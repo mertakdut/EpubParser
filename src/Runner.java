@@ -7,7 +7,7 @@ import org.xml.sax.SAXException;
 
 /*
  * https://wiki.eclipse.org/EGit/User_Guide
- * Starting from existing Git Repositories
+ * Starting from existing Git Repositories 
  * */
 
 public class Runner {
