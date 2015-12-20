@@ -5,6 +5,11 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.DOMException;
 import org.xml.sax.SAXException;
 
+/*
+ * https://wiki.eclipse.org/EGit/User_Guide
+ * Starting from existing Git Repositories
+ * */
+
 public class Runner {
 
 	public static void main(String[] args) {
