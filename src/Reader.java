@@ -1,6 +1,3 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -23,50 +20,85 @@ import org.xml.sax.SAXException;
 
 public class Reader {
 
-	private String epubFilePath;
-
-	// Needed files for .epub format, I might not need these, already giving the
-	// user epub contents.
-	// private File containerFile; // Xml
-	// private File contentFile; // Opf
-
-	private List<String> zipEntryNames;
+	private ZipFile zipFile;
 
 	public Reader(String filePath) throws IOException {
-		this.epubFilePath = filePath;
+		this.zipFile = new ZipFile(filePath);
 	}
 
 	public Content getContent(String savingPath) throws IOException, ParserConfigurationException, SAXException,
 			IllegalArgumentException, IllegalAccessException, DOMException {
 		Content content = new Content();
-		zipEntryNames = new ArrayList<>();
-
-		ZipFile zipFile = new ZipFile(this.epubFilePath);
 
 		Enumeration files = zipFile.entries();
-
-		File directory = new File(savingPath);
-		directory.mkdir();
 
 		while (files.hasMoreElements()) {
 			ZipEntry entry = (ZipEntry) files.nextElement();
 			if (!entry.isDirectory()) {
 				InputStream is = zipFile.getInputStream(entry);
 
-				if (entry.getName().contains("container.xml")) {
-					parseXml(is, content);
-				} else if (entry.getName().endsWith(".opf")) {
-					parseXml(is, content);
-				}
+				if (entry.getName() != null) {
+					String entryName = entry.getName();
 
-				zipEntryNames.add(entry.getName());
+					if (entryName.contains("container.xml")) {
+						parseXml(is, content);
+					} else if (entryName.endsWith(".opf")) {
+						parseXml(is, content);
+					}
+
+					int indexOfSlash = entryName.indexOf("/");
+					if (indexOfSlash != -1) {
+						entryName = entryName.substring(indexOfSlash + 1);
+					}
+
+					content.addZipEntryName(entryName);
+				}
 			}
 		}
 
+		zipFile.close();
+
 		content.getMetadata().printFields();
 		content.getManifest().printXmlItems();
+		content.getSpine().printXmlItems();
+
+		content.printZipEntryNames();
 
 		return content;
+	}
+
+	public InputStream getAllSpines(Content content) {
+
+		// Check if media types are different.
+		for (int i = 0; i < content.getSpine().getXmlItemList().size(); i++) {
+			if (!content.getSpine().getXmlItemList().get(i).getAttributes().containsValue("application/xhtml+xml")) {
+				System.out.println(
+						"Error: Spine contains something different than \"application/xhtml+xml\" media type.");
+			}
+		}
+
+		return null;
+	}
+
+	public InputStream getNextSpine(Content content) throws IOException {
+		return getSpineByIndex(content, content.getSpineIndex());
+	}
+
+	public InputStream getSpine(Content content, int index) throws IOException {
+		return getSpineByIndex(content, index);
+	}
+
+	private InputStream getSpineByIndex(Content content, int index) throws IOException {
+		XmlItem spine = content.getSpine().getXmlItemList().get(content.getSpineIndex());
+
+		String spineHref = spine.getAttributes().get("href");
+
+		if (spineHref != null) {
+			ZipEntry entry = zipFile.getEntry(spineHref);
+			return zipFile.getInputStream(entry);
+		}
+
+		return null;
 	}
 
 	private ArrayList<Map<String, String>> parseXml(InputStream inputStream, Content content)
@@ -102,6 +134,12 @@ public class Reader {
 					content.getMetadata().fillAttributes(tempNode.getChildNodes());
 				} else if (tempNode.getNodeName().equals("manifest")) {
 					content.getManifest().fillXmlItemList(tempNode.getChildNodes());
+				} else if (tempNode.getNodeName().equals("spine")) {
+					content.getSpine().fillXmlItemList(tempNode.getChildNodes(), content.getManifest()); // content.getManifest()
+																											// should
+																											// be
+																											// filled
+																											// before.
 				}
 
 				// get node name and value

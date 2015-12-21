@@ -13,12 +13,17 @@ public class Content {
 
 	private Metadata metadata;
 	private Manifest manifest;
+
 	private Spine spine;
+	private int spineIndex;
+
+	private List<String> zipEntryNames;
 
 	public Content() {
 		metadata = new Metadata();
 		manifest = new Manifest();
 		spine = new Spine();
+		zipEntryNames = new ArrayList<>();
 	}
 
 	public class Metadata {
@@ -109,6 +114,10 @@ public class Content {
 			this.xmlItemList = nodeListToXmlItemList(nodeList);
 		}
 
+		public List<XmlItem> getXmlItemList() {
+			return this.xmlItemList;
+		}
+
 		public void printXmlItems() {
 			System.out.println("\n\nPrinting Manifest...\n");
 
@@ -121,17 +130,50 @@ public class Content {
 		}
 	}
 
+	// <b>Ordered</b> Term of Contents, mostly filled with ids of
+	// application/xhtml+xml files in manifest node.
 	public class Spine {
-		private List<XmlItem> xmlItemList; // <b>Ordered</b> Term of Contents, mostly filled with ids of application/xhtml+xml files in manifest node.
+		private List<XmlItem> xmlItemList;
 
 		public Spine() {
 			this.xmlItemList = new ArrayList<>();
 		}
 
-		public void fillXmlItemList(NodeList nodeList) {
-			this.xmlItemList = nodeListToXmlItemList(nodeList);
+		public void fillXmlItemList(NodeList nodeList, Manifest manifest) {
+			for (int i = 0; i < nodeList.getLength(); i++) {
+				XmlItem xmlItem = nodeToXmlItem(nodeList.item(i));
+
+				if (xmlItem.getAttributes() != null && xmlItem.getAttributes().containsKey("idref")) {
+					String idRef = xmlItem.getAttributes().get("idref");
+
+					// Find the references item inside manifest tag.
+					List<XmlItem> manifestXmlItems = manifest.getXmlItemList();
+
+					for (int j = 0; j < manifestXmlItems.size(); j++) {
+
+						if (manifestXmlItems.get(j).getAttributes().containsValue(idRef)) {
+							this.xmlItemList.add(manifestXmlItems.get(j));
+						}
+
+					}
+				}
+			}
 		}
 
+		public List<XmlItem> getXmlItemList() {
+			return this.xmlItemList;
+		}
+
+		public void printXmlItems() {
+			System.out.println("\n\nPrinting Spine...\n");
+
+			for (int i = 0; i < xmlItemList.size(); i++) {
+				XmlItem xmlItem = xmlItemList.get(i);
+
+				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: "
+						+ xmlItem.getAttributes());
+			}
+		}
 	}
 
 	public Metadata getMetadata() {
@@ -140,6 +182,10 @@ public class Content {
 
 	public Manifest getManifest() {
 		return manifest;
+	}
+
+	public Spine getSpine() {
+		return spine;
 	}
 
 	private List<XmlItem> nodeListToXmlItemList(NodeList nodeList) {
@@ -174,6 +220,31 @@ public class Content {
 		}
 
 		return xmlItem;
+	}
+
+	public void printZipEntryNames() {
+		System.out.println("\n\nPrinting zipEntryNames...\n");
+
+		for (int i = 0; i < zipEntryNames.size(); i++) {
+			System.out.println("(" + i + ")" + zipEntryNames.get(i));
+		}
+	}
+
+	public List<String> getZipEntryNames() {
+		return zipEntryNames;
+	}
+
+	public void addZipEntryName(String zipEntryName) {
+		zipEntryNames.add(zipEntryName);
+	}
+
+	private void incrementSpineIndex() {
+		spineIndex = spineIndex + 1;
+	}
+
+	public int getSpineIndex() {
+		incrementSpineIndex();
+		return spineIndex;
 	}
 
 }
