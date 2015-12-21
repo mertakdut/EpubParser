@@ -67,13 +67,13 @@ public class Reader {
 		return content;
 	}
 
+	// TODO: Merge inputStream or zip entries.
 	public InputStream getAllSpines(Content content) {
 
 		// Check if media types are different.
 		for (int i = 0; i < content.getSpine().getXmlItemList().size(); i++) {
 			if (!content.getSpine().getXmlItemList().get(i).getAttributes().containsValue("application/xhtml+xml")) {
-				System.out.println(
-						"Error: Spine contains something different than \"application/xhtml+xml\" media type.");
+				System.out.println("Error: Spine contains something different than \"application/xhtml+xml\" media type.");
 			}
 		}
 
@@ -135,8 +135,7 @@ public class Reader {
 				} else if (tempNode.getNodeName().equals("manifest")) {
 					content.getManifest().fillXmlItemList(tempNode.getChildNodes());
 				} else if (tempNode.getNodeName().equals("spine")) {
-					content.getSpine().fillXmlItemList(tempNode.getChildNodes(), content.getManifest()); // content.getManifest()
-																											// should
+					content.getSpine().fillXmlItemList(tempNode.getChildNodes(), content.getManifest()); // content.getManifest()							// should
 																											// be
 																											// filled
 																											// before.
