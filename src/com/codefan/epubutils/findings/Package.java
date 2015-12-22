@@ -23,16 +23,25 @@ public class Package extends BaseFindings {
 		guide = new Guide();
 	}
 
-	public class Metadata {
-		private XmlItem rights;
-		private XmlItem identifier;
-		private XmlItem contributor;
-		private XmlItem creator;
+	private class Metadata {
+		// Required Terms
 		private XmlItem title;
 		private XmlItem language;
+		private XmlItem identifier;
+
+		// Optional Terms
+		private XmlItem creator;
+		private XmlItem contributor;
+		private XmlItem publisher;
 		private XmlItem subject;
 		private XmlItem description;
-		private XmlItem publisher;
+		private XmlItem date;
+		private XmlItem type;
+		private XmlItem format;
+		private XmlItem source;
+		private XmlItem relation;
+		private XmlItem coverage;
+		private XmlItem rights;
 
 		public XmlItem getRights() {
 			return rights;
@@ -70,6 +79,30 @@ public class Package extends BaseFindings {
 			return publisher;
 		}
 
+		public XmlItem getDate() {
+			return date;
+		}
+
+		public XmlItem getType() {
+			return type;
+		}
+
+		public XmlItem getFormat() {
+			return format;
+		}
+
+		public XmlItem getSource() {
+			return source;
+		}
+
+		public XmlItem getRelation() {
+			return relation;
+		}
+
+		public XmlItem getCoverage() {
+			return coverage;
+		}
+
 		public void fillAttributes(NodeList nodeList)
 				throws IllegalArgumentException, IllegalAccessException, DOMException {
 			Field[] fields = Package.Metadata.class.getDeclaredFields();
@@ -82,25 +115,31 @@ public class Package extends BaseFindings {
 					}
 				}
 			}
-
 		}
 
-		public void printFields() throws IllegalArgumentException, IllegalAccessException {
+		public void print() {
 			System.out.println("\n\nPrinting Metadata...\n");
 
-			System.out.println("rights: " + (getRights() != null ? getRights().getValue() : null));
-			System.out.println("identifier: " + (getIdentifier() != null ? getIdentifier().getValue() : null));
-			System.out.println("contributor: " + (getContributor() != null ? getContributor().getValue() : null));
-			System.out.println("creator: " + (getCreator() != null ? getCreator().getValue() : null));
 			System.out.println("title: " + (getTitle() != null ? getTitle().getValue() : null));
 			System.out.println("language: " + (getLanguage() != null ? getLanguage().getValue() : null));
+			System.out.println("identifier: " + (getIdentifier() != null ? getIdentifier().getValue() : null));
+
+			System.out.println("creator: " + (getCreator() != null ? getCreator().getValue() : null));
+			System.out.println("contributor: " + (getContributor() != null ? getContributor().getValue() : null));
+			System.out.println("publisher: " + (getPublisher() != null ? getPublisher().getValue() : null));
 			System.out.println("subject: " + (getSubject() != null ? getSubject().getValue() : null));
 			System.out.println("description: " + (getDescription() != null ? getDescription().getValue() : null));
-			System.out.println("publisher: " + (getPublisher() != null ? getPublisher().getValue() : null));
+			System.out.println("date: " + (getDate() != null ? getDate().getValue() : null));
+			System.out.println("type: " + (getType() != null ? getType().getValue() : null));
+			System.out.println("format: " + (getFormat() != null ? getFormat().getValue() : null));
+			System.out.println("source: " + (getSource() != null ? getSource().getValue() : null));
+			System.out.println("relation: " + (getRelation() != null ? getRelation().getValue() : null));
+			System.out.println("coverage: " + (getCoverage() != null ? getCoverage().getValue() : null));
+			System.out.println("rights: " + (getRights() != null ? getRights().getValue() : null));
 		}
 	}
 
-	public class Manifest {
+	private class Manifest {
 		private List<XmlItem> xmlItemList;
 
 		public Manifest() {
@@ -115,7 +154,7 @@ public class Package extends BaseFindings {
 			return this.xmlItemList;
 		}
 
-		public void printXmlItems() {
+		public void print() {
 			System.out.println("\n\nPrinting Manifest...\n");
 
 			for (int i = 0; i < xmlItemList.size(); i++) {
@@ -129,7 +168,7 @@ public class Package extends BaseFindings {
 
 	// <b>Ordered</b> Term of Contents, mostly filled with ids of
 	// application/xhtml+xml files in manifest node.
-	public class Spine {
+	private class Spine {
 		private List<XmlItem> xmlItemList;
 
 		public Spine() {
@@ -161,7 +200,7 @@ public class Package extends BaseFindings {
 			return this.xmlItemList;
 		}
 
-		public void printXmlItems() {
+		public void print() {
 			System.out.println("\n\nPrinting Spine...\n");
 
 			for (int i = 0; i < xmlItemList.size(); i++) {
@@ -188,7 +227,7 @@ public class Package extends BaseFindings {
 			return this.xmlItemList;
 		}
 
-		public void printXmlItems() {
+		public void print() {
 			System.out.println("\n\nPrinting Guide...\n");
 
 			for (int i = 0; i < xmlItemList.size(); i++) {
@@ -229,10 +268,10 @@ public class Package extends BaseFindings {
 		return guide;
 	}
 
-	public void printAllContent() throws IllegalArgumentException, IllegalAccessException {
-		getMetadata().printFields();
-		getManifest().printXmlItems();
-		getSpine().printXmlItems();
-		getGuide().printXmlItems();
+	public void print() throws IllegalArgumentException, IllegalAccessException {
+		getMetadata().print();
+		getManifest().print();
+		getSpine().print();
+		getGuide().print();
 	}
 }

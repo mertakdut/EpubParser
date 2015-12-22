@@ -7,13 +7,16 @@ public class Content {
 
 	private Container container;
 	private Package opfPackage;
+	private Toc toc;
 
 	private List<String> entryNames;
 
 	public Content() {
+		entryNames = new ArrayList<>();
+
 		container = new Container();
 		opfPackage = new Package();
-		entryNames = new ArrayList<>();
+		toc = new Toc();
 	}
 
 	// Debug
@@ -39,6 +42,10 @@ public class Content {
 
 	public Package getPackage() {
 		return opfPackage;
+	}
+
+	public Toc getToc() {
+		return toc;
 	}
 
 }

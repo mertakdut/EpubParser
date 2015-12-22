@@ -10,7 +10,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -26,7 +25,7 @@ public class Reader {
 		this.zipFile = new ZipFile(filePath);
 	}
 
-	public Content getContent(String savingPath) throws IOException, ParserConfigurationException, SAXException,
+	public Content getContent() throws IOException, ParserConfigurationException, SAXException,
 			IllegalArgumentException, IllegalAccessException, DOMException {
 		Content content = new Content();
 
@@ -43,7 +42,11 @@ public class Reader {
 			}
 		}
 
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder docBuilder = factory.newDocumentBuilder();
+
 		boolean isContainerXmlFound = false;
+		boolean isTocXmlFound = false;
 
 		for (int i = 0; i < content.getEntryNames().size(); i++) {
 			String currentEntryName = content.getEntryNames().get(i);
@@ -54,10 +57,22 @@ public class Reader {
 				ZipEntry container = zipFile.getEntry(currentEntryName);
 				InputStream inputStream = zipFile.getInputStream(container);
 
-				parseContainerXml(inputStream, content);
+				parseContainerXml(inputStream, content, docBuilder);
 
-				content.printZipEntryNames();
-				content.getPackage().printAllContent();
+				break;
+			}
+		}
+
+		for (int i = 0; i < content.getEntryNames().size(); i++) {
+			String currentEntryName = content.getEntryNames().get(i);
+
+			if (currentEntryName.contains("toc.ncx")) {
+				isTocXmlFound = true;
+
+				ZipEntry container = zipFile.getEntry(currentEntryName);
+				InputStream inputStream = zipFile.getInputStream(container);
+
+				parseTocFile(inputStream, content, docBuilder);
 
 				break;
 			}
@@ -67,14 +82,19 @@ public class Reader {
 			throw new IOException("container.xml not found.");
 		}
 
+		if (!isTocXmlFound) {
+			throw new IOException("toc.ncx not found.");
+		}
+
+		content.printZipEntryNames();
+		content.getPackage().print();
+		content.getToc().print();
+
 		return content;
 	}
 
-	private void parseContainerXml(InputStream inputStream, Content content) throws IOException,
-			ParserConfigurationException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder docBuilder = factory.newDocumentBuilder();
-
+	private void parseContainerXml(InputStream inputStream, Content content, DocumentBuilder docBuilder)
+			throws IOException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
 		Document document = docBuilder.parse(inputStream);
 
 		inputStream.close();
@@ -86,20 +106,28 @@ public class Reader {
 		String opfFilePath = content.getContainer().getFullPathValue();
 		ZipEntry entry = zipFile.getEntry(opfFilePath);
 
-		parseOpfFile(zipFile.getInputStream(entry), content);
+		parseOpfFile(zipFile.getInputStream(entry), content, docBuilder);
 	}
 
-	private void parseOpfFile(InputStream inputStream, Content content) throws IOException,
-			ParserConfigurationException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder docBuilder = factory.newDocumentBuilder();
-
+	private void parseOpfFile(InputStream inputStream, Content content, DocumentBuilder docBuilder)
+			throws IOException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
 		Document document = docBuilder.parse(inputStream);
 
 		inputStream.close();
 
 		if (document.hasChildNodes()) {
 			traverseDocumentNodes(document.getChildNodes(), content.getPackage());
+		}
+	}
+
+	private void parseTocFile(InputStream inputStream, Content content, DocumentBuilder docBuilder)
+			throws IOException, SAXException, IllegalArgumentException, IllegalAccessException, DOMException {
+		Document document = docBuilder.parse(inputStream);
+
+		inputStream.close();
+
+		if (document.hasChildNodes()) {
+			traverseDocumentNodes(document.getChildNodes(), content.getToc());
 		}
 	}
 

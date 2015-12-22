@@ -36,6 +36,45 @@ public abstract class BaseFindings {
 		}
 	}
 
+	protected class NavPoint {
+		private String id;
+		private int playOrder;
+		private String navLabel;
+		private String contentSrc;
+
+		public String getId() {
+			return id;
+		}
+
+		public void setId(String id) {
+			this.id = id;
+		}
+
+		public int getPlayOrder() {
+			return playOrder;
+		}
+
+		public void setPlayOrder(int playOrder) {
+			this.playOrder = playOrder;
+		}
+
+		public String getNavLabel() {
+			return navLabel;
+		}
+
+		public void setNavLabel(String navLabel) {
+			this.navLabel = navLabel;
+		}
+
+		public String getContentSrc() {
+			return contentSrc;
+		}
+
+		public void setContentSrc(String contentSrc) {
+			this.contentSrc = contentSrc;
+		}
+	}
+
 	protected List<XmlItem> nodeListToXmlItemList(NodeList nodeList) {
 
 		List<XmlItem> xmlItemList = new ArrayList<>();
