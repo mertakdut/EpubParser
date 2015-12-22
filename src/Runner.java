@@ -12,6 +12,11 @@ import com.codefan.epubutils.findings.Content;
  * Starting from existing Git Repositories 
  * */
 
+/*
+ * http://www.hxa.name/articles/content/epub-guide_hxa7241_2007.html
+ * http://www.idpf.org/epub/30/spec/epub30-overview.html
+ */
+
 public class Runner {
 
 	public static void main(String[] args) {
