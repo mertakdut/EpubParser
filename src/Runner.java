@@ -5,6 +5,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.DOMException;
 import org.xml.sax.SAXException;
 
+import com.codefan.epubutils.findings.Content;
+
 /*
  * https://wiki.eclipse.org/EGit/User_Guide
  * Starting from existing Git Repositories 

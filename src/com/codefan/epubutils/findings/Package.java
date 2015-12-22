@@ -1,29 +1,26 @@
+package com.codefan.epubutils.findings;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.w3c.dom.DOMException;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-public class Content {
+//package.opf
+public class Package extends BaseFindings {
 
 	private Metadata metadata;
 	private Manifest manifest;
-
 	private Spine spine;
-	private int spineIndex;
+	private Guide guide;
 
-	private List<String> zipEntryNames;
-
-	public Content() {
+	public Package() {
 		metadata = new Metadata();
 		manifest = new Manifest();
 		spine = new Spine();
-		zipEntryNames = new ArrayList<>();
+		guide = new Guide();
 	}
 
 	public class Metadata {
@@ -75,7 +72,7 @@ public class Content {
 
 		public void fillAttributes(NodeList nodeList)
 				throws IllegalArgumentException, IllegalAccessException, DOMException {
-			Field[] fields = Content.Metadata.class.getDeclaredFields();
+			Field[] fields = Package.Metadata.class.getDeclaredFields();
 
 			for (int i = 0; i < nodeList.getLength(); i++) {
 				for (int j = 0; j < fields.length; j++) {
@@ -176,6 +173,46 @@ public class Content {
 		}
 	}
 
+	private class Guide {
+		private List<XmlItem> xmlItemList;
+
+		public Guide() {
+			this.xmlItemList = new ArrayList<>();
+		}
+
+		public void fillXmlItemList(NodeList nodeList) {
+			this.xmlItemList = nodeListToXmlItemList(nodeList);
+		}
+
+		public List<XmlItem> getXmlItemList() {
+			return this.xmlItemList;
+		}
+
+		public void printXmlItems() {
+			System.out.println("\n\nPrinting Guide...\n");
+
+			for (int i = 0; i < xmlItemList.size(); i++) {
+				XmlItem xmlItem = xmlItemList.get(i);
+
+				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: "
+						+ xmlItem.getAttributes());
+			}
+		}
+	}
+
+	@Override
+	public void fillContent(Node node) throws IllegalArgumentException, IllegalAccessException, DOMException {
+		if (node.getNodeName().equals("metadata")) {
+			getMetadata().fillAttributes(node.getChildNodes());
+		} else if (node.getNodeName().equals("manifest")) {
+			getManifest().fillXmlItemList(node.getChildNodes());
+		} else if (node.getNodeName().equals("spine")) {
+			getSpine().fillXmlItemList(node.getChildNodes(), getManifest());
+		} else if (node.getNodeName().equals("guide")) {
+			getGuide().fillXmlItemList(node.getChildNodes());
+		}
+	}
+
 	public Metadata getMetadata() {
 		return metadata;
 	}
@@ -188,63 +225,14 @@ public class Content {
 		return spine;
 	}
 
-	private List<XmlItem> nodeListToXmlItemList(NodeList nodeList) {
-
-		List<XmlItem> xmlItemList = new ArrayList<>();
-
-		for (int i = 0; i < nodeList.getLength(); i++) {
-			XmlItem xmlItem = nodeToXmlItem(nodeList.item(i));
-			if (!xmlItem.getValue().replaceAll("\\s+", "").equals("") || xmlItem.getAttributes() != null) {
-				xmlItemList.add(xmlItem);
-			}
-		}
-
-		return xmlItemList;
+	public Guide getGuide() {
+		return guide;
 	}
 
-	private XmlItem nodeToXmlItem(Node node) {
-		XmlItem xmlItem = new XmlItem();
-		xmlItem.setValue(node.getTextContent());
-
-		if (node.hasAttributes()) {
-			NamedNodeMap nodeMap = node.getAttributes();
-
-			Map<String, String> attributes = new HashMap<>();
-
-			for (int j = 0; j < nodeMap.getLength(); j++) {
-				Node attribute = nodeMap.item(j);
-				attributes.put(attribute.getNodeName(), attribute.getNodeValue());
-			}
-
-			xmlItem.setAttributes(attributes);
-		}
-
-		return xmlItem;
+	public void printAllContent() throws IllegalArgumentException, IllegalAccessException {
+		getMetadata().printFields();
+		getManifest().printXmlItems();
+		getSpine().printXmlItems();
+		getGuide().printXmlItems();
 	}
-
-	public void printZipEntryNames() {
-		System.out.println("\n\nPrinting zipEntryNames...\n");
-
-		for (int i = 0; i < zipEntryNames.size(); i++) {
-			System.out.println("(" + i + ")" + zipEntryNames.get(i));
-		}
-	}
-
-	public List<String> getZipEntryNames() {
-		return zipEntryNames;
-	}
-
-	public void addZipEntryName(String zipEntryName) {
-		zipEntryNames.add(zipEntryName);
-	}
-
-	private void incrementSpineIndex() {
-		spineIndex = spineIndex + 1;
-	}
-
-	public int getSpineIndex() {
-		incrementSpineIndex();
-		return spineIndex;
-	}
-
 }
