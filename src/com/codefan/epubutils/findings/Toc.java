@@ -21,57 +21,67 @@ public class Toc extends BaseFindings {
 	}
 
 	private class Head {
-		private XmlItem uid;
-		private XmlItem depth;
-		private XmlItem totalPageCount;
-		private XmlItem maxPageNumber;
+		private String uid;
+		private String depth;
+		private String totalPageCount;
+		private String maxPageNumber;
 
 		public void fillAttributes(NodeList nodeList) throws IllegalArgumentException, IllegalAccessException {
 			Field[] fields = Toc.Head.class.getDeclaredFields();
 
-			// Burasý olmadý.
-
 			for (int i = 0; i < nodeList.getLength(); i++) {
-				for (int j = 0; j < fields.length; j++) {
-					NamedNodeMap nodeMap = nodeList.item(i).getAttributes();
+				Node possiblyMetaNode = nodeList.item(i);
 
-					for (int k = 0; k < nodeMap.getLength(); k++) {
-						Node attribute = nodeMap.item(k);
+				if (possiblyMetaNode.getNodeName().equals("meta")) {
+					NamedNodeMap attributes = nodeList.item(i).getAttributes();
 
-						// if
-						// (attribute.getNodeValue().contains(fields[j].getName()))
-						// {
-						// fields[j].setAccessible(true);
-						// fields[j].set(this, nodeToXmlItem(nodeList.item(i)));
-						// }
+					// Loop through meta node's attributes.
+					for (int k = 0; k < attributes.getLength(); k++) {
+						Node attribute = attributes.item(k);
+
+						if (attribute.getNodeName().equals("name")) {
+
+							for (int j = 0; j < fields.length; j++) {
+								if (attribute.getNodeValue().contains(fields[j].getName())) {
+
+									// Find content in attributes
+									for (int l = 0; l < attributes.getLength(); l++) {
+										if (attributes.item(l).getNodeName().equals("content")) {
+											fields[j].setAccessible(true);
+											fields[j].set(this, attributes.item(l).getNodeValue());
+											break;
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}
 		}
 
-		public XmlItem getUid() {
+		public String getUid() {
 			return uid;
 		}
 
-		public XmlItem getDepth() {
+		public String getDepth() {
 			return depth;
 		}
 
-		public XmlItem getTotalPageCount() {
+		public String getTotalPageCount() {
 			return totalPageCount;
 		}
 
-		public XmlItem getMaxPageNumber() {
+		public String getMaxPageNumber() {
 			return maxPageNumber;
 		}
 
 		public void print() {
 			System.out.println("\n\nPrinting Head...\n");
-			System.out.println("uid: " + (getUid() != null ? getUid().getValue() : null));
-			System.out.println("depth: " + (getDepth() != null ? getDepth().getValue() : null));
-			System.out.println(
-					"totalPageCount: " + (getTotalPageCount() != null ? getTotalPageCount().getValue() : null));
-			System.out.println("maxPageNumber: " + (getMaxPageNumber() != null ? getMaxPageNumber().getValue() : null));
+			System.out.println("uid: " + getUid());
+			System.out.println("depth: " + getDepth());
+			System.out.println("totalPageCount: " + getTotalPageCount());
+			System.out.println("maxPageNumber: " + getMaxPageNumber());
 		}
 	}
 
