@@ -15,6 +15,8 @@ public class Toc extends BaseFindings {
 	private Head head;
 	private NavMap navMap;
 
+	private boolean isTocAvailable;
+
 	public Toc() {
 		head = new Head();
 		navMap = new NavMap();
@@ -35,7 +37,6 @@ public class Toc extends BaseFindings {
 				if (possiblyMetaNode.getNodeName().equals("meta")) {
 					NamedNodeMap attributes = nodeList.item(i).getAttributes();
 
-					// Loop through meta node's attributes.
 					for (int k = 0; k < attributes.getLength(); k++) {
 						Node attribute = attributes.item(k);
 
@@ -142,6 +143,18 @@ public class Toc extends BaseFindings {
 					}
 
 					this.navPoints.add(navPoint);
+				}
+
+				// Check if toc is available to use as navigation model.
+
+				isTocAvailable = true;
+
+				//All navPoints should have contents inside 
+				for (int n = 0; n < this.navPoints.size(); n++) {
+					if(this.navPoints.get(n).getContentSrc() == null){ //
+						isTocAvailable = false;
+						break;
+					}
 				}
 			}
 		}

@@ -20,12 +20,22 @@ public class Content {
 	}
 
 	// Debug
-	public void printZipEntryNames() {
+	public void print() throws IllegalArgumentException, IllegalAccessException {
 		System.out.println("\n\nPrinting zipEntryNames...\n");
 
 		for (int i = 0; i < entryNames.size(); i++) {
 			System.out.println("(" + i + ")" + entryNames.get(i));
 		}
+
+		getContainer().print();
+		getPackage().print();
+		getToc().print();
+	}
+
+	public File getSourceFile(int index) {
+		if (getToc() != null) {
+		}
+
 	}
 
 	public List<String> getEntryNames() {

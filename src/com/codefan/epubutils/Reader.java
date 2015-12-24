@@ -1,3 +1,4 @@
+package com.codefan.epubutils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,9 +92,8 @@ public class Reader {
 			throw new IOException("toc.ncx not found.");
 		}
 
-		content.printZipEntryNames();
-		content.getPackage().print();
-		content.getToc().print();
+		//Debug
+		content.print();
 
 		return content;
 	}
