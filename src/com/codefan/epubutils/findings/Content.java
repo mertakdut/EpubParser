@@ -1,14 +1,21 @@
 package com.codefan.epubutils.findings;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import com.codefan.epubutils.findings.BaseFindings.NavPoint;
 import com.codefan.epubutils.findings.BaseFindings.XmlItem;
 
 public class Content {
+
+	private ZipFile epubFile;
 
 	private Container container;
 	private Package opfPackage;
@@ -37,8 +44,39 @@ public class Content {
 		getToc().print();
 	}
 
-	public String getEntryName(int index) throws IOException {
+	public BookSection getBookSection(int index) throws IOException {
+		String[] entryNameAndLabel = getEntryNameAndLabel(index);
 
+		if (entryNameAndLabel != null) {
+			BookSection bookSection = new BookSection();
+
+			String href = entryNameAndLabel[0];
+			String label = entryNameAndLabel[1];
+
+			for (int i = 0; i < getEntryNames().size(); i++) {
+				String entryName = getEntryNames().get(i);
+
+				Path path = Paths.get(entryName);
+				String fileName = path.getFileName().toString();
+
+				if (fileName.equals(href)) { // href actually exists.
+					ZipEntry zipEntry = epubFile.getEntry(entryName);
+					InputStream zipEntryContent = epubFile.getInputStream(zipEntry);
+
+					bookSection.setFileContent(zipEntryContent);
+					bookSection.setLabel(label);
+
+					epubFile.close();
+
+					return bookSection;
+				}
+			}
+		}
+
+		throw new IOException("Referenced file not found!");
+	}
+
+	private String[] getEntryNameAndLabel(int index) throws IOException {
 		if (index > 0) {
 			if (getToc() != null) {
 
@@ -62,7 +100,7 @@ public class Content {
 				}
 
 				if (navPoint.getContentSrc() != null) {
-					return navPoint.getContentSrc();
+					return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
 				} else { // Find from id
 					List<XmlItem> xmlItemList = getPackage().getManifest().getXmlItemList();
 					for (int j = 0; j < xmlItemList.size(); j++) {
@@ -71,14 +109,13 @@ public class Content {
 						String id = attributeMap.get("id");
 
 						if (id.contains(navPoint.getId())) {
-							return attributeMap.get("href");
+							return new String[] { attributeMap.get("href"), navPoint.getNavLabel() };
 						}
 					}
 				}
 
 			} else { // Try spine instead
-				index -= 1; // index will start from 1, it's okay with
-							// playOrder.
+				index -= 1; // input index starts from 1.
 				List<XmlItem> spineItemList = getPackage().getSpine().getXmlItemList();
 
 				XmlItem spineItem = spineItemList.get(index);
@@ -93,17 +130,15 @@ public class Content {
 					String id = attributeMap.get("id");
 
 					if (id.contains(idRef)) {
-						return attributeMap.get("href");
+						return new String[] { attributeMap.get("href"), null };
 					}
 				}
-
 			}
 		} else {
 			throw new IOException("index should be greater than 0");
 		}
 
 		return null;
-
 	}
 
 	public List<String> getEntryNames() {
@@ -124,6 +159,14 @@ public class Content {
 
 	public Toc getToc() {
 		return toc;
+	}
+
+	public ZipFile getEpubFile() {
+		return epubFile;
+	}
+
+	public void setEpubFile(ZipFile epubFile) {
+		this.epubFile = epubFile;
 	}
 
 }

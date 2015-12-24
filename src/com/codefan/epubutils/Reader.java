@@ -1,4 +1,5 @@
 package com.codefan.epubutils;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,21 +22,20 @@ import com.codefan.epubutils.findings.Content;
 
 public class Reader {
 
-	private ZipFile zipFile;
+	private Content content = new Content();
 
 	public Reader(String filePath) throws IOException {
-		this.zipFile = new ZipFile(filePath);
+		content.setEpubFile(new ZipFile(filePath));
 	}
 
 	public Reader(File file) throws IOException {
-		this.zipFile = new ZipFile(file.getPath());
+		content.setEpubFile(new ZipFile(file.getPath()));
 	}
 
 	public Content getContent() throws IOException, ParserConfigurationException, SAXException,
 			IllegalArgumentException, IllegalAccessException, DOMException {
-		Content content = new Content();
 
-		Enumeration files = zipFile.entries();
+		Enumeration files = content.getEpubFile().entries();
 
 		while (files.hasMoreElements()) {
 			ZipEntry entry = (ZipEntry) files.nextElement();
@@ -60,10 +60,10 @@ public class Reader {
 			if (currentEntryName.contains("container.xml")) {
 				isContainerXmlFound = true;
 
-				ZipEntry container = zipFile.getEntry(currentEntryName);
-				InputStream inputStream = zipFile.getInputStream(container);
+				ZipEntry container = content.getEpubFile().getEntry(currentEntryName);
+				InputStream inputStream = content.getEpubFile().getInputStream(container);
 
-				parseContainerXml(inputStream, content, docBuilder);
+				parseContainerXml(inputStream, docBuilder);
 
 				break;
 			}
@@ -75,10 +75,10 @@ public class Reader {
 			if (currentEntryName.contains("toc.ncx")) {
 				isTocXmlFound = true;
 
-				ZipEntry container = zipFile.getEntry(currentEntryName);
-				InputStream inputStream = zipFile.getInputStream(container);
+				ZipEntry container = content.getEpubFile().getEntry(currentEntryName);
+				InputStream inputStream = content.getEpubFile().getInputStream(container);
 
-				parseTocFile(inputStream, content, docBuilder);
+				parseTocFile(inputStream, docBuilder);
 
 				break;
 			}
@@ -92,13 +92,13 @@ public class Reader {
 			throw new IOException("toc.ncx not found.");
 		}
 
-		//Debug
+		// Debug
 		content.print();
 
 		return content;
 	}
 
-	private void parseContainerXml(InputStream inputStream, Content content, DocumentBuilder docBuilder)
+	private void parseContainerXml(InputStream inputStream, DocumentBuilder docBuilder)
 			throws IOException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
 		Document document = docBuilder.parse(inputStream);
 
@@ -109,12 +109,12 @@ public class Reader {
 		}
 
 		String opfFilePath = content.getContainer().getFullPathValue();
-		ZipEntry entry = zipFile.getEntry(opfFilePath);
+		ZipEntry entry = content.getEpubFile().getEntry(opfFilePath);
 
-		parseOpfFile(zipFile.getInputStream(entry), content, docBuilder);
+		parseOpfFile(content.getEpubFile().getInputStream(entry), docBuilder);
 	}
 
-	private void parseOpfFile(InputStream inputStream, Content content, DocumentBuilder docBuilder)
+	private void parseOpfFile(InputStream inputStream, DocumentBuilder docBuilder)
 			throws IOException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
 		Document document = docBuilder.parse(inputStream);
 
@@ -125,7 +125,7 @@ public class Reader {
 		}
 	}
 
-	private void parseTocFile(InputStream inputStream, Content content, DocumentBuilder docBuilder)
+	private void parseTocFile(InputStream inputStream, DocumentBuilder docBuilder)
 			throws IOException, SAXException, IllegalArgumentException, IllegalAccessException, DOMException {
 		Document document = docBuilder.parse(inputStream);
 

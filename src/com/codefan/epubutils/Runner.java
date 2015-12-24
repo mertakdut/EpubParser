@@ -7,6 +7,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.DOMException;
 import org.xml.sax.SAXException;
 
+import com.codefan.epubutils.findings.BookSection;
 import com.codefan.epubutils.findings.Content;
 
 /*
@@ -26,7 +27,13 @@ public class Runner {
 			Reader reader = new Reader("C:\\eBooks/shute-lonely-road.epub");
 			Content epubContent = reader.getContent();
 
-			System.out.println(epubContent.getEntryName(1));
+			int index = 1;
+
+			BookSection bookSection = epubContent.getBookSection(index);
+
+			System.out.println("\n\nsection " + index 
+					+ "\n label: " + bookSection.getLabel() + "...\n fileContent: "
+					+ bookSection.getFileContent());
 
 		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException
 				| IllegalAccessException | DOMException e) {
