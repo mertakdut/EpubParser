@@ -1,4 +1,5 @@
 package com.codefan.epubutils;
+
 import java.io.IOException;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -24,8 +25,8 @@ public class Runner {
 		try {
 			Reader reader = new Reader("C:\\eBooks/shute-lonely-road.epub");
 			Content epubContent = reader.getContent();
-			
-			
+
+			System.out.println(epubContent.getEntryName(1));
 
 		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException
 				| IllegalAccessException | DOMException e) {

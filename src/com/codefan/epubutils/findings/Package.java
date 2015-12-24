@@ -139,7 +139,7 @@ public class Package extends BaseFindings {
 		}
 	}
 
-	private class Manifest {
+	class Manifest {
 		private List<XmlItem> xmlItemList;
 
 		public Manifest() {
@@ -168,7 +168,7 @@ public class Package extends BaseFindings {
 
 	// <b>Ordered</b> Term of Contents, mostly filled with ids of
 	// application/xhtml+xml files in manifest node.
-	private class Spine {
+	class Spine {
 		private List<XmlItem> xmlItemList;
 
 		public Spine() {
