@@ -17,9 +17,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import com.codefan.epubutils.findings.BaseFindings;
-import com.codefan.epubutils.findings.Content;
-
 public class Reader {
 
 	private Content content = new Content();

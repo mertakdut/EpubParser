@@ -1,17 +1,17 @@
-package com.codefan.epubutils.findings;
+package com.codefan.epubutils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import com.codefan.epubutils.findings.BaseFindings.NavPoint;
-import com.codefan.epubutils.findings.BaseFindings.XmlItem;
+import com.codefan.epubutils.BaseFindings.NavPoint;
+import com.codefan.epubutils.BaseFindings.XmlItem;
 
 public class Content {
 
@@ -33,7 +33,7 @@ public class Content {
 
 	// Debug
 	public void print() throws IllegalArgumentException, IllegalAccessException {
-		System.out.println("\n\nPrinting zipEntryNames...\n");
+		System.out.println("Printing zipEntryNames...\n");
 
 		for (int i = 0; i < entryNames.size(); i++) {
 			System.out.println("(" + i + ")" + entryNames.get(i));
@@ -56,17 +56,37 @@ public class Content {
 			for (int i = 0; i < getEntryNames().size(); i++) {
 				String entryName = getEntryNames().get(i);
 
-				Path path = Paths.get(entryName);
-				String fileName = path.getFileName().toString();
+				// Path path = Paths.get(entryName);
+				// String fileName = path.getFileName().toString();
+
+				int lastSlashIndex = entryName.lastIndexOf("\\");
+				String fileName = entryName.substring(lastSlashIndex + 1);
 
 				if (fileName.equals(href)) { // href actually exists.
 					ZipEntry zipEntry = epubFile.getEntry(entryName);
-					InputStream zipEntryContent = epubFile.getInputStream(zipEntry);
+					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
 
-					bookSection.setFileContent(zipEntryContent);
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
+					StringBuilder fileContent = new StringBuilder();
+
+					String line;
+					while ((line = bufferedReader.readLine()) != null) {
+						fileContent.append(line);
+					}
+
+					String extension = null;
+
+					int dotIndex = fileName.lastIndexOf('.');
+					if (dotIndex != -1) {
+						extension = fileName.substring(0, dotIndex);
+					}
+
+					bookSection.setSectionContent(fileContent.toString());
+					bookSection.setExtension(extension);
 					bookSection.setLabel(label);
 
 					epubFile.close();
+					bufferedReader.close();
 
 					return bookSection;
 				}
@@ -77,7 +97,9 @@ public class Content {
 	}
 
 	private String[] getEntryNameAndLabel(int index) throws IOException {
-		if (index > 0) {
+		if (index > -1) {
+			index += 1;
+			
 			if (getToc() != null) {
 
 				boolean isFoundInPlayOrder = false;
@@ -115,7 +137,6 @@ public class Content {
 				}
 
 			} else { // Try spine instead
-				index -= 1; // input index starts from 1.
 				List<XmlItem> spineItemList = getPackage().getSpine().getXmlItemList();
 
 				XmlItem spineItem = spineItemList.get(index);
@@ -135,7 +156,7 @@ public class Content {
 				}
 			}
 		} else {
-			throw new IOException("index should be greater than 0");
+			throw new IOException("index should be greater than -1");
 		}
 
 		return null;

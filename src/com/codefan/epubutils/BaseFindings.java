@@ -1,4 +1,4 @@
-package com.codefan.epubutils.findings;
+package com.codefan.epubutils;
 
 import java.util.ArrayList;
 import java.util.HashMap;

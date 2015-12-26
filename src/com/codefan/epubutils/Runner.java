@@ -7,9 +7,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.DOMException;
 import org.xml.sax.SAXException;
 
-import com.codefan.epubutils.findings.BookSection;
-import com.codefan.epubutils.findings.Content;
-
 /*
  * https://wiki.eclipse.org/EGit/User_Guide
  * Starting from existing Git Repositories 
@@ -31,9 +28,8 @@ public class Runner {
 
 			BookSection bookSection = epubContent.getBookSection(index);
 
-			System.out.println("\n\nsection " + index 
-					+ "\n label: " + bookSection.getLabel() + "...\n fileContent: "
-					+ bookSection.getFileContent());
+			System.out.println("\n\nsection " + index + "\nlabel: " + bookSection.getLabel() + "\nfileContent: "
+					+ bookSection.getSectionContent());
 
 		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException
 				| IllegalAccessException | DOMException e) {
