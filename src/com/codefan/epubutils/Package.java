@@ -179,18 +179,23 @@ public class Package extends BaseFindings {
 			for (int i = 0; i < nodeList.getLength(); i++) {
 				XmlItem xmlItem = nodeToXmlItem(nodeList.item(i));
 
-				if (xmlItem.getAttributes() != null && xmlItem.getAttributes().containsKey("idref")) {
-					String idRef = xmlItem.getAttributes().get("idref");
+				if (nodeList.item(i).getNodeValue() == null
+						|| nodeList.item(i).getNodeValue().replaceAll("\\s+", "").equals("")) {
 
-					// Find the references item inside manifest tag.
-					List<XmlItem> manifestXmlItems = manifest.getXmlItemList();
+					if (xmlItem.getAttributes() != null && xmlItem.getAttributes().containsKey("idref")) {
+						String idRef = xmlItem.getAttributes().get("idref");
 
-					for (int j = 0; j < manifestXmlItems.size(); j++) {
+						// Find the referenced item inside manifest tag.
+						List<XmlItem> manifestXmlItems = manifest.getXmlItemList();
 
-						if (manifestXmlItems.get(j).getAttributes().containsValue(idRef)) {
-							this.xmlItemList.add(manifestXmlItems.get(j));
+						for (int j = 0; j < manifestXmlItems.size(); j++) {
+
+							if (manifestXmlItems.get(j) != null && manifestXmlItems.get(j).getAttributes() != null
+									&& manifestXmlItems.get(j).getAttributes().containsValue(idRef)) {
+								this.xmlItemList.add(manifestXmlItems.get(j));
+							}
+
 						}
-
 					}
 				}
 			}

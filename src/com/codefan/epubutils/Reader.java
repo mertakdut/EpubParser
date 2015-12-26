@@ -69,7 +69,7 @@ public class Reader {
 		for (int i = 0; i < content.getEntryNames().size(); i++) {
 			String currentEntryName = content.getEntryNames().get(i);
 
-			if (currentEntryName.contains("toc.ncx")) {
+			if (currentEntryName.contains(".ncx")) {
 				isTocXmlFound = true;
 
 				ZipEntry container = content.getEpubFile().getEntry(currentEntryName);

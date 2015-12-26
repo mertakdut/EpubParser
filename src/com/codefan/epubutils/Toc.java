@@ -90,8 +90,8 @@ public class Toc extends BaseFindings {
 		public NavMap() {
 			this.navPoints = new ArrayList<NavPoint>();
 		}
-		
-		public List<NavPoint> getNavPoints(){
+
+		public List<NavPoint> getNavPoints() {
 			return navPoints;
 		}
 
@@ -99,7 +99,8 @@ public class Toc extends BaseFindings {
 
 			for (int i = 0; i < possiblyNavPoints.getLength(); i++) {
 
-				if (possiblyNavPoints.item(i).getNodeName().equals("navPoint")) {
+				if (possiblyNavPoints.item(i).getNodeName().equals("navPoint")
+						|| possiblyNavPoints.item(i).getNodeName().equals("pageTarget")) {
 					NavPoint navPoint = new NavPoint();
 
 					NamedNodeMap nodeMap = possiblyNavPoints.item(i).getAttributes();
@@ -111,6 +112,8 @@ public class Toc extends BaseFindings {
 							navPoint.setId(attribute.getNodeValue());
 						} else if (attribute.getNodeName().equals("playOrder")) {
 							navPoint.setPlayOrder(Integer.parseInt(attribute.getNodeValue()));
+						} else if (attribute.getNodeName().equals("type")) {
+							navPoint.setType(attribute.getNodeValue());
 						}
 
 					}
@@ -160,14 +163,13 @@ public class Toc extends BaseFindings {
 						+ navPoint.getContentSrc());
 			}
 		}
-
 	}
 
 	@Override
 	public void fillContent(Node node) throws IllegalArgumentException, IllegalAccessException, DOMException {
 		if (node.getNodeName().equals("head")) {
 			getHead().fillAttributes(node.getChildNodes());
-		} else if (node.getNodeName().equals("navMap")) {
+		} else if (node.getNodeName().equals("navMap") || node.getNodeName().equals("pageList")) {
 			getNavMap().fillNavPoints(node.getChildNodes());
 		}
 	}

@@ -42,6 +42,9 @@ public abstract class BaseFindings {
 		private String navLabel;
 		private String contentSrc;
 
+		private String type;
+		private String value;
+
 		public String getId() {
 			return id;
 		}
@@ -73,6 +76,22 @@ public abstract class BaseFindings {
 		public void setContentSrc(String contentSrc) {
 			this.contentSrc = contentSrc;
 		}
+
+		public String getType() {
+			return type;
+		}
+
+		public void setType(String type) {
+			this.type = type;
+		}
+
+		public String getValue() {
+			return value;
+		}
+
+		public void setValue(String value) {
+			this.value = value;
+		}
 	}
 
 	protected List<XmlItem> nodeListToXmlItemList(NodeList nodeList) {
@@ -81,7 +100,7 @@ public abstract class BaseFindings {
 
 		for (int i = 0; i < nodeList.getLength(); i++) {
 			XmlItem xmlItem = nodeToXmlItem(nodeList.item(i));
-			if (!xmlItem.getValue().replaceAll("\\s+", "").equals("") || xmlItem.getAttributes() != null) {
+			if (xmlItem.getAttributes() != null) {
 				xmlItemList.add(xmlItem);
 			}
 		}

@@ -23,6 +23,8 @@ public class Content {
 
 	private List<String> entryNames;
 
+	private int playOrder = -1;
+
 	public Content() {
 		entryNames = new ArrayList<>();
 
@@ -44,8 +46,12 @@ public class Content {
 		getToc().print();
 	}
 
-	public BookSection getBookSection(int index) throws IOException {
-		String[] entryNameAndLabel = getEntryNameAndLabel(index);
+	public BookSection getNextBookSection() throws IOException {
+		return getBookSection();
+	}
+
+	private BookSection getBookSection() throws IOException {
+		String[] entryNameAndLabel = getEntryNameAndLabel();
 
 		if (entryNameAndLabel != null) {
 			BookSection bookSection = new BookSection();
@@ -56,13 +62,10 @@ public class Content {
 			for (int i = 0; i < getEntryNames().size(); i++) {
 				String entryName = getEntryNames().get(i);
 
-				// Path path = Paths.get(entryName);
-				// String fileName = path.getFileName().toString();
-
-				int lastSlashIndex = entryName.lastIndexOf("\\");
+				int lastSlashIndex = entryName.lastIndexOf("/");
 				String fileName = entryName.substring(lastSlashIndex + 1);
 
-				if (fileName.equals(href)) { // href actually exists.
+				if (href.contains(fileName)) { // href actually exists.
 					ZipEntry zipEntry = epubFile.getEntry(entryName);
 					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
 
@@ -85,7 +88,7 @@ public class Content {
 					bookSection.setExtension(extension);
 					bookSection.setLabel(label);
 
-					epubFile.close();
+//					epubFile.close();
 					bufferedReader.close();
 
 					return bookSection;
@@ -93,70 +96,57 @@ public class Content {
 			}
 		}
 
-		throw new IOException("Referenced file not found!");
+		throw new IOException("Referenced file not found!" + " (playOrder: " + this.playOrder + ")");
 	}
 
-	private String[] getEntryNameAndLabel(int index) throws IOException {
-		if (index > -1) {
-			index += 1;
-			
-			if (getToc() != null) {
+	private String[] getEntryNameAndLabel() throws IOException {
 
-				boolean isFoundInPlayOrder = false;
+		if (getToc() != null) {
+			NavPoint navPoint = null;
 
-				NavPoint navPoint = null;
+			List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
 
-				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
-
-				for (int i = 0; i < navPoints.size(); i++) {
-					navPoint = getToc().getNavMap().getNavPoints().get(i);
-
-					if (navPoint.getPlayOrder() == index) {
-						isFoundInPlayOrder = true;
-						break;
-					}
+			for (int i = 0; i < navPoints.size(); i++) {
+				if (navPoints.get(i).getPlayOrder() > playOrder) {
+					navPoint = navPoints.get(i);
+					this.playOrder = navPoints.get(i).getPlayOrder();
+					break;
 				}
+			}
 
-				if (!isFoundInPlayOrder) {
-					throw new IOException(index + " not found in playOrder");
-				}
-
-				if (navPoint.getContentSrc() != null) {
-					return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
-				} else { // Find from id
-					List<XmlItem> xmlItemList = getPackage().getManifest().getXmlItemList();
-					for (int j = 0; j < xmlItemList.size(); j++) {
-						Map<String, String> attributeMap = xmlItemList.get(j).getAttributes();
-
-						String id = attributeMap.get("id");
-
-						if (id.contains(navPoint.getId())) {
-							return new String[] { attributeMap.get("href"), navPoint.getNavLabel() };
-						}
-					}
-				}
-
-			} else { // Try spine instead
-				List<XmlItem> spineItemList = getPackage().getSpine().getXmlItemList();
-
-				XmlItem spineItem = spineItemList.get(index);
-
-				String idRef = spineItem.getAttributes().get("idref");
-
-				List<XmlItem> manifestItemList = getPackage().getManifest().getXmlItemList();
-
-				for (int j = 0; j < manifestItemList.size(); j++) {
-					Map<String, String> attributeMap = manifestItemList.get(j).getAttributes();
+			if (navPoint.getContentSrc() != null) {
+				return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
+			} else { // Find from id
+				List<XmlItem> xmlItemList = getPackage().getManifest().getXmlItemList();
+				for (int j = 0; j < xmlItemList.size(); j++) {
+					Map<String, String> attributeMap = xmlItemList.get(j).getAttributes();
 
 					String id = attributeMap.get("id");
 
-					if (id.contains(idRef)) {
-						return new String[] { attributeMap.get("href"), null };
+					if (id.contains(navPoint.getId())) {
+						return new String[] { attributeMap.get("href"), navPoint.getNavLabel() };
 					}
 				}
 			}
-		} else {
-			throw new IOException("index should be greater than -1");
+
+		} else { // Try spine instead
+			List<XmlItem> spineItemList = getPackage().getSpine().getXmlItemList();
+
+			XmlItem spineItem = spineItemList.get(playOrder);
+
+			String idRef = spineItem.getAttributes().get("idref");
+
+			List<XmlItem> manifestItemList = getPackage().getManifest().getXmlItemList();
+
+			for (int j = 0; j < manifestItemList.size(); j++) {
+				Map<String, String> attributeMap = manifestItemList.get(j).getAttributes();
+
+				String id = attributeMap.get("id");
+
+				if (id.contains(idRef)) {
+					return new String[] { attributeMap.get("href"), null };
+				}
+			}
 		}
 
 		return null;

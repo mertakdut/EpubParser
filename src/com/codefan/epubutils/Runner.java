@@ -21,14 +21,12 @@ public class Runner {
 
 	public static void main(String[] args) {
 		try {
-			Reader reader = new Reader("C:\\eBooks/shute-lonely-road.epub");
+			Reader reader = new Reader("C:\\eBooks/The Man Who Would Be King.epub");
 			Content epubContent = reader.getContent();
 
-			int index = 1;
+			BookSection bookSection = epubContent.getNextBookSection();
 
-			BookSection bookSection = epubContent.getBookSection(index);
-
-			System.out.println("\n\nsection " + index + "\nlabel: " + bookSection.getLabel() + "\nfileContent: "
+			System.out.println("First Book Section: \nlabel: " + bookSection.getLabel() + "\nfileContent: "
 					+ bookSection.getSectionContent());
 
 		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException
@@ -36,7 +34,6 @@ public class Runner {
 			e.printStackTrace();
 			System.out.println(e.toString());
 		}
-
 	}
 
 }
