@@ -21,12 +21,12 @@ public class Runner {
 
 	public static void main(String[] args) {
 		try {
-			Reader reader = new Reader("C:\\eBooks/The Man Who Would Be King.epub");
+			Reader reader = new Reader("C:\\eBooks/shute-lonely-road.epub");
 			Content epubContent = reader.getContent();
 
 			BookSection bookSection = epubContent.getNextBookSection();
 
-			System.out.println("First Book Section: \nlabel: " + bookSection.getLabel() + "\nfileContent: "
+			System.out.println("\nFirst Book Section: \nlabel: " + bookSection.getLabel() + "\nfileContent: "
 					+ bookSection.getSectionContent());
 
 		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException

@@ -66,15 +66,14 @@ public class Content {
 				String fileName = entryName.substring(lastSlashIndex + 1);
 
 				if (href.contains(fileName)) { // href actually exists.
-					ZipEntry zipHtmlEntry = epubFile.getEntry(entryName);
-					InputStream zipHtmlEntryInputStream = epubFile.getInputStream(zipHtmlEntry);
+					ZipEntry zipEntry = epubFile.getEntry(entryName);
+					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
 
-					BufferedReader bufferedHtmlReader = new BufferedReader(
-							new InputStreamReader(zipHtmlEntryInputStream));
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
 					StringBuilder fileContent = new StringBuilder();
 
 					String line;
-					while ((line = bufferedHtmlReader.readLine()) != null) {
+					while ((line = bufferedReader.readLine()) != null) {
 						fileContent.append(line);
 					}
 
@@ -92,7 +91,7 @@ public class Content {
 					bookSection.setLabel(label);
 
 					// epubFile.close();
-					bufferedHtmlReader.close();
+					bufferedReader.close();
 
 					return bookSection;
 				}
@@ -105,10 +104,11 @@ public class Content {
 	private String replaceLinkedContentWithCss(String htmlContent) throws IOException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
-
+		
 		int indexOfLinkStart = htmlContent.indexOf("<link");
-
-		if (indexOfLinkStart != -1) {
+		
+		while(indexOfLinkStart != -1){
+			
 			int indexOfLinkEnd = htmlContent.indexOf("/>", indexOfLinkStart);
 
 			String linkStr = htmlContent.substring(indexOfLinkStart, indexOfLinkEnd + 2);
@@ -117,35 +117,38 @@ public class Content {
 			int indexOfHrefEnd = linkStr.indexOf("\"", indexOfHrefStart + 6);
 
 			String cssHref = linkStr.substring(indexOfHrefStart + 6, indexOfHrefEnd);
+			
+			if(cssHref.endsWith(".css")){ //Is actually linked to a css file.
+				for (int i = 0; i < getEntryNames().size(); i++) {
+					String entryName = getEntryNames().get(i);
 
-			for (int i = 0; i < getEntryNames().size(); i++) {
-				String entryName = getEntryNames().get(i);
+					int lastSlashIndex = entryName.lastIndexOf("/");
+					String fileName = entryName.substring(lastSlashIndex + 1);
 
-				int lastSlashIndex = entryName.lastIndexOf("/");
-				String fileName = entryName.substring(lastSlashIndex + 1);
+					if (cssHref.contains(fileName)) { // css exists.
+						ZipEntry zipEntry = epubFile.getEntry(entryName);
+						InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
 
-				if (cssHref.contains(fileName)) { // css exists.
-					ZipEntry zipEntry = epubFile.getEntry(entryName);
-					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
+						BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
+						StringBuilder fileContent = new StringBuilder();
 
-					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
-					StringBuilder fileContent = new StringBuilder();
-					
-					fileContent.append("<style type=\"text/css\">");
+						fileContent.append("<style type=\"text/css\">");
 
-					String cssLine;
-					while ((cssLine = bufferedReader.readLine()) != null) {
-						fileContent.append(cssLine);
+						String line;
+						while ((line = bufferedReader.readLine()) != null) {
+							fileContent.append(line);
+						}
+
+						bufferedReader.close();
+
+						fileContent.append("</style>");
+
+						htmlContent = htmlContent.replace(linkStr, fileContent.toString());
+						
+						indexOfLinkStart = htmlContent.indexOf("<link");
 					}
-					
-					bufferedReader.close();
-					
-					fileContent.append("</style>");
-
-					return htmlContent.replace(linkStr, fileContent.toString());
 				}
 			}
-
 		}
 
 		return htmlContent;

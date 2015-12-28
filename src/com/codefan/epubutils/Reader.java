@@ -32,7 +32,7 @@ public class Reader {
 	public Content getContent() throws IOException, ParserConfigurationException, SAXException,
 			IllegalArgumentException, IllegalAccessException, DOMException {
 
-		Enumeration files = content.getEpubFile().entries();
+		Enumeration<? extends ZipEntry> files = content.getEpubFile().entries();
 
 		while (files.hasMoreElements()) {
 			ZipEntry entry = (ZipEntry) files.nextElement();
@@ -52,6 +52,11 @@ public class Reader {
 		boolean isTocXmlFound = false;
 
 		for (int i = 0; i < content.getEntryNames().size(); i++) {
+
+			if (isContainerXmlFound && isTocXmlFound) {
+				break;
+			}
+
 			String currentEntryName = content.getEntryNames().get(i);
 
 			if (currentEntryName.contains("container.xml")) {
@@ -61,23 +66,13 @@ public class Reader {
 				InputStream inputStream = content.getEpubFile().getInputStream(container);
 
 				parseContainerXml(inputStream, docBuilder);
-
-				break;
-			}
-		}
-
-		for (int i = 0; i < content.getEntryNames().size(); i++) {
-			String currentEntryName = content.getEntryNames().get(i);
-
-			if (currentEntryName.contains(".ncx")) {
+			} else if (currentEntryName.contains(".ncx")) {
 				isTocXmlFound = true;
 
 				ZipEntry container = content.getEpubFile().getEntry(currentEntryName);
 				InputStream inputStream = content.getEpubFile().getInputStream(container);
 
 				parseTocFile(inputStream, docBuilder);
-
-				break;
 			}
 		}
 
