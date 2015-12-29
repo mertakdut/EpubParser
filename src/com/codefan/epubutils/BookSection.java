@@ -4,12 +4,13 @@ public class BookSection {
 	private String label;
 	private String extension;
 	private String sectionContent;
+	private String mediaType;
 
 	public String getLabel() {
 		return label;
 	}
 
-	protected void setLabel(String label) {
+	void setLabel(String label) {
 		this.label = label;
 	}
 
@@ -17,7 +18,7 @@ public class BookSection {
 		return sectionContent;
 	}
 
-	protected void setSectionContent(String sectionContent) {
+	void setSectionContent(String sectionContent) {
 		this.sectionContent = sectionContent;
 	}
 
@@ -25,8 +26,16 @@ public class BookSection {
 		return extension;
 	}
 
-	protected void setExtension(String extension) {
+	void setExtension(String extension) {
 		this.extension = extension;
+	}
+
+	public String getMediaType() {
+		return mediaType;
+	}
+
+	void setMediaType(String mediaType) {
+		this.mediaType = mediaType;
 	}
 
 }

@@ -47,9 +47,10 @@ public class Content {
 	}
 
 	public BookSection getNextBookSection() throws IOException {
-		String[] entryNameAndLabel = getEntryNameAndLabel(++this.playOrder);
+		String[] entryNameAndLabel = getEntryNameAndLabel(this.playOrder + 1);
 
 		if (entryNameAndLabel != null) {
+			this.playOrder += 1;
 			return getBookSectionFromEntryNameAndLabel(entryNameAndLabel);
 		}
 
@@ -57,9 +58,10 @@ public class Content {
 	}
 
 	public BookSection getPrevBookSection() throws IOException {
-		String[] entryNameAndLabel = getEntryNameAndLabel(--this.playOrder);
+		String[] entryNameAndLabel = getEntryNameAndLabel(this.playOrder - 1);
 
 		if (entryNameAndLabel != null) {
+			this.playOrder -= 1;
 			return getBookSectionFromEntryNameAndLabel(entryNameAndLabel);
 		}
 
@@ -77,48 +79,51 @@ public class Content {
 	}
 
 	private String[] getEntryNameAndLabel(int index) throws IOException {
+		if (index >= 0) {
+			if (getToc() != null) {
+				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
 
-		if (getToc() != null) {
-			List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
+				NavPoint navPoint = navPoints.get(index);
 
-			NavPoint navPoint = navPoints.get(index);
+				if (navPoint.getContentSrc() != null) {
+					return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
+				} else { // Find from id
+					List<XmlItem> xmlItemList = getPackage().getManifest().getXmlItemList();
+					for (int j = 0; j < xmlItemList.size(); j++) {
+						Map<String, String> attributeMap = xmlItemList.get(j).getAttributes();
 
-			if (navPoint.getContentSrc() != null) {
-				return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
-			} else { // Find from id
-				List<XmlItem> xmlItemList = getPackage().getManifest().getXmlItemList();
-				for (int j = 0; j < xmlItemList.size(); j++) {
-					Map<String, String> attributeMap = xmlItemList.get(j).getAttributes();
+						String id = attributeMap.get("id");
+
+						if (id.contains(navPoint.getId())) {
+							return new String[] { attributeMap.get("href"), navPoint.getNavLabel() };
+						}
+					}
+				}
+			} else { // Try spine instead
+				List<XmlItem> spineItemList = getPackage().getSpine().getXmlItemList();
+
+				XmlItem spineItem = spineItemList.get(playOrder);
+
+				String idRef = spineItem.getAttributes().get("idref");
+
+				List<XmlItem> manifestItemList = getPackage().getManifest().getXmlItemList();
+
+				for (int j = 0; j < manifestItemList.size(); j++) {
+					Map<String, String> attributeMap = manifestItemList.get(j).getAttributes();
 
 					String id = attributeMap.get("id");
 
-					if (id.contains(navPoint.getId())) {
-						return new String[] { attributeMap.get("href"), navPoint.getNavLabel() };
+					if (id.contains(idRef)) {
+						return new String[] { attributeMap.get("href"), null };
 					}
 				}
 			}
 
-		} else { // Try spine instead
-			List<XmlItem> spineItemList = getPackage().getSpine().getXmlItemList();
+			return null;
 
-			XmlItem spineItem = spineItemList.get(playOrder);
-
-			String idRef = spineItem.getAttributes().get("idref");
-
-			List<XmlItem> manifestItemList = getPackage().getManifest().getXmlItemList();
-
-			for (int j = 0; j < manifestItemList.size(); j++) {
-				Map<String, String> attributeMap = manifestItemList.get(j).getAttributes();
-
-				String id = attributeMap.get("id");
-
-				if (id.contains(idRef)) {
-					return new String[] { attributeMap.get("href"), null };
-				}
-			}
+		} else {
+			throw new IOException("Index can't be less than 0");
 		}
-
-		return null;
 	}
 
 	private BookSection getBookSectionFromEntryNameAndLabel(String[] entryNameAndLabel) throws IOException {
@@ -135,9 +140,9 @@ public class Content {
 
 			if (href.contains(fileName)) { // href actually exists.
 				ZipEntry zipEntry = epubFile.getEntry(entryName);
-				InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
+				InputStream inputStream = epubFile.getInputStream(zipEntry);
 
-				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 				StringBuilder fileContent = new StringBuilder();
 
 				String line;
@@ -154,9 +159,12 @@ public class Content {
 					extension = fileName.substring(0, dotIndex);
 				}
 
+				String mediaType = getMediaType(fileName);
+
 				bookSection.setSectionContent(fileContentStr);
 				bookSection.setExtension(extension);
 				bookSection.setLabel(label);
+				bookSection.setMediaType(mediaType);
 
 				// epubFile.close();
 				bufferedReader.close();
@@ -166,6 +174,21 @@ public class Content {
 		}
 
 		throw new IOException("Referenced file not found!");
+	}
+
+	private String getMediaType(String fileName) {
+
+		List<XmlItem> manifestItems = getPackage().getManifest().getXmlItemList();
+
+		for (int i = 0; i < manifestItems.size(); i++) {
+			if (manifestItems.get(i).getAttributes().containsValue(fileName)) {
+				if (manifestItems.get(i).getAttributes().containsKey("media-type")) {
+					return manifestItems.get(i).getAttributes().get("media-type");
+				}
+			}
+		}
+
+		return null;
 	}
 
 	private String[] getCssHrefAndLinkPart(String htmlContent) {
@@ -182,7 +205,7 @@ public class Content {
 			String cssHref = linkStr.substring(indexOfHrefStart + 6, indexOfHrefEnd);
 
 			if (cssHref.endsWith(".css")) {
-				return new String[]{ cssHref, linkStr };
+				return new String[] { cssHref, linkStr };
 			}
 		}
 
@@ -196,10 +219,10 @@ public class Content {
 		String[] cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
 
 		while (cssHrefAndLinkPart != null) {
-			
+
 			String cssHref = cssHrefAndLinkPart[0];
 			String linkPart = cssHrefAndLinkPart[1];
-			
+
 			for (int i = 0; i < getEntryNames().size(); i++) {
 				String entryName = getEntryNames().get(i);
 

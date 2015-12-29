@@ -175,30 +175,8 @@ public class Package extends BaseFindings {
 			this.xmlItemList = new ArrayList<>();
 		}
 
-		public void fillXmlItemList(NodeList nodeList, Manifest manifest) {
-			for (int i = 0; i < nodeList.getLength(); i++) {
-				XmlItem xmlItem = nodeToXmlItem(nodeList.item(i));
-
-				if (nodeList.item(i).getNodeValue() == null
-						|| nodeList.item(i).getNodeValue().replaceAll("\\s+", "").equals("")) {
-
-					if (xmlItem.getAttributes() != null && xmlItem.getAttributes().containsKey("idref")) {
-						String idRef = xmlItem.getAttributes().get("idref");
-
-						// Find the referenced item inside manifest tag.
-						List<XmlItem> manifestXmlItems = manifest.getXmlItemList();
-
-						for (int j = 0; j < manifestXmlItems.size(); j++) {
-
-							if (manifestXmlItems.get(j) != null && manifestXmlItems.get(j).getAttributes() != null
-									&& manifestXmlItems.get(j).getAttributes().containsValue(idRef)) {
-								this.xmlItemList.add(manifestXmlItems.get(j));
-							}
-
-						}
-					}
-				}
-			}
+		public void fillXmlItemList(NodeList nodeList) {
+			this.xmlItemList = nodeListToXmlItemList(nodeList);
 		}
 
 		public List<XmlItem> getXmlItemList() {
@@ -228,9 +206,9 @@ public class Package extends BaseFindings {
 			this.xmlItemList = nodeListToXmlItemList(nodeList);
 		}
 
-		public List<XmlItem> getXmlItemList() {
-			return this.xmlItemList;
-		}
+		// public List<XmlItem> getXmlItemList() {
+		// return this.xmlItemList;
+		// }
 
 		public void print() {
 			System.out.println("\n\nPrinting Guide...\n");
@@ -251,7 +229,7 @@ public class Package extends BaseFindings {
 		} else if (node.getNodeName().equals("manifest")) {
 			getManifest().fillXmlItemList(node.getChildNodes());
 		} else if (node.getNodeName().equals("spine")) {
-			getSpine().fillXmlItemList(node.getChildNodes(), getManifest());
+			getSpine().fillXmlItemList(node.getChildNodes());
 		} else if (node.getNodeName().equals("guide")) {
 			getGuide().fillXmlItemList(node.getChildNodes());
 		}

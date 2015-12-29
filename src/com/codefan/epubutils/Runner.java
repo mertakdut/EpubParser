@@ -25,22 +25,22 @@ public class Runner {
 			Content epubContent = reader.getContent();
 
 			BookSection bookSection = epubContent.getNextBookSection();
-			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel());
+			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 			bookSection = epubContent.getNextBookSection();
-			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel());
+			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 			bookSection = epubContent.getNextBookSection();
-			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel());
+			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 			bookSection = epubContent.getPrevBookSection();
-			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel());
+			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 			bookSection = epubContent.getBookSection(0);
-			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel());
+			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 			bookSection = epubContent.getBookSection(1);
-			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel());
+			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException
 				| IllegalAccessException | DOMException e) {
