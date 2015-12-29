@@ -2,6 +2,8 @@ package com.codefan.epubutils;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.w3c.dom.DOMException;
@@ -150,6 +152,12 @@ public class Toc extends BaseFindings {
 					this.navPoints.add(navPoint);
 				}
 			}
+
+			Collections.sort(this.navPoints, new Comparator<NavPoint>() {
+				public int compare(NavPoint o1, NavPoint o2) {
+					return o1.getPlayOrder() <= o2.getPlayOrder() ? -1 : 1; //if equals, first occurence should be sorted as first
+				}
+			});
 		}
 
 		public void print() {

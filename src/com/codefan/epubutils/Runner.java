@@ -25,9 +25,22 @@ public class Runner {
 			Content epubContent = reader.getContent();
 
 			BookSection bookSection = epubContent.getNextBookSection();
+			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel());
 
-			System.out.println("\nFirst Book Section: \nlabel: " + bookSection.getLabel() + "\nfileContent: "
-					+ bookSection.getSectionContent());
+			bookSection = epubContent.getNextBookSection();
+			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel());
+
+			bookSection = epubContent.getNextBookSection();
+			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel());
+
+			bookSection = epubContent.getPrevBookSection();
+			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel());
+
+			bookSection = epubContent.getBookSection(0);
+			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel());
+
+			bookSection = epubContent.getBookSection(1);
+			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel());
 
 		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException
 				| IllegalAccessException | DOMException e) {
