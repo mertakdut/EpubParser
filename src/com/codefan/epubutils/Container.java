@@ -1,7 +1,5 @@
 package com.codefan.epubutils;
 
-import java.io.IOException;
-
 import org.w3c.dom.Node;
 
 public class Container extends BaseFindings {
@@ -15,14 +13,12 @@ public class Container extends BaseFindings {
 		this.rootFile = rootFile;
 	}
 
-	public String getFullPathValue() throws IOException {
-		if (getRootFile() != null && getRootFile().getAttributes() != null
-				&& getRootFile().getAttributes().containsKey("full-path")
-				&& getRootFile().getAttributes().get("full-path") != null
-				&& !getRootFile().getAttributes().get("full-path").equals("")) {
+	public String getFullPathValue() throws ReadingException {
+		if (getRootFile() != null && getRootFile().getAttributes() != null && getRootFile().getAttributes().containsKey("full-path")
+				&& getRootFile().getAttributes().get("full-path") != null && !getRootFile().getAttributes().get("full-path").equals("")) {
 			return getRootFile().getAttributes().get("full-path");
 		} else {
-			throw new IOException(".opf file not found.");
+			throw new ReadingException(Constants.FILE_NAME_PACKAGE_OPF + " file not found.");
 		}
 	}
 

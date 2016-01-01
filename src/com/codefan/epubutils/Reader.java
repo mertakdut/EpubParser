@@ -11,7 +11,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -21,16 +20,25 @@ public class Reader {
 
 	private Content content = new Content();
 
-	public Reader(String filePath) throws IOException {
-		content.setEpubFile(new ZipFile(filePath));
+	public Reader(String filePath) throws ReadingException {
+		try {
+			content.setEpubFile(new ZipFile(filePath));
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+		}
 	}
 
-	public Reader(File file) throws IOException {
-		content.setEpubFile(new ZipFile(file.getPath()));
+	public Reader(File file) throws ReadingException {
+		try {
+			content.setEpubFile(new ZipFile(file.getPath()));
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+		}
 	}
 
-	public Content getContent() throws IOException, ParserConfigurationException, SAXException,
-			IllegalArgumentException, IllegalAccessException, DOMException {
+	public Content getContent() throws ReadingException {
 
 		Enumeration<? extends ZipEntry> files = content.getEpubFile().entries();
 
@@ -46,7 +54,14 @@ public class Reader {
 		}
 
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder docBuilder = factory.newDocumentBuilder();
+		DocumentBuilder docBuilder;
+
+		try {
+			docBuilder = factory.newDocumentBuilder();
+		} catch (ParserConfigurationException e) {
+			e.printStackTrace();
+			throw new ReadingException("DocumentBuilder cannot be created: " + e.getMessage());
+		}
 
 		boolean isContainerXmlFound = false;
 		boolean isTocXmlFound = false;
@@ -63,25 +78,39 @@ public class Reader {
 				isContainerXmlFound = true;
 
 				ZipEntry container = content.getEpubFile().getEntry(currentEntryName);
-				InputStream inputStream = content.getEpubFile().getInputStream(container);
+
+				InputStream inputStream;
+				try {
+					inputStream = content.getEpubFile().getInputStream(container);
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("IOException while reading " + Constants.FILE_NAME_CONTAINER_XML + " file: " + e.getMessage());
+				}
 
 				parseContainerXml(inputStream, docBuilder);
 			} else if (currentEntryName.contains(".ncx")) {
 				isTocXmlFound = true;
 
-				ZipEntry container = content.getEpubFile().getEntry(currentEntryName);
-				InputStream inputStream = content.getEpubFile().getInputStream(container);
+				ZipEntry toc = content.getEpubFile().getEntry(currentEntryName);
+
+				InputStream inputStream;
+				try {
+					inputStream = content.getEpubFile().getInputStream(toc);
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("IOException while reading " + Constants.FILE_NAME_TOC_NCX + " file: " + e.getMessage());
+				}
 
 				parseTocFile(inputStream, docBuilder);
 			}
 		}
 
 		if (!isContainerXmlFound) {
-			throw new IOException("container.xml not found.");
+			throw new ReadingException("container.xml not found.");
 		}
 
 		if (!isTocXmlFound) {
-			throw new IOException("toc.ncx not found.");
+			throw new ReadingException("toc.ncx not found.");
 		}
 
 		// Debug
@@ -90,46 +119,59 @@ public class Reader {
 		return content;
 	}
 
-	private void parseContainerXml(InputStream inputStream, DocumentBuilder docBuilder)
-			throws IOException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
-		Document document = docBuilder.parse(inputStream);
-
-		inputStream.close();
+	private void parseContainerXml(InputStream inputStream, DocumentBuilder docBuilder) throws ReadingException {
+		Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
 
 		if (document.hasChildNodes()) {
-			traverseDocumentNodes(document.getChildNodes(), content.getContainer());
+			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getContainer());
 		}
 
 		String opfFilePath = content.getContainer().getFullPathValue();
-		ZipEntry entry = content.getEpubFile().getEntry(opfFilePath);
+		ZipEntry opfFileEntry = content.getEpubFile().getEntry(opfFilePath);
 
-		parseOpfFile(content.getEpubFile().getInputStream(entry), docBuilder);
+		InputStream opfFileInputStream;
+		try {
+			opfFileInputStream = content.getEpubFile().getInputStream(opfFileEntry);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ReadingException("IO error while reading " + Constants.FILE_NAME_PACKAGE_OPF + " inputstream: " + e.getMessage());
+		}
+
+		parseOpfFile(opfFileInputStream, docBuilder);
 	}
 
-	private void parseOpfFile(InputStream inputStream, DocumentBuilder docBuilder)
-			throws IOException, IllegalArgumentException, IllegalAccessException, DOMException, SAXException {
-		Document document = docBuilder.parse(inputStream);
-
-		inputStream.close();
+	private void parseOpfFile(InputStream inputStream, DocumentBuilder docBuilder) throws ReadingException {
+		Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_PACKAGE_OPF);
 
 		if (document.hasChildNodes()) {
-			traverseDocumentNodes(document.getChildNodes(), content.getPackage());
+			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getPackage());
 		}
 	}
 
-	private void parseTocFile(InputStream inputStream, DocumentBuilder docBuilder)
-			throws IOException, SAXException, IllegalArgumentException, IllegalAccessException, DOMException {
-		Document document = docBuilder.parse(inputStream);
-
-		inputStream.close();
+	private void parseTocFile(InputStream inputStream, DocumentBuilder docBuilder) throws ReadingException {
+		Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_TOC_NCX);
 
 		if (document.hasChildNodes()) {
-			traverseDocumentNodes(document.getChildNodes(), content.getToc());
+			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getToc());
 		}
 	}
 
-	private void traverseDocumentNodes(NodeList nodeList, BaseFindings findings)
-			throws IllegalArgumentException, IllegalAccessException, DOMException {
+	private Document getDocument(DocumentBuilder docBuilder, InputStream inputStream, String fileName) throws ReadingException {
+		Document document;
+		try {
+			document = docBuilder.parse(inputStream);
+			inputStream.close();
+			return document;
+		} catch (SAXException e) {
+			e.printStackTrace();
+			throw new ReadingException("Parse error while parsing " + fileName + " file: " + e.getMessage());
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ReadingException("IO error while parsing/closing " + fileName + " file: " + e.getMessage());
+		}
+	}
+
+	private void traverseDocumentNodesAndFillContent(NodeList nodeList, BaseFindings findings) throws ReadingException {
 
 		for (int i = 0; i < nodeList.getLength(); i++) {
 
@@ -141,7 +183,7 @@ public class Reader {
 
 				if (tempNode.hasChildNodes()) {
 					// loop again if has child nodes
-					traverseDocumentNodes(tempNode.getChildNodes(), findings);
+					traverseDocumentNodesAndFillContent(tempNode.getChildNodes(), findings);
 				}
 			}
 		}

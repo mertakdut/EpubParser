@@ -28,7 +28,7 @@ public class Toc extends BaseFindings {
 		private String totalPageCount;
 		private String maxPageNumber;
 
-		public void fillAttributes(NodeList nodeList) throws IllegalArgumentException, IllegalAccessException {
+		public void fillAttributes(NodeList nodeList) throws ReadingException {
 			Field[] fields = Toc.Head.class.getDeclaredFields();
 
 			for (int i = 0; i < nodeList.getLength(); i++) {
@@ -49,7 +49,12 @@ public class Toc extends BaseFindings {
 									for (int l = 0; l < attributes.getLength(); l++) {
 										if (attributes.item(l).getNodeName().equals("content")) {
 											fields[j].setAccessible(true);
-											fields[j].set(this, attributes.item(l).getNodeValue());
+											try {
+												fields[j].set(this, attributes.item(l).getNodeValue());
+											} catch (IllegalArgumentException | IllegalAccessException | DOMException e) {
+												e.printStackTrace();
+												throw new ReadingException("Exception while parsing " + Constants.FILE_NAME_TOC_NCX + " content: " + e.getMessage());
+											}
 											break;
 										}
 									}
@@ -101,8 +106,7 @@ public class Toc extends BaseFindings {
 
 			for (int i = 0; i < possiblyNavPoints.getLength(); i++) {
 
-				if (possiblyNavPoints.item(i).getNodeName().equals("navPoint")
-						|| possiblyNavPoints.item(i).getNodeName().equals("pageTarget")) {
+				if (possiblyNavPoints.item(i).getNodeName().equals("navPoint") || possiblyNavPoints.item(i).getNodeName().equals("pageTarget")) {
 					NavPoint navPoint = new NavPoint();
 
 					NamedNodeMap nodeMap = possiblyNavPoints.item(i).getAttributes();
@@ -155,7 +159,7 @@ public class Toc extends BaseFindings {
 
 			Collections.sort(this.navPoints, new Comparator<NavPoint>() {
 				public int compare(NavPoint o1, NavPoint o2) {
-					return o1.getPlayOrder() <= o2.getPlayOrder() ? -1 : 1; //if equals, first occurence should be sorted as first
+					return o1.getPlayOrder() <= o2.getPlayOrder() ? -1 : 1; // if equals, first occurence should be sorted as first
 				}
 			});
 		}
@@ -166,15 +170,14 @@ public class Toc extends BaseFindings {
 			for (int i = 0; i < this.navPoints.size(); i++) {
 				NavPoint navPoint = this.navPoints.get(i);
 
-				System.out.println("navPoint (" + i + ") id: " + navPoint.getId() + ", playOrder: "
-						+ navPoint.getPlayOrder() + ", navLabel(Text): " + navPoint.getNavLabel() + ", content src: "
-						+ navPoint.getContentSrc());
+				System.out.println("navPoint (" + i + ") id: " + navPoint.getId() + ", playOrder: " + navPoint.getPlayOrder() + ", navLabel(Text): " + navPoint.getNavLabel()
+						+ ", content src: " + navPoint.getContentSrc());
 			}
 		}
 	}
 
 	@Override
-	public void fillContent(Node node) throws IllegalArgumentException, IllegalAccessException, DOMException {
+	public void fillContent(Node node) throws ReadingException {
 		if (node.getNodeName().equals("head")) {
 			getHead().fillAttributes(node.getChildNodes());
 		} else if (node.getNodeName().equals("navMap") || node.getNodeName().equals("pageList")) {

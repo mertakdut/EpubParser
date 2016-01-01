@@ -1,12 +1,5 @@
 package com.codefan.epubutils;
 
-import java.io.IOException;
-
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.w3c.dom.DOMException;
-import org.xml.sax.SAXException;
-
 /*
  * https://wiki.eclipse.org/EGit/User_Guide
  * Starting from existing Git Repositories 
@@ -21,29 +14,30 @@ public class Runner {
 
 	public static void main(String[] args) {
 		try {
-			Reader reader = new Reader("C:\\eBooks/shute-lonely-road.epub");
+			Reader reader = new Reader("C:\\eBooks/Alice in Wonderland.epub");
 			Content epubContent = reader.getContent();
 
-			BookSection bookSection = epubContent.getNextBookSection();
+			BookSection bookSection = epubContent.getBookSection(0);
 			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-			bookSection = epubContent.getNextBookSection();
-			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+			System.out.println("content: " + bookSection.getSectionContent());
 
-			bookSection = epubContent.getNextBookSection();
-			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+//			bookSection = epubContent.getNextBookSection();
+//			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+			//
+			// bookSection = epubContent.getNextBookSection();
+			// System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+			//
+			// bookSection = epubContent.getPrevBookSection();
+			// System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+			//
+			// bookSection = epubContent.getBookSection(0);
+			// System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+			//
+			// bookSection = epubContent.getBookSection(1);
+			// System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-			bookSection = epubContent.getPrevBookSection();
-			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			bookSection = epubContent.getBookSection(0);
-			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			bookSection = epubContent.getBookSection(1);
-			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-		} catch (IOException | ParserConfigurationException | SAXException | IllegalArgumentException
-				| IllegalAccessException | DOMException e) {
+		} catch (ReadingException e) {
 			e.printStackTrace();
 			System.out.println(e.toString());
 		}

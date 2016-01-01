@@ -5,15 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.w3c.dom.DOMException;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-//Helper methods used in Findings
+//Helper classes and methods used in Findings
 public abstract class BaseFindings {
 
-	public abstract void fillContent(Node node) throws IllegalArgumentException, IllegalAccessException, DOMException;
+	public abstract void fillContent(Node node) throws ReadingException;
 
 	protected class XmlItem {
 		private String value;
@@ -44,6 +43,8 @@ public abstract class BaseFindings {
 
 		private String type;
 		private String value;
+		
+		private boolean markedToDelete;
 
 		public String getId() {
 			return id;
@@ -91,6 +92,14 @@ public abstract class BaseFindings {
 
 		public void setValue(String value) {
 			this.value = value;
+		}
+
+		public boolean isMarkedToDelete() {
+			return markedToDelete;
+		}
+
+		public void setMarkedToDelete(boolean markedToDelete) {
+			this.markedToDelete = markedToDelete;
 		}
 	}
 

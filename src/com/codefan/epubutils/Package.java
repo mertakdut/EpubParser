@@ -4,7 +4,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.w3c.dom.DOMException;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -103,15 +102,19 @@ public class Package extends BaseFindings {
 			return coverage;
 		}
 
-		public void fillAttributes(NodeList nodeList)
-				throws IllegalArgumentException, IllegalAccessException, DOMException {
+		public void fillAttributes(NodeList nodeList) throws ReadingException {
 			Field[] fields = Package.Metadata.class.getDeclaredFields();
 
 			for (int i = 0; i < nodeList.getLength(); i++) {
 				for (int j = 0; j < fields.length; j++) {
 					if (nodeList.item(i).getNodeName().contains(fields[j].getName())) {
 						fields[j].setAccessible(true);
-						fields[j].set(this, nodeToXmlItem(nodeList.item(i)));
+						try {
+							fields[j].set(this, nodeToXmlItem(nodeList.item(i)));
+						} catch (IllegalArgumentException | IllegalAccessException e) {
+							e.printStackTrace();
+							throw new ReadingException("Exception while parsing " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
+						}
 					}
 				}
 			}
@@ -160,14 +163,12 @@ public class Package extends BaseFindings {
 			for (int i = 0; i < xmlItemList.size(); i++) {
 				XmlItem xmlItem = xmlItemList.get(i);
 
-				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: "
-						+ xmlItem.getAttributes());
+				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: " + xmlItem.getAttributes());
 			}
 		}
 	}
 
-	// <b>Ordered</b> Term of Contents, mostly filled with ids of
-	// application/xhtml+xml files in manifest node.
+	// <b>Ordered</b> Term of Contents, mostly filled with ids of application/xhtml+xml files in manifest node.
 	class Spine {
 		private List<XmlItem> xmlItemList;
 
@@ -189,8 +190,7 @@ public class Package extends BaseFindings {
 			for (int i = 0; i < xmlItemList.size(); i++) {
 				XmlItem xmlItem = xmlItemList.get(i);
 
-				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: "
-						+ xmlItem.getAttributes());
+				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: " + xmlItem.getAttributes());
 			}
 		}
 	}
@@ -216,14 +216,13 @@ public class Package extends BaseFindings {
 			for (int i = 0; i < xmlItemList.size(); i++) {
 				XmlItem xmlItem = xmlItemList.get(i);
 
-				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: "
-						+ xmlItem.getAttributes());
+				System.out.println("xmlItem(" + i + ")" + ": value:" + xmlItem.getValue() + " attributes: " + xmlItem.getAttributes());
 			}
 		}
 	}
 
 	@Override
-	public void fillContent(Node node) throws IllegalArgumentException, IllegalAccessException, DOMException {
+	public void fillContent(Node node) throws ReadingException {
 		if (node.getNodeName().equals("metadata")) {
 			getMetadata().fillAttributes(node.getChildNodes());
 		} else if (node.getNodeName().equals("manifest")) {
@@ -251,7 +250,7 @@ public class Package extends BaseFindings {
 		return guide;
 	}
 
-	public void print() throws IllegalArgumentException, IllegalAccessException {
+	public void print() {
 		getMetadata().print();
 		getManifest().print();
 		getSpine().print();
