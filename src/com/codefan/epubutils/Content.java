@@ -75,7 +75,7 @@ public class Content {
 				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
 
 				if (index >= navPoints.size()) {
-					throw new ReadingException("Index is greater (or equal) than TOC (Term of Contents) size");
+					throw new ReadingException("Index is greater than (or equal) TOC (Term of Contents) size");
 				}
 
 				return navPoints.get(index);
@@ -190,7 +190,6 @@ public class Content {
 
 						NavPoint entryNavPoint = new NavPoint();
 
-						// entryNavPoint = navPoint;
 						entryNavPoint.setEntryName(entryName);
 						entryNavPoint.setBodyTrimStartPosition(maxContentPerSection);
 
@@ -238,7 +237,7 @@ public class Content {
 					}
 
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, anchorIndex);
-					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex);
+					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
 				} else {
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
 				}
@@ -246,7 +245,7 @@ public class Content {
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
 			}
 
-			if (htmlBodyToReplace.length() > maxContentPerSection) {
+			if (htmlBodyToReplace.length() > maxContentPerSection) { // Trimming again if needed.
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimStartPosition + maxContentPerSection);
 
 				NavPoint nextEntryNavPoint = new NavPoint();
@@ -254,11 +253,9 @@ public class Content {
 				nextEntryNavPoint.setEntryName(entryName);
 				nextEntryNavPoint.setBodyTrimStartPosition(bodyTrimStartPosition + maxContentPerSection);
 
-				getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(bodyTrimStartPosition + maxContentPerSection);
+				getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(bodyTrimStartPosition + maxContentPerSection); // Sets endPosition to avoid calculating again.
 
 				getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
-			} else { // There is no need to trim anymore.
-				this.lastBookSectionInfo = null;
 			}
 		} else {
 			htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
@@ -283,7 +280,7 @@ public class Content {
 		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) {
 			NavPoint nextNavPoint = getNavPoint(index + 1);
 
-			if (nextNavPoint.getEntryName() == null) { // Not a trimmed section.
+			if (nextNavPoint.getEntryName() == null) { // Real navPoint. Only real navPoints are anchored.
 				String[] nextEntryLabel = findEntryNameAndLabel(nextNavPoint);
 
 				String nextHref = nextEntryLabel[0];
@@ -349,7 +346,7 @@ public class Content {
 			return fileContent.toString();
 		} catch (IOException e) {
 			e.printStackTrace();
-			throw new ReadingException("IO Exception while reading entry " + entryName + "\n" + e.getMessage());
+			throw new ReadingException("IO Exception while reading entry " + entryName + e.getMessage());
 		}
 
 	}
