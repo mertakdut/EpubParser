@@ -1,30 +1,48 @@
 package com.codefan.epubutils;
 
-/*
- * https://wiki.eclipse.org/EGit/User_Guide
- * Starting from existing Git Repositories 
- * */
-
-/*
- * http://www.hxa.name/articles/content/epub-guide_hxa7241_2007.html
- * http://www.idpf.org/epub/30/spec/epub30-overview.html
- */
-
 public class Runner {
 
 	public static void main(String[] args) {
 		try {
-			Reader reader = new Reader("C:\\eBooks/Alice in Wonderland.epub");
-			Content epubContent = reader.getContent();
+
+			Reader reader = new Reader();
+			Content epubContent = reader.getContent("C:\\eBooks/shute-lonely-road.epub", 1000);
 
 			BookSection bookSection = epubContent.getBookSection(0);
 			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-			System.out.println("content: " + bookSection.getSectionContent());
+			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
 
-//			bookSection = epubContent.getNextBookSection();
-//			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-			//
+			bookSection = epubContent.getBookSection(1);
+			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+
+			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+
+			bookSection = epubContent.getBookSection(2);
+			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+
+			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+			
+			bookSection = epubContent.getBookSection(3);
+			System.out.println("\n4th Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+
+			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+			
+			bookSection = epubContent.getBookSection(4);
+			System.out.println("\n5th Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+
+			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+			
+			bookSection = epubContent.getBookSection(3);
+			System.out.println("\n4th Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+
+			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+			
+			bookSection = epubContent.getBookSection(2);
+			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+
+			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+
 			// bookSection = epubContent.getNextBookSection();
 			// System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 			//
@@ -40,6 +58,17 @@ public class Runner {
 		} catch (ReadingException e) {
 			e.printStackTrace();
 			System.out.println(e.toString());
+		}
+	}
+	
+	private static String getHtmlBody(String htmlContent) throws ReadingException {
+		int startOfBody = htmlContent.indexOf(Constants.TAG_BODY_START);
+		int endOfBody = htmlContent.indexOf(Constants.TAG_BODY_END);
+
+		if (startOfBody != -1 && endOfBody != -1) {
+			return htmlContent.substring(startOfBody + Constants.TAG_BODY_START.length(), endOfBody);
+		} else {
+			throw new ReadingException("Exception while getting book section : Html body tags not found.");
 		}
 	}
 

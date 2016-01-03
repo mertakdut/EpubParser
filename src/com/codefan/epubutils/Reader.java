@@ -18,27 +18,61 @@ import org.xml.sax.SAXException;
 
 public class Reader {
 
-	private Content content = new Content();
+	public Content getContent(String filePath) throws ReadingException {
+		Content content = new Content();
 
-	public Reader(String filePath) throws ReadingException {
 		try {
 			content.setEpubFile(new ZipFile(filePath));
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
 		}
+
+		return getContent(content);
 	}
 
-	public Reader(File file) throws ReadingException {
+	public Content getContent(String filePath, int maxContentPerSection) throws ReadingException {
+		Content content = new Content();
+
+		try {
+			content.setEpubFile(new ZipFile(filePath));
+			content.setMaxContentPerSection(maxContentPerSection);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+		}
+
+		return getContent(content);
+	}
+
+	public Content getContent(File file) throws ReadingException {
+		Content content = new Content();
+
 		try {
 			content.setEpubFile(new ZipFile(file.getPath()));
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
 		}
+
+		return getContent(content);
 	}
 
-	public Content getContent() throws ReadingException {
+	public Content getContent(File file, int maxContentPerSection) throws ReadingException {
+		Content content = new Content();
+
+		try {
+			content.setEpubFile(new ZipFile(file.getPath()));
+			content.setMaxContentPerSection(maxContentPerSection);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+		}
+
+		return getContent(content);
+	}
+
+	private Content getContent(Content content) throws ReadingException {
 
 		Enumeration<? extends ZipEntry> files = content.getEpubFile().entries();
 
@@ -87,7 +121,8 @@ public class Reader {
 					throw new ReadingException("IOException while reading " + Constants.FILE_NAME_CONTAINER_XML + " file: " + e.getMessage());
 				}
 
-				parseContainerXml(inputStream, docBuilder);
+				Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
+				parseContainerXml(docBuilder, document, content);
 			} else if (currentEntryName.contains(".ncx")) {
 				isTocXmlFound = true;
 
@@ -101,7 +136,8 @@ public class Reader {
 					throw new ReadingException("IOException while reading " + Constants.FILE_NAME_TOC_NCX + " file: " + e.getMessage());
 				}
 
-				parseTocFile(inputStream, docBuilder);
+				Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_TOC_NCX);
+				parseTocFile(document, content);
 			}
 		}
 
@@ -119,9 +155,7 @@ public class Reader {
 		return content;
 	}
 
-	private void parseContainerXml(InputStream inputStream, DocumentBuilder docBuilder) throws ReadingException {
-		Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
-
+	private void parseContainerXml(DocumentBuilder docBuilder, Document document, Content content) throws ReadingException {
 		if (document.hasChildNodes()) {
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getContainer());
 		}
@@ -137,20 +171,17 @@ public class Reader {
 			throw new ReadingException("IO error while reading " + Constants.FILE_NAME_PACKAGE_OPF + " inputstream: " + e.getMessage());
 		}
 
-		parseOpfFile(opfFileInputStream, docBuilder);
+		Document packageDocument = getDocument(docBuilder, opfFileInputStream, Constants.FILE_NAME_PACKAGE_OPF);
+		parseOpfFile(packageDocument, content);
 	}
 
-	private void parseOpfFile(InputStream inputStream, DocumentBuilder docBuilder) throws ReadingException {
-		Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_PACKAGE_OPF);
-
+	private void parseOpfFile(Document document, Content content) throws ReadingException {
 		if (document.hasChildNodes()) {
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getPackage());
 		}
 	}
 
-	private void parseTocFile(InputStream inputStream, DocumentBuilder docBuilder) throws ReadingException {
-		Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_TOC_NCX);
-
+	private void parseTocFile(Document document, Content content) throws ReadingException {
 		if (document.hasChildNodes()) {
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getToc());
 		}
