@@ -9,6 +9,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -338,11 +340,77 @@ public class Content {
 			InputStream inputStream = epubFile.getInputStream(zipEntry);
 
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-			StringBuilder fileContent = new StringBuilder();
 
-			String line;
-			while ((line = bufferedReader.readLine()) != null) {
-				fileContent.append(line);
+			StringBuilder fileContent = new StringBuilder();
+			StringBuilder possiblyTagProgress = new StringBuilder();
+			StringBuilder possiblyBodyTag = new StringBuilder();
+
+			Pattern pattern = Pattern.compile(Constants.HTML_TAG_PATTERN); // Need a different pattern where tag values are a must.
+			Matcher matcher;
+
+			boolean isPossiblyTagStarted = false;
+			boolean isPossiblyBodyStarted = false;
+
+			boolean isPossiblyBodyEnded = false;
+
+			boolean isInBody = false;
+
+			int character;
+			while ((character = bufferedReader.read()) != -1) {
+				char singleCharacter = (char) character;
+
+				fileContent.append(singleCharacter);
+
+				if (singleCharacter == '<') { // Tag might have been opened.
+					isPossiblyTagStarted = true;
+					isPossiblyBodyStarted = true;
+					isPossiblyBodyEnded = true;
+				} else if (singleCharacter == '>') { // Tag might have been closed.
+					possiblyTagProgress.append(singleCharacter);
+					possiblyBodyTag.append(singleCharacter);
+
+					isPossiblyTagStarted = false;
+					isPossiblyBodyStarted = false;
+					isPossiblyBodyEnded = false;
+
+					// Check here if we are in 'body' tag and possiblyTagProgress is really tag.
+					// If it's really an html tag, append something at the end(newline would do? would split both newlines and tags); to split it later.
+					if (isInBody) {
+						matcher = pattern.matcher(possiblyTagProgress.toString());
+
+						if (matcher.matches()) { // It's an html tag, with value.
+							System.out.println("Matched: " + possiblyTagProgress.toString());
+						}
+					}
+
+					if (!isInBody) {
+						if (possiblyBodyTag.toString().equals("<body>")) {
+							isInBody = true;
+						}
+					} else {
+						if (possiblyBodyTag.toString().equals("</body>")) {
+							isInBody = false;
+						}
+					}
+
+					possiblyTagProgress.setLength(0);
+					possiblyBodyTag.setLength(0);
+				}
+
+				if (isInBody) {
+					if (isPossiblyTagStarted) {
+						possiblyTagProgress.append(singleCharacter);
+					}
+
+					if (isPossiblyBodyEnded) {
+						possiblyBodyTag.append(singleCharacter);
+					}
+				} else {
+					if (isPossiblyBodyStarted) {
+						possiblyBodyTag.append(singleCharacter);
+					}
+				}
+
 			}
 
 			// epubFile.close();
