@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -195,6 +196,11 @@ public class Content {
 
 						getToc().getNavMap().getNavPoints().add(index + 1, entryNavPoint);
 
+						// Not sure if these are needed.
+						getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
+						getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(0);
+						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(maxContentPerSection);
+
 						lastBookSectionInfo = new BookSection();
 						lastBookSectionInfo.setExtension(extension);
 						lastBookSectionInfo.setLabel(label);
@@ -246,16 +252,15 @@ public class Content {
 			}
 
 			if (htmlBodyToReplace.length() > maxContentPerSection) { // Trimming again if needed.
-				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimStartPosition + maxContentPerSection);
+				// htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimStartPosition + maxContentPerSection);
 
 				NavPoint nextEntryNavPoint = new NavPoint();
 
 				nextEntryNavPoint.setEntryName(entryName);
 				nextEntryNavPoint.setBodyTrimStartPosition(bodyTrimStartPosition + maxContentPerSection);
+				getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 
 				getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(bodyTrimStartPosition + maxContentPerSection); // Sets endPosition to avoid calculating again.
-
-				getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 			}
 		} else {
 			htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
@@ -348,7 +353,29 @@ public class Content {
 			e.printStackTrace();
 			throw new ReadingException("IO Exception while reading entry " + entryName + e.getMessage());
 		}
+	}
 
+	private String getRows(String content, int rowStartPos, int maxLength) {
+		StringBuilder rows = new StringBuilder();
+
+		int linePosition = 0;
+		Scanner scanner = new Scanner(content);
+		while (scanner.hasNextLine()) {
+			if (rowStartPos <= linePosition) {
+				String line = scanner.nextLine();
+				rows.append(line);
+			} else {
+				scanner.nextLine();
+			}
+
+			if (rows.length() >= maxLength) {
+				break;
+			}
+		}
+		scanner.close();
+
+		// Return linePosition as well; to use as endIndex of the current navPoint, and startIndex of the next navPoint.
+		return rows.toString();
 	}
 
 	private String getFileName(String entryName) {
