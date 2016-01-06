@@ -9,8 +9,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -235,10 +233,10 @@ public class Content {
 			String nextAnchor = getNextAnchor(index, entryName);
 
 			if (nextAnchor != null) { // Next anchor is available in the same file. It may be the next stop for the content.
-				String anchorHtml = convertAnchorToHtml(nextAnchor);
+				String nextAnchorHtml = convertAnchorToHtml(nextAnchor);
 
-				if (htmlBody.contains(anchorHtml)) {
-					int anchorIndex = htmlBody.indexOf(anchorHtml);
+				if (htmlBody.contains(nextAnchorHtml)) {
+					int anchorIndex = htmlBody.indexOf(nextAnchorHtml);
 
 					while (htmlBody.charAt(anchorIndex) != '<') { // Getting just before anchor html.
 						anchorIndex--;
@@ -247,14 +245,59 @@ public class Content {
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, anchorIndex);
 					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
 				} else {
-					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
+					// NextAnchor not found in the htmlContent. Invalidate it by removing it from navPoints and search for the next one.
+					int tmpIndex = index;
+					getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Removing the nextAnchor from navPoints.
+
+					int markedNavPoints = 0;
+
+					// Next available anchor should be the next starting point.
+					while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
+						NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
+						String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
+
+						String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
+
+						if (possiblyNextEntryName != null) {
+							String fileName = getFileName(entryName);
+
+							if (possiblyNextEntryName.contains(fileName)) {
+								String anchor = possiblyNextEntryName.replace(fileName, "");
+								anchor = convertAnchorToHtml(anchor);
+
+								if (htmlBody.contains(anchor)) {
+									nextAnchor = anchor;
+									break;
+								}
+							}
+						}
+
+						getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
+						markedNavPoints++;
+
+						tmpIndex++;
+					}
+
+					if (markedNavPoints != 0) {
+						for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
+							NavPoint navPointToDelete = iterator.next();
+							if (navPointToDelete.isMarkedToDelete()) {
+								iterator.remove();
+
+								if (--markedNavPoints == 0) {
+									break;
+								}
+							}
+						}
+					}
+
 				}
 			} else {
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
 			}
 
 			if (htmlBodyToReplace.length() > maxContentPerSection) { // Trimming again if needed.
-				// htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimStartPosition + maxContentPerSection);
+				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimStartPosition + maxContentPerSection);
 
 				NavPoint nextEntryNavPoint = new NavPoint();
 
@@ -342,75 +385,10 @@ public class Content {
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
 			StringBuilder fileContent = new StringBuilder();
-			StringBuilder possiblyTagProgress = new StringBuilder();
-			StringBuilder possiblyBodyTag = new StringBuilder();
 
-			Pattern pattern = Pattern.compile(Constants.HTML_TAG_PATTERN); // Need a different pattern where tag values are a must.
-			Matcher matcher;
-
-			boolean isPossiblyTagStarted = false;
-			boolean isPossiblyBodyStarted = false;
-
-			boolean isPossiblyBodyEnded = false;
-
-			boolean isInBody = false;
-
-			int character;
-			while ((character = bufferedReader.read()) != -1) {
-				char singleCharacter = (char) character;
-
-				fileContent.append(singleCharacter);
-
-				if (singleCharacter == '<') { // Tag might have been opened.
-					isPossiblyTagStarted = true;
-					isPossiblyBodyStarted = true;
-					isPossiblyBodyEnded = true;
-				} else if (singleCharacter == '>') { // Tag might have been closed.
-					possiblyTagProgress.append(singleCharacter);
-					possiblyBodyTag.append(singleCharacter);
-
-					isPossiblyTagStarted = false;
-					isPossiblyBodyStarted = false;
-					isPossiblyBodyEnded = false;
-
-					// Check here if we are in 'body' tag and possiblyTagProgress is really tag.
-					// If it's really an html tag, append something at the end(newline would do? would split both newlines and tags); to split it later.
-					if (isInBody) {
-						matcher = pattern.matcher(possiblyTagProgress.toString());
-
-						if (matcher.matches()) { // It's an html tag, with value.
-							System.out.println("Matched: " + possiblyTagProgress.toString());
-						}
-					}
-
-					if (!isInBody) {
-						if (possiblyBodyTag.toString().equals("<body>")) {
-							isInBody = true;
-						}
-					} else {
-						if (possiblyBodyTag.toString().equals("</body>")) {
-							isInBody = false;
-						}
-					}
-
-					possiblyTagProgress.setLength(0);
-					possiblyBodyTag.setLength(0);
-				}
-
-				if (isInBody) {
-					if (isPossiblyTagStarted) {
-						possiblyTagProgress.append(singleCharacter);
-					}
-
-					if (isPossiblyBodyEnded) {
-						possiblyBodyTag.append(singleCharacter);
-					}
-				} else {
-					if (isPossiblyBodyStarted) {
-						possiblyBodyTag.append(singleCharacter);
-					}
-				}
-
+			String line;
+			while ((line = bufferedReader.readLine()) != null) {
+				fileContent.append(line);
 			}
 
 			// epubFile.close();
