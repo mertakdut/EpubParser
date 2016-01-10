@@ -12,5 +12,6 @@ class Constants {
 	static final String TAG_BODY_END = "</body>";
 
 	static final String HTML_TAG_PATTERN = "</?\\w+((\\s+\\w+(\\s*=\\s*(?:\".*?\"|'.*?'|[^'\">\\s]+))?)+\\s*|\\s*)/?>";
+	
 
 }

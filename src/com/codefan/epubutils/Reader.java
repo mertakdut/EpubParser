@@ -205,7 +205,6 @@ public class Reader {
 	private void traverseDocumentNodesAndFillContent(NodeList nodeList, BaseFindings findings) throws ReadingException {
 
 		for (int i = 0; i < nodeList.getLength(); i++) {
-
 			Node tempNode = nodeList.item(i);
 
 			// make sure it's element node.

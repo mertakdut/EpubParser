@@ -1,5 +1,7 @@
 package com.codefan.epubutils;
 
+import java.util.List;
+
 class NavPoint {
 	private String id;
 	private int playOrder;
@@ -15,6 +17,8 @@ class NavPoint {
 	private String entryName;
 	private int bodyTrimStartPosition;
 	private int bodyTrimEndPosition;
+	private List<String> openTags; // Holding list might be expensive.
+	private String closingTags;
 
 	public String getId() {
 		return id;
@@ -94,5 +98,21 @@ class NavPoint {
 
 	public void setBodyTrimEndPosition(int bodyTrimEndPosition) {
 		this.bodyTrimEndPosition = bodyTrimEndPosition;
+	}
+
+	public String getClosingTags() {
+		return closingTags;
+	}
+
+	public void setClosingTags(String closingTags) {
+		this.closingTags = closingTags;
+	}
+
+	public List<String> getOpenTags() {
+		return openTags;
+	}
+
+	public void setOpenTags(List<String> openTags) {
+		this.openTags = openTags;
 	}
 }
