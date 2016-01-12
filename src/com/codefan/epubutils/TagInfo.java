@@ -2,8 +2,8 @@ package com.codefan.epubutils;
 
 class TagInfo {
 	private String tagName;
-	private int tagStartPosition;
-	private int tagEndPosition;
+	private int openingTagPosition;
+	private int closingTagPosition;
 
 	public String getTagName() {
 		return tagName;
@@ -13,20 +13,20 @@ class TagInfo {
 		this.tagName = tagName;
 	}
 
-	public int getTagStartPosition() {
-		return tagStartPosition;
+	public int getOpeningTagPosition() {
+		return openingTagPosition;
 	}
 
-	public void setTagStartPosition(int tagStartPosition) {
-		this.tagStartPosition = tagStartPosition;
+	public void setOpeningTagPosition(int openingTagPosition) {
+		this.openingTagPosition = openingTagPosition;
 	}
 
-	public int getTagEndPosition() {
-		return tagEndPosition;
+	public int getClosingTagPosition() {
+		return closingTagPosition;
 	}
 
-	public void setTagEndPosition(int tagEndPosition) {
-		this.tagEndPosition = tagEndPosition;
+	public void setClosingTagPosition(int closingTagPosition) {
+		this.closingTagPosition = closingTagPosition;
 	}
 
 }

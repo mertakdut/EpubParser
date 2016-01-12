@@ -203,9 +203,9 @@ public class Content {
 					if (htmlBody.length() > maxContentPerSection) {
 						int calculatedTrimEndPosition = calculateTrimEndPosition(htmlBody, 0);
 
-						fileContentStr = fileContentStr.replace(htmlBody, htmlBody.substring(0, calculatedTrimEndPosition));
-
 						List<String> openedTags = getOpenedTags(entryName, 0, calculatedTrimEndPosition);
+
+						fileContentStr = fileContentStr.replace(htmlBody, htmlBody.substring(0, calculatedTrimEndPosition));
 
 						String closingTags = null;
 						if (openedTags != null) {
@@ -233,8 +233,7 @@ public class Content {
 						lastBookSectionInfo.setMediaType(mediaType);
 
 						/*
-						 * nextEntryNavPoint.setEntryName(entryName); nextEntryNavPoint.setBodyTrimStartPosition(calculatedTrimEndPosition);
-						 * nextEntryNavPoint.setOpenTags(openedTags);
+						 * nextEntryNavPoint.setEntryName(entryName); nextEntryNavPoint.setBodyTrimStartPosition(calculatedTrimEndPosition); nextEntryNavPoint.setOpenTags(openedTags);
 						 * 
 						 * getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 						 * 
@@ -299,8 +298,8 @@ public class Content {
 									}
 
 									TagInfo tagInfo = new TagInfo();
-									tagInfo.setTagStartPosition(openedTag.getTagStartPosition());
-									tagInfo.setTagEndPosition(i - tagName.length());
+									tagInfo.setOpeningTagPosition(openedTag.getOpeningTagPosition());
+									tagInfo.setClosingTagPosition(i - tagName.length());
 									tagInfo.setTagName(tagName);
 
 									if (this.entryTagPositions.containsKey(entryName)) {
@@ -323,7 +322,7 @@ public class Content {
 
 							TagInfo tag = new TagInfo();
 							tag.setTagName(tagName);
-							tag.setTagStartPosition(i - tagName.length());
+							tag.setOpeningTagPosition(i - tagName.length());
 
 							openedTags.add(tag);
 						}
@@ -360,7 +359,7 @@ public class Content {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
 
 			// Opened in the trimmed part, closed after the trimmed part.
-			if (tagInfo.getTagStartPosition() > trimStartIndex && tagInfo.getTagStartPosition() < trimEndIndex && tagInfo.getTagEndPosition() > trimEndIndex) {
+			if (tagInfo.getOpeningTagPosition() > trimStartIndex && tagInfo.getOpeningTagPosition() < trimEndIndex && tagInfo.getOpeningTagPosition() > trimEndIndex) {
 				if (openedTags == null) {
 					openedTags = new ArrayList<>();
 				}
