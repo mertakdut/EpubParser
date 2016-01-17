@@ -585,6 +585,7 @@ public class Content {
 		while (true) {
 			int tagsLength = 0;
 
+			// TODO: Sort these lists to be able to break when greater than the endPositions. This way, we won't have to traverse all the list. Or is already sorted?
 			for (int i = 0; i < tagStartEndPositions.size(); i++) {
 				TagInfo tagInfo = tagStartEndPositions.get(i);
 
