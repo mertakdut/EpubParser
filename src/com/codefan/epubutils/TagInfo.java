@@ -2,6 +2,7 @@ package com.codefan.epubutils;
 
 class TagInfo {
 	private String tagName;
+	private String fullTagName;
 	private int openingTagPosition;
 	private int closingTagPosition;
 
@@ -27,6 +28,14 @@ class TagInfo {
 
 	public void setClosingTagPosition(int closingTagPosition) {
 		this.closingTagPosition = closingTagPosition;
+	}
+
+	public String getFullTagName() {
+		return fullTagName;
+	}
+
+	public void setFullTagName(String fullTagName) {
+		this.fullTagName = fullTagName;
 	}
 
 }

@@ -6,7 +6,7 @@ public class Runner {
 		try {
 
 			Reader reader = new Reader();
-			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub", 1000); // shute-lonely-road.epub
+			Content epubContent = reader.getContent("C:\\eBooks/shute-lonely-road.epub", 1000); // Alice in Wonderland.epub
 
 			BookSection bookSection = epubContent.getBookSection(0);
 			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
