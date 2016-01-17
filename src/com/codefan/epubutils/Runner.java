@@ -8,40 +8,14 @@ public class Runner {
 			Reader reader = new Reader();
 			Content epubContent = reader.getContent("C:\\eBooks/shute-lonely-road.epub", 1000); // Alice in Wonderland.epub
 
-			BookSection bookSection = epubContent.getBookSection(0);
-			System.out.println("\n1st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+			BookSection bookSection;
 
-			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+			for (int i = 0; i < 25; i++) {
+				bookSection = epubContent.getBookSection(i);
+				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-			bookSection = epubContent.getBookSection(1);
-			System.out.println("\n2nd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
-
-			bookSection = epubContent.getBookSection(2);
-			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
-
-			bookSection = epubContent.getBookSection(3);
-			System.out.println("\n4th Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
-
-			bookSection = epubContent.getBookSection(4);
-			System.out.println("\n5th Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
-
-			bookSection = epubContent.getBookSection(3);
-			System.out.println("\n4th Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
-
-			bookSection = epubContent.getBookSection(2);
-			System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
-
-			System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+			}
 
 			// bookSection = epubContent.getNextBookSection();
 			// System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());

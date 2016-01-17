@@ -111,6 +111,8 @@ public class Content {
 		String currentAnchor = null;
 		String nextAnchor = null;
 
+		int htmlBodyLength = 0;
+
 		for (int i = 0; i < getEntryNames().size(); i++) {
 			String entryName = getEntryNames().get(i);
 
@@ -127,6 +129,7 @@ public class Content {
 
 				if (maxContentPerSection != 0) {
 					String htmlBody = getHtmlBody(fileContentStr);
+					htmlBodyLength = htmlBody.length();
 
 					// Calculate the tag positions of the current entry, if it hasn't done before.
 					if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
@@ -211,7 +214,7 @@ public class Content {
 				if (maxContentPerSection != 0) { // maxContentPerSection is given.
 					String htmlBody = getHtmlBody(fileContentStr);
 
-					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, 0);
+					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, 0);
 
 					if (calculatedTrimEndPosition != -1) {
 						List<String> openedTags = getOpenedTags(entryName, 0, calculatedTrimEndPosition);
@@ -410,6 +413,8 @@ public class Content {
 		String fileContent = readFileContent(entryName);
 
 		String htmlBody = getHtmlBody(fileContent);
+		int htmlBodyLength = htmlBody.length();
+
 		String htmlBodyToReplace = null;
 
 		if (bodyTrimEndPosition == 0) { // Not calculated before.
@@ -491,7 +496,7 @@ public class Content {
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyToReplace, bodyTrimStartPosition);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, bodyTrimStartPosition);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, calculatedTrimEndPosition);
@@ -565,11 +570,11 @@ public class Content {
 		return openingTags.toString();
 	}
 
-	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition) {
+	private int calculateTrimEndPosition(String entryName, int htmlBodyLength, int trimStartPosition) {
 		int trimEndPosition = trimStartPosition + maxContentPerSection;
 
 		// Don't need to trim. HtmlBody with tags are already below limit.
-		if (htmlBody.length() < maxContentPerSection) {
+		if (htmlBodyLength < maxContentPerSection) {
 			return -1;
 		}
 
@@ -613,7 +618,8 @@ public class Content {
 			trimEndPosition += tagsLength;
 
 			// If trimEndPosition is over the htmlBody's index; then htmlBody is already within limits. No need to trim.
-			if (trimEndPosition >= htmlBody.length()) {
+			// Problem is here. HtmlBody is not actually whole part; but trimmed part. So trimEndPosition may be greater than its length.
+			if (trimEndPosition >= htmlBodyLength) {
 				return -1;
 			}
 
