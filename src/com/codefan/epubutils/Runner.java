@@ -10,7 +10,7 @@ public class Runner {
 
 			BookSection bookSection;
 
-			for (int i = 0; i < 25; i++) {
+			for (int i = 0; i < 5; i++) {
 				bookSection = epubContent.getBookSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 

@@ -155,7 +155,7 @@ public class Content {
 					boolean containsNextAnchor = fileContentStr.contains(nextAnchor);
 
 					if (containsCurrentAnchor && containsNextAnchor) {
-						int[] bodyIntervals = getAnchorsInterval(fileContentStr, currentAnchor, nextAnchor);
+						int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
 
 						trimStartPosition = bodyIntervals[0];
 						trimEndPosition = bodyIntervals[1];
@@ -211,7 +211,7 @@ public class Content {
 							}
 						}
 
-						int[] bodyIntervals = getAnchorsInterval(fileContentStr, currentAnchor, nextAnchor);
+						int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
 
 						trimStartPosition = bodyIntervals[0];
 						trimEndPosition = bodyIntervals[1];
@@ -223,7 +223,10 @@ public class Content {
 				String extension = getFileExtension(fileName);
 				String mediaType = getMediaType(fileName);
 
+				// trimStartPosition and trimEndPosition may be saved in the current index, to avoid calculation again.
 				String htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+				
+				// TODO: The problem is probably here. When turning back to already calculated navPoints, it throws an exception.
 
 				// If fileContentStr is too long; crop it by the maxContentPerSection.
 				// Save the fileContent and position within a new navPoint, insert it after current index.
