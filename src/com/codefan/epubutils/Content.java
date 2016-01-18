@@ -111,6 +111,10 @@ public class Content {
 		String currentAnchor = null;
 		String nextAnchor = null;
 
+		int trimStartPosition = 0;
+		int trimEndPosition = 0;
+
+		String htmlBody = null;
 		int htmlBodyLength = 0;
 
 		for (int i = 0; i < getEntryNames().size(); i++) {
@@ -128,7 +132,7 @@ public class Content {
 				String fileContentStr = readFileContent(entryName);
 
 				if (maxContentPerSection != 0) {
-					String htmlBody = getHtmlBody(fileContentStr);
+					htmlBody = getHtmlBody(fileContentStr);
 					htmlBodyLength = htmlBody.length();
 
 					// Calculate the tag positions of the current entry, if it hasn't done before.
@@ -151,7 +155,12 @@ public class Content {
 					boolean containsNextAnchor = fileContentStr.contains(nextAnchor);
 
 					if (containsCurrentAnchor && containsNextAnchor) {
-						fileContentStr = getAnchorsInterval(fileContentStr, currentAnchor, nextAnchor);
+						int[] bodyIntervals = getAnchorsInterval(fileContentStr, currentAnchor, nextAnchor);
+
+						trimStartPosition = bodyIntervals[0];
+						trimEndPosition = bodyIntervals[1];
+
+						htmlBodyLength = trimEndPosition - trimStartPosition;
 					} else {
 						int tmpIndex = index;
 
@@ -202,32 +211,35 @@ public class Content {
 							}
 						}
 
-						fileContentStr = getAnchorsInterval(fileContentStr, currentAnchor, nextAnchor);
+						int[] bodyIntervals = getAnchorsInterval(fileContentStr, currentAnchor, nextAnchor);
+
+						trimStartPosition = bodyIntervals[0];
+						trimEndPosition = bodyIntervals[1];
+
+						htmlBodyLength = trimEndPosition - trimStartPosition;
 					}
 				}
 
 				String extension = getFileExtension(fileName);
 				String mediaType = getMediaType(fileName);
 
+				String htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+
 				// If fileContentStr is too long; crop it by the maxContentPerSection.
 				// Save the fileContent and position within a new navPoint, insert it after current index.
 				if (maxContentPerSection != 0) { // maxContentPerSection is given.
-					String htmlBody = getHtmlBody(fileContentStr);
-
-					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, 0);
+					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, trimStartPosition);
 
 					if (calculatedTrimEndPosition != -1) {
-						List<String> openedTags = getOpenedTags(entryName, 0, calculatedTrimEndPosition);
+						List<String> openedTags = getOpenedTags(entryName, trimStartPosition, calculatedTrimEndPosition);
 
-						String htmlBodyToReplace = htmlBody.substring(0, calculatedTrimEndPosition);
+						htmlBodyToReplace = htmlBody.substring(trimStartPosition, calculatedTrimEndPosition);
 
 						String closingTags = null;
 						if (openedTags != null) {
 							closingTags = prepareClosingTags(openedTags);
 							htmlBodyToReplace += closingTags;
 						}
-
-						fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 						NavPoint nextEntryNavPoint = new NavPoint();
 
@@ -239,7 +251,7 @@ public class Content {
 
 						// Not sure if these are needed.
 						getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
-						getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(0);
+						getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
 						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition);
 						getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 
@@ -247,19 +259,10 @@ public class Content {
 						lastBookSectionInfo.setExtension(extension);
 						lastBookSectionInfo.setLabel(label);
 						lastBookSectionInfo.setMediaType(mediaType);
-
-						/*
-						 * nextEntryNavPoint.setEntryName(entryName); nextEntryNavPoint.setBodyTrimStartPosition(calculatedTrimEndPosition);
-						 * nextEntryNavPoint.setOpenTags(openedTags);
-						 * 
-						 * getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
-						 * 
-						 * getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition); // Sets endPosition to avoid calculating again.
-						 * getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
-						 * 
-						 */
 					}
 				}
+
+				fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 				bookSection.setSectionContent(fileContentStr);
 				bookSection.setExtension(extension);
@@ -422,75 +425,18 @@ public class Content {
 
 			if (nextAnchor != null) { // Next anchor is available in the same file. It may be the next stop for the content.
 				String nextAnchorHtml = convertAnchorToHtml(nextAnchor);
+				int anchorIndex = htmlBody.indexOf(nextAnchorHtml);
 
-				if (htmlBody.contains(nextAnchorHtml)) {
-					int anchorIndex = htmlBody.indexOf(nextAnchorHtml);
+				if (anchorIndex != -1 && bodyTrimStartPosition <= anchorIndex) {
 
 					while (htmlBody.charAt(anchorIndex) != '<') { // Getting just before anchor html.
 						anchorIndex--;
 					}
 
-					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, anchorIndex);
 					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
+					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, anchorIndex);
 				} else { // NextAnchor not found in the htmlContent. Invalidate it by removing it from navPoints and search for the next one.
-					int tmpIndex = index;
-					getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Removing the nextAnchor from navPoints.
-
-					int markedNavPoints = 0;
-
-					boolean isNextAnchorFound = false;
-					// Next available anchor should be the next starting point.
-					while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
-						NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
-						String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
-
-						String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
-
-						if (possiblyNextEntryName != null) {
-							String fileName = getFileName(entryName);
-
-							if (possiblyNextEntryName.contains(fileName)) {
-								String anchor = possiblyNextEntryName.replace(fileName, "");
-								String anchorHtml = convertAnchorToHtml(anchor);
-
-								if (htmlBody.contains(anchorHtml)) {
-									int anchorIndex = htmlBody.indexOf(anchorHtml);
-
-									while (htmlBody.charAt(anchorIndex) != '<') { // Getting just before anchor html.
-										anchorIndex--;
-									}
-
-									htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, anchorIndex);
-									getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(tmpIndex); // Sets endPosition to avoid calculating again.
-									isNextAnchorFound = true;
-									break;
-								}
-							}
-						}
-
-						getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
-						markedNavPoints++;
-
-						tmpIndex++;
-					}
-
-					if (markedNavPoints != 0) {
-						for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
-							NavPoint navPointToDelete = iterator.next();
-							if (navPointToDelete.isMarkedToDelete()) {
-								iterator.remove();
-
-								if (--markedNavPoints == 0) {
-									break;
-								}
-							}
-						}
-					}
-
-					if (!isNextAnchorFound) {
-						htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
-					}
-
+					htmlBodyToReplace = trimByNextAvailableAnchor(index, entryName, bodyTrimStartPosition, htmlBody);
 				}
 			} else {
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
@@ -550,6 +496,71 @@ public class Content {
 		return bookSection;
 	}
 
+	private String trimByNextAvailableAnchor(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
+		int tmpIndex = index;
+
+		getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Removing the nextAnchor from navPoints; 'cause it's already not found.
+
+		int markedNavPoints = 0;
+
+		int anchorIndex = -1;
+
+		boolean isNextAnchorFound = false;
+
+		// Next available anchor should be the next starting point.
+		while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
+			NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
+			String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
+
+			String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
+
+			if (possiblyNextEntryName != null) {
+				String fileName = getFileName(entryName);
+
+				if (possiblyNextEntryName.contains(fileName)) {
+					String anchor = possiblyNextEntryName.replace(fileName, "");
+					String anchorHtml = convertAnchorToHtml(anchor);
+					anchorIndex = htmlBody.indexOf(anchorHtml); // anchorIndex may be greater than bodyTrimStartPosition!
+
+					if (anchorIndex != -1 && bodyTrimStartPosition <= anchorIndex) {
+
+						while (htmlBody.charAt(anchorIndex) != '<') { // Getting just before anchor html.
+							anchorIndex--;
+						}
+
+						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(tmpIndex); // Sets endPosition to avoid calculating again.
+						isNextAnchorFound = true;
+						break;
+					}
+				}
+			}
+
+			getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
+			markedNavPoints++;
+
+			tmpIndex++;
+		}
+
+		if (markedNavPoints != 0) {
+			for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
+				NavPoint navPointToDelete = iterator.next();
+				if (navPointToDelete.isMarkedToDelete()) {
+					iterator.remove();
+
+					if (--markedNavPoints == 0) {
+						break;
+					}
+				}
+			}
+		}
+
+		if (!isNextAnchorFound) {
+			return htmlBody.substring(bodyTrimStartPosition);
+		} else {
+			return htmlBody.substring(bodyTrimStartPosition, anchorIndex);
+		}
+	}
+
 	private String prepareClosingTags(List<String> openedTags) {
 		StringBuilder closingTagsBuilder = new StringBuilder();
 
@@ -580,17 +591,13 @@ public class Content {
 
 		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
-		// System.out.println("\ntrimStartPosition: " + trimStartPosition);
-		// System.out.println("entryTagPositions(" + entryName + ") size: " + entryTagPositions.get(entryName).size());
-		// System.out.println("trimEndPosition: " + trimEndPosition);
-
 		int loopCount = 0;
 		int lastTagsLength = 0;
 
 		while (true) {
 			int tagsLength = 0;
 
-			// TODO: Sort these lists to be able to break when greater than the endPositions. This way, we won't have to traverse all the list. Or is already sorted?
+			// TODO: Sort these lists to be able to break when greater than the endPositions. This way, we won't have to traverse all the list. Or are they already sorted?
 			for (int i = 0; i < tagStartEndPositions.size(); i++) {
 				TagInfo tagInfo = tagStartEndPositions.get(i);
 
@@ -604,8 +611,6 @@ public class Content {
 					tagsLength += tagInfo.getTagName().length() + 3; // </>
 				}
 			}
-
-			// System.out.println("tagsLength: " + tagsLength + ", lastTagsLength: " + lastTagsLength + ", loopCount: " + loopCount);
 
 			if (lastTagsLength == tagsLength) { // Tags length isn't greater than the last one. No need to keep going.
 				if (loopCount == 0) { // Returned on the first try. Don't need to trim. HtmlBody without tags are already below limit.
@@ -748,9 +753,7 @@ public class Content {
 	}
 
 	// Starts from current anchor, reads until the next anchor starts.
-	private String getAnchorsInterval(String htmlContent, String currentAnchor, String nextAnchor) throws ReadingException {
-		String htmlBody = getHtmlBody(htmlContent);
-
+	private int[] getAnchorsInterval(String htmlBody, String currentAnchor, String nextAnchor) throws ReadingException {
 		int startOfCurrentAnchor = htmlBody.indexOf(currentAnchor);
 		int startOfNextAnchor = htmlBody.indexOf(nextAnchor);
 
@@ -764,10 +767,7 @@ public class Content {
 				startOfNextAnchor--;
 			}
 
-			String trimmedPart = htmlBody.substring(startOfCurrentAnchor, startOfNextAnchor);
-
-			htmlContent = htmlContent.replace(htmlBody, trimmedPart);
-			return htmlContent;
+			return new int[] { startOfCurrentAnchor, startOfNextAnchor };
 		} else {
 			throw new ReadingException("Exception while trimming anchored parts : Defined Anchors not found.");
 		}
