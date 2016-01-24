@@ -224,7 +224,7 @@ public class Content {
 				String mediaType = getMediaType(fileName);
 
 				// trimStartPosition and trimEndPosition may be saved in the current index, to avoid calculation again.
-				String htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+				String htmlBodyToReplace = null;
 
 				// TODO: The problem is probably here. When turning back to already calculated navPoints, it throws an exception.
 
@@ -262,6 +262,18 @@ public class Content {
 						lastBookSectionInfo.setExtension(extension);
 						lastBookSectionInfo.setLabel(label);
 						lastBookSectionInfo.setMediaType(mediaType);
+					} else {
+						if (trimEndPosition == 0) {
+							htmlBodyToReplace = htmlBody.substring(trimStartPosition);
+						} else {
+							htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+						}
+					}
+				} else {
+					if (trimEndPosition == 0) {
+						htmlBodyToReplace = htmlBody.substring(trimStartPosition);
+					} else {
+						htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
 					}
 				}
 
@@ -730,7 +742,7 @@ public class Content {
 
 			String line;
 			while ((line = bufferedReader.readLine()) != null) {
-				fileContent.append(line);
+				fileContent.append(line).append(" ");
 			}
 
 			// epubFile.close();
