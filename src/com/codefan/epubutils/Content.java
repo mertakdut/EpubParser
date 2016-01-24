@@ -225,7 +225,7 @@ public class Content {
 
 				// trimStartPosition and trimEndPosition may be saved in the current index, to avoid calculation again.
 				String htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
-				
+
 				// TODO: The problem is probably here. When turning back to already calculated navPoints, it throws an exception.
 
 				// If fileContentStr is too long; crop it by the maxContentPerSection.
@@ -617,6 +617,10 @@ public class Content {
 
 			if (lastTagsLength == tagsLength) { // Tags length isn't greater than the last one. No need to keep going.
 				if (loopCount == 0) { // Returned on the first try. Don't need to trim. HtmlBody without tags are already below limit.
+					if (tagsLength == 0 && htmlBodyLength > trimEndPosition) { // If there are no tags in the trimmed part.
+						break;
+					}
+
 					return -1;
 				} else {
 					break;

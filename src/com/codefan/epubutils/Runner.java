@@ -6,11 +6,11 @@ public class Runner {
 		try {
 
 			Reader reader = new Reader();
-			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub", 1000); // shute-lonely-road.epub
+			Content epubContent = reader.getContent("C:\\eBooks/The Man Who Would Be King.epub", 1000); // shute-lonely-road.epub
 
 			BookSection bookSection;
 
-			for (int i = 0; i < 5; i++) {
+			for (int i = 0; i < 100; i++) {
 				bookSection = epubContent.getBookSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
