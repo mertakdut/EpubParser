@@ -531,7 +531,7 @@ public class Content {
 							anchorIndex--;
 						}
 
-						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(tmpIndex); // Sets endPosition to avoid calculating again.
+						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
 						isNextAnchorFound = true;
 						break;
 					}
