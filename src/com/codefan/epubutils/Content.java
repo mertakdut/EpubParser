@@ -74,10 +74,10 @@ public class Content {
 		NavPoint navPoint = getNavPoint(index);
 
 		if (maxContentPerSection == 0 || navPoint.getEntryName() == null) { // Real navPoint - actual file/anchor.
-			logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
+			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
 			return prepareBookSection(navPoint, index);
 		} else { // Pseudo navPoint - trimmed file entry.
-			logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
+			// logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
 			return prepareTrimmedBookSection(navPoint, index);
 		}
 	}
@@ -159,8 +159,6 @@ public class Content {
 
 						trimStartPosition = bodyIntervals[0];
 						trimEndPosition = bodyIntervals[1];
-
-						htmlBodyLength = trimEndPosition - trimStartPosition;
 					} else {
 						int tmpIndex = index;
 
@@ -223,8 +221,6 @@ public class Content {
 
 						trimStartPosition = bodyIntervals[0];
 						trimEndPosition = bodyIntervals[1];
-
-						htmlBodyLength = trimEndPosition - trimStartPosition;
 					}
 				}
 
@@ -239,7 +235,7 @@ public class Content {
 				// If fileContentStr is too long; crop it by the maxContentPerSection.
 				// Save the fileContent and position within a new navPoint, insert it after current index.
 				if (maxContentPerSection != 0) { // maxContentPerSection is given.
-					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, trimStartPosition);
+					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, trimStartPosition, trimEndPosition);
 
 					if (calculatedTrimEndPosition != -1) {
 						List<String> openedTags = getOpenedTags(entryName, trimStartPosition, calculatedTrimEndPosition);
@@ -457,15 +453,13 @@ public class Content {
 					}
 
 					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
-					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, anchorIndex);
+					bodyTrimEndPosition = anchorIndex;
 				} else { // NextAnchor not found in the htmlContent. Invalidate it by removing it from navPoints and search for the next one.
-					htmlBodyToReplace = trimByNextAvailableAnchor(index, entryName, bodyTrimStartPosition, htmlBody);
+					bodyTrimEndPosition = getNextAvailableAnchorIndex(index, entryName, bodyTrimStartPosition, htmlBody);
 				}
-			} else {
-				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, bodyTrimStartPosition);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, bodyTrimStartPosition, bodyTrimEndPosition);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, calculatedTrimEndPosition);
@@ -488,6 +482,13 @@ public class Content {
 
 				getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition); // Sets endPosition to avoid calculating again.
 				getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
+			} else {
+				if (bodyTrimEndPosition != 0) {
+					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
+				} else {
+					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
+					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length()); // Sets endPosition to avoid calculating again.
+				}
 			}
 		} else { // Calculated before.
 			htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
@@ -519,7 +520,7 @@ public class Content {
 		return bookSection;
 	}
 
-	private String trimByNextAvailableAnchor(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
+	private int getNextAvailableAnchorIndex(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
 		getToc().getNavMap().getNavPoints().remove(++index); // Removing the nextAnchor from navPoints; 'cause it's already not found.
 
 		int markedNavPoints = 0;
@@ -577,10 +578,10 @@ public class Content {
 			}
 		}
 
-		if (!isNextAnchorFound) {
-			return htmlBody.substring(bodyTrimStartPosition);
+		if (isNextAnchorFound) {
+			return anchorIndex;
 		} else {
-			return htmlBody.substring(bodyTrimStartPosition, anchorIndex);
+			return 0;
 		}
 	}
 
@@ -604,11 +605,11 @@ public class Content {
 		return openingTags.toString();
 	}
 
-	private int calculateTrimEndPosition(String entryName, int htmlBodyLength, int trimStartPosition) {
-		int trimEndPosition = trimStartPosition + maxContentPerSection;
+	private int calculateTrimEndPosition(String entryName, int htmlBodyLength, int trimStartPosition, int trimEndPos) {
+		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
 
 		// Don't need to trim. HtmlBody with tags are already below limit.
-		if (htmlBodyLength < maxContentPerSection) {
+		if (htmlBodyLength < maxContentPerSection || (trimEndPosition - trimStartPosition) < maxContentPerSection) {
 			return -1;
 		}
 
@@ -650,7 +651,6 @@ public class Content {
 			trimEndPosition += tagsLength;
 
 			// If trimEndPosition is over the htmlBody's index; then htmlBody is already within limits. No need to trim.
-			// Problem is here. HtmlBody is not actually whole part; but trimmed part. So trimEndPosition may be greater than its length.
 			if (trimEndPosition >= htmlBodyLength) {
 				return -1;
 			}
