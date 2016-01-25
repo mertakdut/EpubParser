@@ -164,7 +164,11 @@ public class Content {
 					} else {
 						int tmpIndex = index;
 
-						if (containsCurrentAnchor) { // Next anchor not found.
+						if (!containsCurrentAnchor && !containsNextAnchor) { // Both of the anchors not found.
+							getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
+							getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the second one (next anchor)
+							currentAnchor = null;
+						} else if (containsCurrentAnchor) { // Next anchor not found.
 							getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Delete the second one (next anchor)
 						} else if (containsNextAnchor) { // Current anchor not found.
 							getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
@@ -186,8 +190,12 @@ public class Content {
 									anchor = convertAnchorToHtml(anchor);
 
 									if (fileContentStr.contains(anchor)) {
-										nextAnchor = anchor;
-										break;
+										if (currentAnchor == null) { // If current anchor is not found, first set that.
+											currentAnchor = anchor;
+										} else { // If current anchor is already defined set the next anchor and break.
+											nextAnchor = anchor;
+											break;
+										}
 									}
 								}
 							}
@@ -512,9 +520,7 @@ public class Content {
 	}
 
 	private String trimByNextAvailableAnchor(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
-		int tmpIndex = index;
-
-		getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Removing the nextAnchor from navPoints; 'cause it's already not found.
+		getToc().getNavMap().getNavPoints().remove(++index); // Removing the nextAnchor from navPoints; 'cause it's already not found.
 
 		int markedNavPoints = 0;
 
@@ -523,8 +529,8 @@ public class Content {
 		boolean isNextAnchorFound = false;
 
 		// Next available anchor should be the next starting point.
-		while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
-			NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
+		while (index < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
+			NavPoint possiblyNextNavPoint = getNavPoint(index);
 			String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
 
 			String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
@@ -535,25 +541,27 @@ public class Content {
 				if (possiblyNextEntryName.contains(fileName)) {
 					String anchor = possiblyNextEntryName.replace(fileName, "");
 					String anchorHtml = convertAnchorToHtml(anchor);
-					anchorIndex = htmlBody.indexOf(anchorHtml); // anchorIndex may be greater than bodyTrimStartPosition!
+					anchorIndex = htmlBody.indexOf(anchorHtml);
 
-					if (anchorIndex != -1 && bodyTrimStartPosition <= anchorIndex) {
+					if (anchorIndex != -1) {
 
 						while (htmlBody.charAt(anchorIndex) != '<') { // Getting just before anchor html.
 							anchorIndex--;
 						}
 
-						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
-						isNextAnchorFound = true;
-						break;
+						if (bodyTrimStartPosition <= anchorIndex) {
+							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
+							isNextAnchorFound = true;
+							break;
+						}
 					}
 				}
 			}
 
-			getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
+			getToc().getNavMap().getNavPoints().get(index).setMarkedToDelete(true);
 			markedNavPoints++;
 
-			tmpIndex++;
+			index++;
 		}
 
 		if (markedNavPoints != 0) {
