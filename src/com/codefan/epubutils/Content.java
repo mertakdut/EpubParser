@@ -487,7 +487,7 @@ public class Content {
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
 				} else {
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
-					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length()); // Sets endPosition to avoid calculating again.
+					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length() + bodyTrimStartPosition); // Sets endPosition to avoid calculating again.
 				}
 			}
 		} else { // Calculated before.
@@ -609,7 +609,7 @@ public class Content {
 		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
 
 		// Don't need to trim. HtmlBody with tags are already below limit.
-		if (htmlBodyLength < maxContentPerSection || (trimEndPosition - trimStartPosition) < maxContentPerSection) {
+		if (htmlBodyLength < trimEndPosition || (trimEndPosition - trimStartPosition) < maxContentPerSection) {
 			return -1;
 		}
 
