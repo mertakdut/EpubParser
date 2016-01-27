@@ -115,7 +115,6 @@ public class Content {
 		int trimEndPosition = 0;
 
 		String htmlBody = null;
-		int htmlBodyLength = 0;
 
 		for (int i = 0; i < getEntryNames().size(); i++) {
 			String entryName = getEntryNames().get(i);
@@ -133,7 +132,6 @@ public class Content {
 
 				if (maxContentPerSection != 0) {
 					htmlBody = getHtmlBody(fileContentStr);
-					htmlBodyLength = htmlBody.length();
 
 					// Calculate the tag positions of the current entry, if it hasn't done before.
 					if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
@@ -235,7 +233,7 @@ public class Content {
 				// If fileContentStr is too long; crop it by the maxContentPerSection.
 				// Save the fileContent and position within a new navPoint, insert it after current index.
 				if (maxContentPerSection != 0) { // maxContentPerSection is given.
-					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, trimStartPosition, trimEndPosition);
+					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition);
 
 					if (calculatedTrimEndPosition != -1) {
 						List<String> openedTags = getOpenedTags(entryName, trimStartPosition, calculatedTrimEndPosition);
@@ -429,13 +427,12 @@ public class Content {
 		String entryClosingTags = entryNavPoint.getClosingTags(); // Will be calculated on the first attempt.
 		List<String> entryOpenedTags = entryNavPoint.getOpenTags();
 
-		logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
-				+ bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
+		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
+		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
 
 		String fileContent = readFileContent(entryName);
 
 		String htmlBody = getHtmlBody(fileContent);
-		int htmlBodyLength = htmlBody.length();
 
 		String htmlBodyToReplace = null;
 
@@ -459,7 +456,7 @@ public class Content {
 				}
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBodyLength, bodyTrimStartPosition, bodyTrimEndPosition);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, calculatedTrimEndPosition);
@@ -487,7 +484,8 @@ public class Content {
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
 				} else {
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
-					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length() + bodyTrimStartPosition); // Sets endPosition to avoid calculating again.
+					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length() + bodyTrimStartPosition); // Sets endPosition to avoid
+																																				// calculating again.
 				}
 			}
 		} else { // Calculated before.
@@ -605,8 +603,10 @@ public class Content {
 		return openingTags.toString();
 	}
 
-	private int calculateTrimEndPosition(String entryName, int htmlBodyLength, int trimStartPosition, int trimEndPos) {
+	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
 		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
+
+		int htmlBodyLength = htmlBody.length();
 
 		// Don't need to trim. HtmlBody with tags are already below limit.
 		if (htmlBodyLength < trimEndPosition || (trimEndPosition - trimStartPosition) < maxContentPerSection) {
@@ -655,13 +655,17 @@ public class Content {
 				return -1;
 			}
 
+			if ((trimEndPosition - tagsLength) >= maxContentPerSection) {
+				break;
+			}
+
 			lastTagsLength = tagsLength;
 			loopCount++;
 		}
 
-		// while (htmlBody.charAt(trimEndPosition) != ' ') {
-		// trimEndPosition--;
-		// }
+		while (htmlBody.charAt(trimEndPosition) != ' ') {
+			trimEndPosition--;
+		}
 
 		return trimEndPosition;
 	}
