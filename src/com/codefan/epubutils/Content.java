@@ -16,7 +16,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import com.codefan.epubutils.BaseFindings.XmlItem;
-import com.codefan.epubutils.Logger.Severity;
 
 public class Content {
 
@@ -130,9 +129,9 @@ public class Content {
 
 				String fileContentStr = readFileContent(entryName);
 
-				if (maxContentPerSection != 0) {
-					htmlBody = getHtmlBody(fileContentStr);
+				htmlBody = getHtmlBody(fileContentStr);
 
+				if (maxContentPerSection != 0) {
 					// Calculate the tag positions of the current entry, if it hasn't done before.
 					if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
 						if (entryTagPositions == null) {
@@ -254,13 +253,16 @@ public class Content {
 
 						getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 
-						// Not sure if these are needed.
-						getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
+						// Inserting calculated info to avoid calculating this navPoint again. In the future these data could be written to Term of Contents file.
+						getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName); // To indicate that this is a trimmed part.
 						getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
 						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition);
 						getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 
-						lastBookSectionInfo = new BookSection();
+						if (lastBookSectionInfo == null) {
+							lastBookSectionInfo = new BookSection();
+						}
+
 						lastBookSectionInfo.setExtension(extension);
 						lastBookSectionInfo.setLabel(label);
 						lastBookSectionInfo.setMediaType(mediaType);
@@ -285,139 +287,12 @@ public class Content {
 				bookSection.setExtension(extension);
 				bookSection.setLabel(label);
 				bookSection.setMediaType(mediaType);
+
 				return bookSection;
 			}
 		}
 
 		throw new ReadingException("Referenced file not found!");
-	}
-
-	/*
-	 * This method calculates and keeps every tag indices of the given entry file. Later on, these calculations will be used when trimming the entry.
-	 * 
-	 * e.g. If the open-close tag indices are in the same trimmed part; tag will be closed there and won't disturb the next trimmed part.
-	 * 
-	 * If the open-close tag indices are not in the same trimmed part; tag will be closed at the end of the current trimmed part, and opened in the next trimmed part.
-	 */
-	private void calculateEntryTagPositions(String entryName, String htmlBody) {
-		List<TagInfo> openedTags = null;
-		ListIterator<TagInfo> listIterator = null;
-
-		boolean isPossiblyTagOpened = false;
-		StringBuilder possiblyTag = new StringBuilder();
-
-		Pattern pattern = Pattern.compile(Constants.HTML_TAG_PATTERN);
-		Matcher matcher;
-
-		for (int i = 0; i < htmlBody.length(); i++) {
-			if (htmlBody.charAt(i) == '<') { // Tag might have been opened.
-				isPossiblyTagOpened = true;
-				possiblyTag.setLength(0); // In case of double occurence of '<' start from the next found tag opening; e.g. '< <p>'.
-			} else if (htmlBody.charAt(i) == '>') { // Tag might have been closed.
-				possiblyTag.append('>');
-				if (htmlBody.charAt(i - 1) != '/') { // Not an empty tag.
-					String tagStr = possiblyTag.toString();
-
-					matcher = pattern.matcher(tagStr);
-
-					if (matcher.matches()) {
-						if (tagStr.charAt(1) == '/') { // Closing tag. Match it with the last open tag with the same name.
-							String tagName = getFullTagName(tagStr, false);
-
-							listIterator = openedTags.listIterator(openedTags.size());
-
-							while (listIterator.hasPrevious()) {
-								TagInfo openedTag = listIterator.previous();
-
-								if (openedTag.getTagName().equals(tagName)) { // Found the last open tag with the same name.
-									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagPosition(), i); // i - tagName.length()
-									listIterator.remove();
-									break;
-								}
-							}
-						} else { // Opening tag.
-							if (openedTags == null) {
-								openedTags = new ArrayList<>();
-							}
-
-							String fullTagName = getFullTagName(tagStr, true);
-
-							String tagName = getTagName(fullTagName);
-
-							TagInfo tag = new TagInfo();
-							tag.setTagName(tagName);
-							tag.setFullTagName(fullTagName);
-							tag.setOpeningTagPosition(i); // i - fullTagName.length()
-
-							openedTags.add(tag);
-						}
-					}
-				} else { // Empty tag.
-					String tagStr = possiblyTag.toString();
-
-					matcher = pattern.matcher(tagStr);
-
-					if (matcher.matches()) {
-						int closingBracletIndex = tagStr.indexOf('>');
-						String tagName = tagStr.substring(1, closingBracletIndex - 1);
-
-						addEntryTagPosition(entryName, tagName, i, i);
-					}
-				}
-
-				possiblyTag.setLength(0);
-				isPossiblyTagOpened = false;
-			}
-
-			if (isPossiblyTagOpened) {
-				possiblyTag.append(htmlBody.charAt(i));
-			}
-		}
-	}
-
-	private void addEntryTagPosition(String entryName, String fullTagName, int openingPosition, int closingPosition) {
-		if (this.entryTagPositions == null) {
-			this.entryTagPositions = new HashMap<>();
-		}
-
-		TagInfo tagInfo = new TagInfo();
-		tagInfo.setOpeningTagPosition(openingPosition);
-		tagInfo.setClosingTagPosition(closingPosition);
-		tagInfo.setFullTagName(fullTagName);
-		tagInfo.setTagName(getTagName(fullTagName));
-
-		if (this.entryTagPositions.containsKey(entryName)) {
-			this.entryTagPositions.get(entryName).add(tagInfo);
-		} else {
-			List<TagInfo> tagInfoList = new ArrayList<>();
-			tagInfoList.add(tagInfo);
-			this.entryTagPositions.put(entryName, tagInfoList);
-		}
-	}
-
-	private String getFullTagName(String tag, boolean isOpeningTag) {
-		int closingBracletIndex = tag.indexOf('>');
-		if (isOpeningTag) {
-			return tag.substring(1, closingBracletIndex);
-		} else {
-			return tag.substring(2, closingBracletIndex);
-		}
-	}
-
-	private String getTagName(String fullTagName) {
-		String tagName = fullTagName;
-
-		if (tagName.contains(" ")) {
-			int endIndex = 2;
-
-			while (fullTagName.length() > endIndex && fullTagName.charAt(endIndex) != ' ') {
-				endIndex++;
-			}
-
-			tagName = fullTagName.substring(0, endIndex);
-		}
-
-		return tagName;
 	}
 
 	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException {
@@ -445,7 +320,7 @@ public class Content {
 
 				if (anchorIndex != -1 && bodyTrimStartPosition <= anchorIndex) {
 
-					while (htmlBody.charAt(anchorIndex) != '<') { // Getting just before anchor html.
+					while (htmlBody.charAt(anchorIndex) != Constants.TAG_OPENING) { // Getting just before anchor html.
 						anchorIndex--;
 					}
 
@@ -456,7 +331,7 @@ public class Content {
 				}
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, 0);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, calculatedTrimEndPosition);
@@ -518,6 +393,134 @@ public class Content {
 		return bookSection;
 	}
 
+	/*
+	 * This method calculates and keeps every tag indices of the given entry file. Later on, these calculations will be used when trimming the entry.
+	 * 
+	 * e.g. If the open-close tag indices are in the same trimmed part; tag will be closed there and won't disturb the next trimmed part.
+	 * 
+	 * If the open-close tag indices are not in the same trimmed part; tag will be closed at the end of the current trimmed part, and opened in the next trimmed part.
+	 */
+	private void calculateEntryTagPositions(String entryName, String htmlBody) {
+		List<TagInfo> openedTags = null;
+		ListIterator<TagInfo> listIterator = null;
+
+		boolean isPossiblyTagOpened = false;
+		StringBuilder possiblyTag = new StringBuilder();
+
+		Pattern pattern = Pattern.compile(Constants.HTML_TAG_PATTERN);
+		Matcher matcher;
+
+		for (int i = 0; i < htmlBody.length(); i++) {
+			if (htmlBody.charAt(i) == Constants.TAG_OPENING) { // Tag might have been opened.
+				isPossiblyTagOpened = true;
+				possiblyTag.setLength(0); // In case of double occurence of '<' start from the next found tag opening; e.g. '< <p>'.
+			} else if (htmlBody.charAt(i) == Constants.TAG_CLOSING) { // Tag might have been closed.
+				possiblyTag.append(Constants.TAG_CLOSING);
+				if (htmlBody.charAt(i - 1) != '/') { // Not an empty tag.
+					String tagStr = possiblyTag.toString();
+
+					matcher = pattern.matcher(tagStr);
+
+					if (matcher.matches()) {
+						if (tagStr.charAt(1) == '/') { // Closing tag. Match it with the last open tag with the same name.
+							String tagName = getFullTagName(tagStr, false);
+
+							listIterator = openedTags.listIterator(openedTags.size());
+
+							while (listIterator.hasPrevious()) {
+								TagInfo openedTag = listIterator.previous();
+
+								if (openedTag.getTagName().equals(tagName)) { // Found the last open tag with the same name.
+									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagPosition(), i); // i - tagName.length()
+									listIterator.remove();
+									break;
+								}
+							}
+						} else { // Opening tag.
+							if (openedTags == null) {
+								openedTags = new ArrayList<>();
+							}
+
+							String fullTagName = getFullTagName(tagStr, true);
+
+							String tagName = getTagName(fullTagName);
+
+							TagInfo tag = new TagInfo();
+							tag.setTagName(tagName);
+							tag.setFullTagName(fullTagName);
+							tag.setOpeningTagPosition(i); // i - fullTagName.length()
+
+							openedTags.add(tag);
+						}
+					}
+				} else { // Empty tag.
+					String tagStr = possiblyTag.toString();
+
+					matcher = pattern.matcher(tagStr);
+
+					if (matcher.matches()) {
+						int closingBracletIndex = tagStr.indexOf(Constants.TAG_CLOSING);
+						String tagName = tagStr.substring(1, closingBracletIndex - 1);
+
+						addEntryTagPosition(entryName, tagName, i, i);
+					}
+				}
+
+				possiblyTag.setLength(0);
+				isPossiblyTagOpened = false;
+			}
+
+			if (isPossiblyTagOpened) {
+				possiblyTag.append(htmlBody.charAt(i));
+			}
+		}
+	}
+
+	private void addEntryTagPosition(String entryName, String fullTagName, int openingPosition, int closingPosition) {
+		if (this.entryTagPositions == null) {
+			this.entryTagPositions = new HashMap<>();
+		}
+
+		TagInfo tagInfo = new TagInfo();
+		tagInfo.setOpeningTagPosition(openingPosition);
+		tagInfo.setClosingTagPosition(closingPosition);
+		tagInfo.setFullTagName(fullTagName);
+		tagInfo.setTagName(getTagName(fullTagName));
+
+		if (this.entryTagPositions.containsKey(entryName)) {
+			this.entryTagPositions.get(entryName).add(tagInfo);
+		} else {
+			List<TagInfo> tagInfoList = new ArrayList<>();
+			tagInfoList.add(tagInfo);
+			this.entryTagPositions.put(entryName, tagInfoList);
+		}
+	}
+
+	private String getFullTagName(String tag, boolean isOpeningTag) {
+		int closingBracletIndex = tag.indexOf(Constants.TAG_CLOSING);
+		if (isOpeningTag) {
+			return tag.substring(1, closingBracletIndex);
+		} else {
+			return tag.substring(2, closingBracletIndex);
+		}
+	}
+
+	private String getTagName(String fullTagName) {
+		String tagName = fullTagName;
+
+		if (tagName.contains(" ")) {
+			int endIndex = 2;
+
+			while (fullTagName.length() > endIndex && fullTagName.charAt(endIndex) != ' ') {
+				endIndex++;
+			}
+
+			tagName = fullTagName.substring(0, endIndex);
+		}
+
+		return tagName;
+	}
+
 	private int getNextAvailableAnchorIndex(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
 		getToc().getNavMap().getNavPoints().remove(++index); // Removing the nextAnchor from navPoints; 'cause it's already not found.
 
@@ -544,7 +547,7 @@ public class Content {
 
 					if (anchorIndex != -1) {
 
-						while (htmlBody.charAt(anchorIndex) != '<') { // Getting just before anchor html.
+						while (htmlBody.charAt(anchorIndex) != Constants.TAG_OPENING) { // Getting just before anchor html.
 							anchorIndex--;
 						}
 
@@ -587,7 +590,7 @@ public class Content {
 		StringBuilder closingTagsBuilder = new StringBuilder();
 
 		for (int i = 0; i < openedTags.size(); i++) {
-			closingTagsBuilder.append("</" + getTagName(openedTags.get(i)) + ">");
+			closingTagsBuilder.append(Constants.TAG_START + getTagName(openedTags.get(i)) + Constants.TAG_CLOSING);
 		}
 
 		return closingTagsBuilder.toString();
@@ -597,14 +600,15 @@ public class Content {
 		StringBuilder openingTags = new StringBuilder();
 
 		for (int i = 0; i < openedTags.size(); i++) {
-			openingTags.append('<').append(openedTags.get(i)).append('>');
+			openingTags.append(Constants.TAG_OPENING).append(openedTags.get(i)).append(Constants.TAG_CLOSING);
 		}
 
 		return openingTags.toString();
 	}
 
 	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
-		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
+		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos
+				: trimStartPosition + maxContentPerSection;
 
 		int htmlBodyLength = htmlBody.length();
 
@@ -680,7 +684,8 @@ public class Content {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
 
 			// Opened in the trimmed part, closed after the trimmed part.
-			if (tagInfo.getOpeningTagPosition() > trimStartIndex && tagInfo.getOpeningTagPosition() < trimEndIndex && tagInfo.getClosingTagPosition() > trimEndIndex) {
+			if (tagInfo.getOpeningTagPosition() > trimStartIndex && tagInfo.getOpeningTagPosition() < trimEndIndex
+					&& tagInfo.getClosingTagPosition() > trimEndIndex) {
 				if (openedTags == null) {
 					openedTags = new ArrayList<>();
 				}
@@ -790,11 +795,11 @@ public class Content {
 
 		if (startOfCurrentAnchor != -1 && startOfNextAnchor != -1) {
 
-			while (htmlBody.charAt(startOfCurrentAnchor) != '<') {
+			while (htmlBody.charAt(startOfCurrentAnchor) != Constants.TAG_OPENING) {
 				startOfCurrentAnchor--;
 			}
 
-			while (htmlBody.charAt(startOfNextAnchor) != '<') {
+			while (htmlBody.charAt(startOfNextAnchor) != Constants.TAG_OPENING) {
 				startOfNextAnchor--;
 			}
 
@@ -830,7 +835,7 @@ public class Content {
 		int indexOfLinkStart = htmlContent.indexOf("<link");
 
 		if (indexOfLinkStart != -1) {
-			int indexOfLinkEnd = htmlContent.indexOf("/>", indexOfLinkStart);
+			int indexOfLinkEnd = htmlContent.indexOf(Constants.TAG_END, indexOfLinkStart);
 
 			String linkStr = htmlContent.substring(indexOfLinkStart, indexOfLinkEnd + 2);
 
@@ -839,7 +844,7 @@ public class Content {
 
 			String cssHref = linkStr.substring(indexOfHrefStart + 6, indexOfHrefEnd);
 
-			if (cssHref.endsWith(".css")) {
+			if (cssHref.endsWith(Constants.EXTENSION_CSS)) {
 				return new String[] { cssHref, linkStr };
 			}
 		}
