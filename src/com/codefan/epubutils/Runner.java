@@ -10,7 +10,7 @@ public class Runner {
 
 			BookSection bookSection;
 
-			for (int i = 0; i < 100; i++) {
+			for (int i = 0; i < 5; i++) {
 				bookSection = epubContent.getBookSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
@@ -18,7 +18,7 @@ public class Runner {
 			}
 
 			System.out.println("\n-------------------------------Going backwards!-------------------------------------\n");
-			for (int i = 98; i > 0; i--) {
+			for (int i = 4; i >= 0; i--) {
 				bookSection = epubContent.getBookSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 

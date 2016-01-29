@@ -142,8 +142,6 @@ public class Content {
 					}
 				}
 
-				fileContentStr = replaceLinkedWithActualCss(fileContentStr);
-
 				if (nextAnchor != null) { // Splitting the file by anchors.
 					currentAnchor = convertAnchorToHtml(currentAnchor);
 					nextAnchor = convertAnchorToHtml(nextAnchor);
@@ -282,6 +280,7 @@ public class Content {
 				}
 
 				fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
+				fileContentStr = replaceLinkedWithActualCss(fileContentStr);
 
 				bookSection.setSectionContent(fileContentStr);
 				bookSection.setExtension(extension);
@@ -358,6 +357,7 @@ public class Content {
 				if (bodyTrimEndPosition != 0) {
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
 				} else {
+					// make it null here htmlBody
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
 					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length() + bodyTrimStartPosition); // Sets endPosition to avoid
 																																				// calculating again.
@@ -379,6 +379,7 @@ public class Content {
 		}
 
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
+		fileContent = replaceLinkedWithActualCss(fileContent);
 
 		BookSection bookSection = new BookSection();
 
@@ -431,7 +432,7 @@ public class Content {
 								TagInfo openedTag = listIterator.previous();
 
 								if (openedTag.getTagName().equals(tagName)) { // Found the last open tag with the same name.
-									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagPosition(), i); // i - tagName.length()
+									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagPosition(), i - tagName.length()); // i - tagName.length()
 									listIterator.remove();
 									break;
 								}
@@ -448,7 +449,7 @@ public class Content {
 							TagInfo tag = new TagInfo();
 							tag.setTagName(tagName);
 							tag.setFullTagName(fullTagName);
-							tag.setOpeningTagPosition(i); // i - fullTagName.length()
+							tag.setOpeningTagPosition(i - fullTagName.length()); // i - fullTagName.length()
 
 							openedTags.add(tag);
 						}
@@ -607,8 +608,7 @@ public class Content {
 	}
 
 	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
-		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos
-				: trimStartPosition + maxContentPerSection;
+		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
 
 		int htmlBodyLength = htmlBody.length();
 
@@ -684,8 +684,7 @@ public class Content {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
 
 			// Opened in the trimmed part, closed after the trimmed part.
-			if (tagInfo.getOpeningTagPosition() > trimStartIndex && tagInfo.getOpeningTagPosition() < trimEndIndex
-					&& tagInfo.getClosingTagPosition() > trimEndIndex) {
+			if (tagInfo.getOpeningTagPosition() > trimStartIndex && tagInfo.getOpeningTagPosition() < trimEndIndex && tagInfo.getClosingTagPosition() > trimEndIndex) {
 				if (openedTags == null) {
 					openedTags = new ArrayList<>();
 				}
@@ -757,13 +756,15 @@ public class Content {
 
 			StringBuilder fileContent = new StringBuilder();
 
-			String line;
-			while ((line = bufferedReader.readLine()) != null) {
-				fileContent.append(line).append(" ");
+			try {
+				String line;
+				while ((line = bufferedReader.readLine()) != null) {
+					fileContent.append(line).append(" ");
+				}
+			} finally {
+				bufferedReader.close();
+				// epubFile.close();
 			}
-
-			// epubFile.close();
-			bufferedReader.close();
 
 			return fileContent.toString();
 		} catch (IOException e) {
@@ -831,27 +832,6 @@ public class Content {
 		return null;
 	}
 
-	private String[] getCssHrefAndLinkPart(String htmlContent) {
-		int indexOfLinkStart = htmlContent.indexOf("<link");
-
-		if (indexOfLinkStart != -1) {
-			int indexOfLinkEnd = htmlContent.indexOf(Constants.TAG_END, indexOfLinkStart);
-
-			String linkStr = htmlContent.substring(indexOfLinkStart, indexOfLinkEnd + 2);
-
-			int indexOfHrefStart = linkStr.indexOf("href=\"");
-			int indexOfHrefEnd = linkStr.indexOf("\"", indexOfHrefStart + 6);
-
-			String cssHref = linkStr.substring(indexOfHrefStart + 6, indexOfHrefEnd);
-
-			if (cssHref.endsWith(Constants.EXTENSION_CSS)) {
-				return new String[] { cssHref, linkStr };
-			}
-		}
-
-		return null;
-	}
-
 	private String replaceLinkedWithActualCss(String htmlContent) throws ReadingException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
@@ -905,6 +885,27 @@ public class Content {
 		return htmlContent;
 	}
 
+	private String[] getCssHrefAndLinkPart(String htmlContent) {
+		int indexOfLinkStart = htmlContent.indexOf("<link");
+
+		if (indexOfLinkStart != -1) {
+			int indexOfLinkEnd = htmlContent.indexOf(Constants.TAG_END, indexOfLinkStart);
+
+			String linkStr = htmlContent.substring(indexOfLinkStart, indexOfLinkEnd + 2);
+
+			int indexOfHrefStart = linkStr.indexOf("href=\"");
+			int indexOfHrefEnd = linkStr.indexOf("\"", indexOfHrefStart + 6);
+
+			String cssHref = linkStr.substring(indexOfHrefStart + 6, indexOfHrefEnd);
+
+			if (cssHref.endsWith(Constants.EXTENSION_CSS)) {
+				return new String[] { cssHref, linkStr };
+			}
+		}
+
+		return null;
+	}
+
 	List<String> getEntryNames() {
 		return entryNames;
 	}
@@ -933,7 +934,7 @@ public class Content {
 		this.epubFile = epubFile;
 	}
 
-	public void setMaxContentPerSection(int maxContentPerSection) {
+	void setMaxContentPerSection(int maxContentPerSection) {
 		this.maxContentPerSection = maxContentPerSection;
 	}
 
