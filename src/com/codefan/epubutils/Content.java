@@ -21,7 +21,7 @@ public class Content {
 
 	private Logger logger;
 
-	private ZipFile epubFile;
+	private String zipFilePath;
 
 	private Container container;
 	private Package opfPackage;
@@ -280,7 +280,6 @@ public class Content {
 				}
 
 				fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
-				fileContentStr = replaceLinkedWithActualCss(fileContentStr);
 
 				bookSection.setSectionContent(fileContentStr);
 				bookSection.setExtension(extension);
@@ -379,7 +378,6 @@ public class Content {
 		}
 
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
-		fileContent = replaceLinkedWithActualCss(fileContent);
 
 		BookSection bookSection = new BookSection();
 
@@ -748,7 +746,11 @@ public class Content {
 
 	private String readFileContent(String entryName) throws ReadingException {
 
+		ZipFile epubFile = null;
+
 		try {
+			epubFile = new ZipFile(zipFilePath);
+
 			ZipEntry zipEntry = epubFile.getEntry(entryName);
 			InputStream inputStream = epubFile.getInputStream(zipEntry);
 
@@ -766,10 +768,19 @@ public class Content {
 				// epubFile.close();
 			}
 
-			return fileContent.toString();
+			return replaceLinkedWithActualCss(epubFile, fileContent.toString());
 		} catch (IOException e) {
 			e.printStackTrace();
-			throw new ReadingException("IO Exception while reading entry " + entryName + e.getMessage());
+			throw new ReadingException("IO Exception while reading content " + entryName + e.getMessage());
+		} finally {
+			try {
+				if (epubFile != null) {
+					epubFile.close();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new ReadingException("Error closing ZipFile: " + e.getMessage());
+			}
 		}
 	}
 
@@ -832,7 +843,7 @@ public class Content {
 		return null;
 	}
 
-	private String replaceLinkedWithActualCss(String htmlContent) throws ReadingException {
+	private String replaceLinkedWithActualCss(ZipFile epubFile, String htmlContent) throws ReadingException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
@@ -926,16 +937,12 @@ public class Content {
 		return toc;
 	}
 
-	ZipFile getEpubFile() {
-		return epubFile;
-	}
-
-	void setEpubFile(ZipFile epubFile) {
-		this.epubFile = epubFile;
-	}
-
 	void setMaxContentPerSection(int maxContentPerSection) {
 		this.maxContentPerSection = maxContentPerSection;
+	}
+
+	void setZipFilePath(String zipFilePath) {
+		this.zipFilePath = zipFilePath;
 	}
 
 }

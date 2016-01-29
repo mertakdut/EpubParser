@@ -20,170 +20,166 @@ public class Reader {
 
 	public Content getContent(String filePath) throws ReadingException {
 		Content content = new Content();
+		content.setZipFilePath(filePath);
 
-		try {
-			content.setEpubFile(new ZipFile(filePath));
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
-		}
-
-		return getContent(content);
+		return getContent(filePath, content);
 	}
 
 	public Content getContent(String filePath, int maxContentPerSection) throws ReadingException {
 		Content content = new Content();
 
-		try {
-			content.setEpubFile(new ZipFile(filePath));
-			content.setMaxContentPerSection(maxContentPerSection);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
-		}
+		content.setZipFilePath(filePath);
+		content.setMaxContentPerSection(maxContentPerSection);
 
-		return getContent(content);
+		return getContent(filePath, content);
 	}
 
 	public Content getContent(File file) throws ReadingException {
 		Content content = new Content();
+		content.setZipFilePath(file.getPath());
 
-		try {
-			content.setEpubFile(new ZipFile(file.getPath()));
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
-		}
-
-		return getContent(content);
+		return getContent(file.getPath(), content);
 	}
 
 	public Content getContent(File file, int maxContentPerSection) throws ReadingException {
 		Content content = new Content();
 
-		try {
-			content.setEpubFile(new ZipFile(file.getPath()));
-			content.setMaxContentPerSection(maxContentPerSection);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
-		}
+		content.setZipFilePath(file.getPath());
+		content.setMaxContentPerSection(maxContentPerSection);
 
-		return getContent(content);
+		return getContent(file.getPath(), content);
 	}
 
-	private Content getContent(Content content) throws ReadingException {
+	private Content getContent(String zipFilePath, Content content) throws ReadingException {
 
-		Enumeration<? extends ZipEntry> files = content.getEpubFile().entries();
-
-		while (files.hasMoreElements()) {
-			ZipEntry entry = (ZipEntry) files.nextElement();
-			if (!entry.isDirectory()) {
-				String entryName = entry.getName();
-
-				if (entryName != null) {
-					content.addEntryName(entryName);
-				}
-			}
-		}
-
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder docBuilder;
-
+		ZipFile epubFile = null;
 		try {
-			docBuilder = factory.newDocumentBuilder();
-		} catch (ParserConfigurationException e) {
-			e.printStackTrace();
-			throw new ReadingException("DocumentBuilder cannot be created: " + e.getMessage());
-		}
-
-		boolean isContainerXmlFound = false;
-		boolean isTocXmlFound = false;
-
-		for (int i = 0; i < content.getEntryNames().size(); i++) {
-
-			if (isContainerXmlFound && isTocXmlFound) {
-				break;
+			try {
+				epubFile = new ZipFile(zipFilePath);
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
 			}
 
-			String currentEntryName = content.getEntryNames().get(i);
+			Enumeration<? extends ZipEntry> files = epubFile.entries();
 
-			if (currentEntryName.contains("container.xml")) {
-				isContainerXmlFound = true;
+			while (files.hasMoreElements()) {
+				ZipEntry entry = (ZipEntry) files.nextElement();
+				if (!entry.isDirectory()) {
+					String entryName = entry.getName();
 
-				ZipEntry container = content.getEpubFile().getEntry(currentEntryName);
+					if (entryName != null) {
+						content.addEntryName(entryName);
+					}
+				}
+			}
 
-				InputStream inputStream;
-				try {
-					inputStream = content.getEpubFile().getInputStream(container);
-				} catch (IOException e) {
-					e.printStackTrace();
-					throw new ReadingException("IOException while reading " + Constants.FILE_NAME_CONTAINER_XML + " file: " + e.getMessage());
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder docBuilder;
+
+			try {
+				docBuilder = factory.newDocumentBuilder();
+			} catch (ParserConfigurationException e) {
+				e.printStackTrace();
+				throw new ReadingException("DocumentBuilder cannot be created: " + e.getMessage());
+			}
+
+			boolean isContainerXmlFound = false;
+			boolean isTocXmlFound = false;
+
+			for (int i = 0; i < content.getEntryNames().size(); i++) {
+
+				if (isContainerXmlFound && isTocXmlFound) {
+					break;
 				}
 
-				Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
-				parseContainerXml(docBuilder, document, content);
-			} else if (currentEntryName.contains(".ncx")) {
-				isTocXmlFound = true;
+				String currentEntryName = content.getEntryNames().get(i);
 
-				ZipEntry toc = content.getEpubFile().getEntry(currentEntryName);
+				if (currentEntryName.contains("container.xml")) {
+					isContainerXmlFound = true;
 
-				InputStream inputStream;
-				try {
-					inputStream = content.getEpubFile().getInputStream(toc);
-				} catch (IOException e) {
-					e.printStackTrace();
-					throw new ReadingException("IOException while reading " + Constants.FILE_NAME_TOC_NCX + " file: " + e.getMessage());
+					ZipEntry container = epubFile.getEntry(currentEntryName);
+
+					InputStream inputStream;
+					try {
+						inputStream = epubFile.getInputStream(container);
+					} catch (IOException e) {
+						e.printStackTrace();
+						throw new ReadingException("IOException while reading " + Constants.FILE_NAME_CONTAINER_XML + " file: " + e.getMessage());
+					}
+
+					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
+					parseContainerXml(docBuilder, document, content, epubFile);
+				} else if (currentEntryName.contains(".ncx")) {
+					isTocXmlFound = true;
+
+					ZipEntry toc = epubFile.getEntry(currentEntryName);
+
+					InputStream inputStream;
+					try {
+						inputStream = epubFile.getInputStream(toc);
+					} catch (IOException e) {
+						e.printStackTrace();
+						throw new ReadingException("IOException while reading " + Constants.FILE_NAME_TOC_NCX + " file: " + e.getMessage());
+					}
+
+					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_TOC_NCX);
+					parseTocFile(document, content.getToc());
 				}
+			}
 
-				Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_TOC_NCX);
-				parseTocFile(document, content);
+			if (!isContainerXmlFound) {
+				throw new ReadingException("container.xml not found.");
+			}
+
+			if (!isTocXmlFound) {
+				throw new ReadingException("toc.ncx not found.");
+			}
+
+			// Debug
+			content.print();
+
+			return content;
+
+		} finally {
+			try {
+				epubFile.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new ReadingException("Error closing ZipFile: " + e.getMessage());
 			}
 		}
-
-		if (!isContainerXmlFound) {
-			throw new ReadingException("container.xml not found.");
-		}
-
-		if (!isTocXmlFound) {
-			throw new ReadingException("toc.ncx not found.");
-		}
-
-		// Debug
-		content.print();
-
-		return content;
 	}
 
-	private void parseContainerXml(DocumentBuilder docBuilder, Document document, Content content) throws ReadingException {
+	private void parseContainerXml(DocumentBuilder docBuilder, Document document, Content content, ZipFile epubFile) throws ReadingException {
 		if (document.hasChildNodes()) {
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getContainer());
 		}
 
 		String opfFilePath = content.getContainer().getFullPathValue();
-		ZipEntry opfFileEntry = content.getEpubFile().getEntry(opfFilePath);
+		ZipEntry opfFileEntry = epubFile.getEntry(opfFilePath);
 
 		InputStream opfFileInputStream;
 		try {
-			opfFileInputStream = content.getEpubFile().getInputStream(opfFileEntry);
+			opfFileInputStream = epubFile.getInputStream(opfFileEntry);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new ReadingException("IO error while reading " + Constants.FILE_NAME_PACKAGE_OPF + " inputstream: " + e.getMessage());
 		}
 
 		Document packageDocument = getDocument(docBuilder, opfFileInputStream, Constants.FILE_NAME_PACKAGE_OPF);
-		parseOpfFile(packageDocument, content);
+		parseOpfFile(packageDocument, content.getPackage());
 	}
 
-	private void parseOpfFile(Document document, Content content) throws ReadingException {
+	private void parseOpfFile(Document document, Package pckage) throws ReadingException {
 		if (document.hasChildNodes()) {
-			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getPackage());
+			traverseDocumentNodesAndFillContent(document.getChildNodes(), pckage);
 		}
 	}
 
-	private void parseTocFile(Document document, Content content) throws ReadingException {
+	private void parseTocFile(Document document, Toc toc) throws ReadingException {
 		if (document.hasChildNodes()) {
-			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getToc());
+			traverseDocumentNodesAndFillContent(document.getChildNodes(), toc);
 		}
 	}
 
