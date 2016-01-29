@@ -1,6 +1,8 @@
 package com.codefan.epubutils;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,6 +16,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
+import javax.imageio.ImageIO;
+import javax.xml.bind.DatatypeConverter;
 
 import com.codefan.epubutils.BaseFindings.XmlItem;
 
@@ -279,6 +284,7 @@ public class Content {
 					}
 				}
 
+				htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
 				fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 				bookSection.setSectionContent(fileContentStr);
@@ -377,6 +383,7 @@ public class Content {
 			htmlBodyToReplace += closingTags;
 		}
 
+		htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
 
 		BookSection bookSection = new BookSection();
@@ -657,7 +664,7 @@ public class Content {
 				return -1;
 			}
 
-			if ((trimEndPosition - tagsLength) >= maxContentPerSection) {
+			if (((trimEndPosition - trimStartPosition) + tagsLength) >= maxContentPerSection) {
 				break;
 			}
 
@@ -738,12 +745,14 @@ public class Content {
 	private String getFileExtension(String fileName) {
 		int dotIndex = fileName.lastIndexOf('.');
 		if (dotIndex != -1) {
-			return fileName.substring(0, dotIndex);
+			return fileName.substring(dotIndex + 1);
 		}
 
 		return null;
 	}
 
+	// This operation is getting more expensive. File Content could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
+	// If map doesn't contain that entryName -> then this method can be used. But replacing the whole file content's css and img parts everyTime is quite redundant.
 	private String readFileContent(String entryName) throws ReadingException {
 
 		ZipFile epubFile = null;
@@ -754,7 +763,7 @@ public class Content {
 			ZipEntry zipEntry = epubFile.getEntry(entryName);
 			InputStream inputStream = epubFile.getInputStream(zipEntry);
 
-			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
 
 			StringBuilder fileContent = new StringBuilder();
 
@@ -765,7 +774,6 @@ public class Content {
 				}
 			} finally {
 				bufferedReader.close();
-				// epubFile.close();
 			}
 
 			return replaceLinkedWithActualCss(epubFile, fileContent.toString());
@@ -843,7 +851,7 @@ public class Content {
 		return null;
 	}
 
-	private String replaceLinkedWithActualCss(ZipFile epubFile, String htmlContent) throws ReadingException {
+	private String replaceLinkedWithActualCss(ZipFile epubFile, String htmlContent) throws IOException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
@@ -859,41 +867,95 @@ public class Content {
 
 				int lastSlashIndex = entryName.lastIndexOf("/");
 				String fileName = entryName.substring(lastSlashIndex + 1);
+				fileName = encodeToHtml(fileName);
 
 				if (cssHref.contains(fileName)) { // css exists.
 					ZipEntry zipEntry = epubFile.getEntry(entryName);
-					InputStream zipEntryInputStream;
+
+					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
+
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
+					StringBuilder fileContent = new StringBuilder();
+
+					fileContent.append("<style type=\"text/css\">");
+
 					try {
-						zipEntryInputStream = epubFile.getInputStream(zipEntry);
-
-						BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
-						StringBuilder fileContent = new StringBuilder();
-
-						fileContent.append("<style type=\"text/css\">");
-
 						String line;
 						while ((line = bufferedReader.readLine()) != null) {
 							fileContent.append(line);
 						}
-
+					} finally {
 						bufferedReader.close();
-
-						fileContent.append("</style>");
-
-						htmlContent = htmlContent.replace(linkPart, fileContent.toString());
-
-						cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
-
-						break;
-					} catch (IOException e) {
-						e.printStackTrace();
-						throw new ReadingException("IOException while reading " + cssHref + " file: " + e.getMessage());
 					}
+
+					fileContent.append("</style>");
+
+					htmlContent = htmlContent.replace(linkPart, fileContent.toString());
+
+					cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
+
+					break;
 				}
 			}
 		}
 
 		return htmlContent;
+	}
+
+	private String replaceLinkWithActualImage(String htmlBody) {
+
+		String srcHref = getImgSrcHref(htmlBody);
+
+		while (srcHref != null) { // There may be multiple img tags.
+
+			for (int i = 0; i < getEntryNames().size(); i++) {
+				String entryName = getEntryNames().get(i);
+
+				int lastSlashIndex = entryName.lastIndexOf("/");
+				String fileName = entryName.substring(lastSlashIndex + 1);
+				fileName = encodeToHtml(fileName);
+
+				if (srcHref.contains(fileName)) { // image exists.
+					ZipFile epubFile = null;
+
+					try {
+						String extension = getFileExtension(fileName);
+
+						epubFile = new ZipFile(this.zipFilePath);
+						ZipEntry zipEntry = epubFile.getEntry(entryName);
+						InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
+
+						BufferedImage bufferedImage = ImageIO.read(zipEntryInputStream);
+
+						ByteArrayOutputStream out = new ByteArrayOutputStream();
+						ImageIO.write(bufferedImage, extension, out);
+
+						byte[] imageAsBytes = out.toByteArray();
+
+						String imageAsByte64 = DatatypeConverter.printBase64Binary(imageAsBytes);
+						String src = "data:image/png;base64," + imageAsByte64;
+
+						htmlBody = htmlBody.replace(srcHref, src);
+
+						srcHref = getImgSrcHref(htmlBody);
+
+						break;
+					} catch (IOException e) {
+						e.printStackTrace();
+					} finally {
+						if (epubFile != null) {
+							try {
+								epubFile.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return htmlBody;
 	}
 
 	private String[] getCssHrefAndLinkPart(String htmlContent) {
@@ -915,6 +977,31 @@ public class Content {
 		}
 
 		return null;
+	}
+
+	private String getImgSrcHref(String htmlBody) {
+		int indexOfImgStart = htmlBody.indexOf("<img");
+
+		if (indexOfImgStart != -1) {
+			int indexOfImgEnd = htmlBody.indexOf(Constants.TAG_END, indexOfImgStart);
+
+			String imgPart = htmlBody.substring(indexOfImgStart, indexOfImgEnd + 2);
+
+			int indexOfSrcStart = imgPart.indexOf("src=\"");
+			int indexOfSrcEnd = imgPart.indexOf("\"", indexOfSrcStart + 5);
+
+			String srcHref = imgPart.substring(indexOfSrcStart + 5, indexOfSrcEnd);
+
+			if (!srcHref.contains("data:image")) { // Not replaced before.
+				return srcHref;
+			}
+		}
+
+		return null;
+	}
+	
+	private String encodeToHtml(String fileName) {
+		return fileName.replace("&", "&amp;").replace("Œ", "&OElig;").replace("œ", "&oelig;").replace("Ÿ", "&Yuml;");
 	}
 
 	List<String> getEntryNames() {
