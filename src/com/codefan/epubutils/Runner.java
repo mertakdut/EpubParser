@@ -6,11 +6,25 @@ public class Runner {
 		try {
 
 			Reader reader = new Reader();
-			Content epubContent = reader.getContent("C:\\eBooks/ALICE'S ADVENTURES IN WONDERLAND_80701.epub", 1000); // IN THE YEAR 2889.epub
+			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub", 1000); // IN THE YEAR 2889.epub
 
 			BookSection bookSection;
 
-			for (int i = 0; i < 5; i++) {
+			// int k = 0;
+			// for (int i = 0; i < 50; i++) {
+			//
+			// bookSection = epubContent.getBookSection(k);
+			// System.out.println("\n" + k + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
+			//
+			// System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+			//
+			// k += getRandomBoolean() ? 1 : -1;
+			//
+			// if (k < 0)
+			// k += 2;
+			// }
+
+			for (int i = 0; i < 50; i++) {
 				bookSection = epubContent.getBookSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
@@ -18,12 +32,17 @@ public class Runner {
 			}
 
 			System.out.println("\n-------------------------------Going backwards!-------------------------------------\n");
-			for (int i = 4; i >= 0; i--) {
+			
+			// Alice - 10. entry'de baþa dönüyor. trimStartPosition ve trimEndPosition 0 olarak alýnýyor.
+
+			for (int i = 48; i >= 0; i--) {
 				bookSection = epubContent.getBookSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
 			}
+
+			// int x = 5;
 
 			// bookSection = epubContent.getNextBookSection();
 			// System.out.println("\n3rd Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
@@ -52,6 +71,10 @@ public class Runner {
 		} else {
 			throw new ReadingException("Exception while getting book section : Html body tags not found.");
 		}
+	}
+
+	public static boolean getRandomBoolean() {
+		return Math.random() < 0.5;
 	}
 
 }

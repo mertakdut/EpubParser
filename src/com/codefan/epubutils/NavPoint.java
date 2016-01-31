@@ -14,6 +14,7 @@ class NavPoint {
 	private boolean markedToDelete;
 
 	// Additional cropped file navPoint variables.
+	private int typeCode; // 0 - realNavPoint, 1 - anchoredPart, 2 - trimmedPart
 	private String entryName;
 	private int bodyTrimStartPosition;
 	private int bodyTrimEndPosition;
@@ -76,14 +77,6 @@ class NavPoint {
 		this.markedToDelete = markedToDelete;
 	}
 
-	public String getEntryName() {
-		return entryName;
-	}
-
-	public void setEntryName(String entryName) {
-		this.entryName = entryName;
-	}
-
 	public int getBodyTrimStartPosition() {
 		return bodyTrimStartPosition;
 	}
@@ -114,5 +107,21 @@ class NavPoint {
 
 	public void setOpenTags(List<String> openTags) {
 		this.openTags = openTags;
+	}
+
+	public int getTypeCode() {
+		return typeCode;
+	}
+
+	public void setTypeCode(int typeCode) {
+		this.typeCode = typeCode;
+	}
+
+	public String getEntryName() {
+		return entryName;
+	}
+
+	public void setEntryName(String entryName) {
+		this.entryName = entryName;
 	}
 }

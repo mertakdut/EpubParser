@@ -14,6 +14,7 @@ class Constants {
 	static final char TAG_CLOSING = '>';
 	static final String TAG_END = "/>";
 	static final String TAG_START = "</";
+	static final char DOT = '.';
 	
 	static final String EXTENSION_CSS = ".css";
 

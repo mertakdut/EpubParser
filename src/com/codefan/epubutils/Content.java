@@ -1,6 +1,5 @@
 package com.codefan.epubutils;
 
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,8 +16,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import javax.imageio.ImageIO;
-import javax.xml.bind.DatatypeConverter;
+import org.apache.commons.codec.binary.Base64;
 
 import com.codefan.epubutils.BaseFindings.XmlItem;
 
@@ -77,7 +75,7 @@ public class Content {
 	public BookSection getBookSection(int index) throws ReadingException {
 		NavPoint navPoint = getNavPoint(index);
 
-		if (maxContentPerSection == 0 || navPoint.getEntryName() == null) { // Real navPoint - actual file/anchor.
+		if (maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
 			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
 			return prepareBookSection(navPoint, index);
 		} else { // Pseudo navPoint - trimmed file entry.
@@ -107,196 +105,226 @@ public class Content {
 	private BookSection prepareBookSection(NavPoint navPoint, int index) throws ReadingException {
 		BookSection bookSection = new BookSection();
 
-		String[] entryNameAndLabel = findEntryNameAndLabel(navPoint);
+		int entryStartPosition = navPoint.getBodyTrimStartPosition();
+		int entryEndPosition = navPoint.getBodyTrimEndPosition(); // How the fuck is this not 0 (Zero).
+		String entryEntryName = navPoint.getEntryName();
 
-		String href = entryNameAndLabel[0];
-		String label = entryNameAndLabel[1];
+		if (entryStartPosition == 0 && entryEndPosition == 0) { // Not calculated before.
+			String[] entryNameAndLabel = findEntryNameAndLabel(navPoint);
 
-		String currentAnchor = null;
-		String nextAnchor = null;
+			String href = entryNameAndLabel[0];
+			String label = entryNameAndLabel[1];
 
-		int trimStartPosition = 0;
-		int trimEndPosition = 0;
+			String currentAnchor = null;
+			String nextAnchor = null;
 
-		String htmlBody = null;
+			int trimStartPosition = 0;
+			int trimEndPosition = 0;
 
-		for (int i = 0; i < getEntryNames().size(); i++) {
-			String entryName = getEntryNames().get(i);
+			String htmlBody = null;
 
-			String fileName = getFileName(entryName);
+			for (int i = 0; i < getEntryNames().size(); i++) {
+				String entryName = getEntryNames().get(i);
 
-			if (href.contains(fileName)) { // href actually exists.
+				String fileName = getFileName(entryName);
 
-				if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
-					currentAnchor = href.replace(fileName, "");
-					nextAnchor = getNextAnchor(index, entryName);
-				}
+				if (href.contains(fileName)) { // href actually exists.
 
-				String fileContentStr = readFileContent(entryName);
-
-				htmlBody = getHtmlBody(fileContentStr);
-
-				if (maxContentPerSection != 0) {
-					// Calculate the tag positions of the current entry, if it hasn't done before.
-					if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
-						if (entryTagPositions == null) {
-							entryTagPositions = new HashMap<>();
-						}
-
-						calculateEntryTagPositions(entryName, htmlBody);
+					if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
+						currentAnchor = href.replace(fileName, "");
+						nextAnchor = getNextAnchor(index, entryName);
 					}
-				}
 
-				if (nextAnchor != null) { // Splitting the file by anchors.
-					currentAnchor = convertAnchorToHtml(currentAnchor);
-					nextAnchor = convertAnchorToHtml(nextAnchor);
+					String fileContentStr = readFileContent(entryName);
+					htmlBody = getHtmlBody(fileContentStr);
 
-					boolean containsCurrentAnchor = fileContentStr.contains(currentAnchor);
-					boolean containsNextAnchor = fileContentStr.contains(nextAnchor);
+					if (maxContentPerSection != 0 && maxContentPerSection < htmlBody.length()) {
+						// Calculate the tag positions of the current entry, if it hasn't done before.
+						if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
+							if (entryTagPositions == null) {
+								entryTagPositions = new HashMap<>();
+							}
 
-					if (containsCurrentAnchor && containsNextAnchor) {
-						int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
-
-						trimStartPosition = bodyIntervals[0];
-						trimEndPosition = bodyIntervals[1];
-					} else {
-						int tmpIndex = index;
-
-						if (!containsCurrentAnchor && !containsNextAnchor) { // Both of the anchors not found.
-							getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
-							getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the second one (next anchor)
-							currentAnchor = null;
-						} else if (containsCurrentAnchor) { // Next anchor not found.
-							getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Delete the second one (next anchor)
-						} else if (containsNextAnchor) { // Current anchor not found.
-							getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
-							currentAnchor = nextAnchor;
+							calculateEntryTagPositions(entryName, htmlBody);
 						}
+					}
 
-						int markedNavPoints = 0;
+					if (nextAnchor != null) { // Splitting the file by anchors.
+						currentAnchor = convertAnchorToHtml(currentAnchor);
+						nextAnchor = convertAnchorToHtml(nextAnchor);
 
-						// Next available anchor should be the next starting point.
-						while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
-							NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
-							String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
+						boolean containsCurrentAnchor = fileContentStr.contains(currentAnchor);
+						boolean containsNextAnchor = fileContentStr.contains(nextAnchor);
 
-							String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
+						if (containsCurrentAnchor && containsNextAnchor) {
+							int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
 
-							if (possiblyNextEntryName != null) {
-								if (possiblyNextEntryName.contains(fileName)) {
-									String anchor = possiblyNextEntryName.replace(fileName, "");
-									anchor = convertAnchorToHtml(anchor);
+							trimStartPosition = bodyIntervals[0];
+							trimEndPosition = bodyIntervals[1];
+						} else {
+							int tmpIndex = index;
 
-									if (fileContentStr.contains(anchor)) {
-										if (currentAnchor == null) { // If current anchor is not found, first set that.
-											currentAnchor = anchor;
-										} else { // If current anchor is already defined set the next anchor and break.
-											nextAnchor = anchor;
+							if (!containsCurrentAnchor && !containsNextAnchor) { // Both of the anchors not found.
+								getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
+								getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the second one (next anchor)
+								currentAnchor = null;
+							} else if (containsCurrentAnchor) { // Next anchor not found.
+								getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Delete the second one (next anchor)
+							} else if (containsNextAnchor) { // Current anchor not found.
+								getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
+								currentAnchor = nextAnchor;
+							}
+
+							int markedNavPoints = 0;
+
+							// Next available anchor should be the next starting point.
+							while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
+								NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
+								String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
+
+								String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
+
+								if (possiblyNextEntryName != null) {
+									if (possiblyNextEntryName.contains(fileName)) {
+										String anchor = possiblyNextEntryName.replace(fileName, "");
+										anchor = convertAnchorToHtml(anchor);
+
+										if (fileContentStr.contains(anchor)) {
+											if (currentAnchor == null) { // If current anchor is not found, first set that.
+												currentAnchor = anchor;
+											} else { // If current anchor is already defined set the next anchor and break.
+												nextAnchor = anchor;
+												break;
+											}
+										}
+									}
+								}
+
+								getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
+								markedNavPoints++;
+
+								tmpIndex++;
+							}
+
+							if (markedNavPoints != 0) {
+								for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
+									NavPoint navPointToDelete = iterator.next();
+									if (navPointToDelete.isMarkedToDelete()) {
+										iterator.remove();
+
+										if (--markedNavPoints == 0) {
 											break;
 										}
 									}
 								}
 							}
 
-							getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
-							markedNavPoints++;
+							int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
 
-							tmpIndex++;
+							trimStartPosition = bodyIntervals[0];
+							trimEndPosition = bodyIntervals[1];
 						}
+					}
 
-						if (markedNavPoints != 0) {
-							for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
-								NavPoint navPointToDelete = iterator.next();
-								if (navPointToDelete.isMarkedToDelete()) {
-									iterator.remove();
+					String extension = getFileExtension(fileName);
+					String mediaType = getMediaType(fileName);
 
-									if (--markedNavPoints == 0) {
-										break;
-									}
-								}
+					// trimStartPosition and trimEndPosition may be saved in the current index, to avoid calculation again.
+					String htmlBodyToReplace = null;
+
+					// If fileContentStr is too long; crop it by the maxContentPerSection.
+					// Save the fileContent and position within a new navPoint, insert it after current index.
+					if (maxContentPerSection != 0) { // maxContentPerSection is given.
+						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition);
+
+						if (calculatedTrimEndPosition != -1) {
+							List<String> openedTags = getOpenedTags(entryName, trimStartPosition, calculatedTrimEndPosition);
+
+							htmlBodyToReplace = htmlBody.substring(trimStartPosition, calculatedTrimEndPosition);
+
+							String closingTags = null;
+							if (openedTags != null) {
+								closingTags = prepareClosingTags(openedTags);
+								htmlBodyToReplace += closingTags;
 							}
-						}
 
-						int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
+							NavPoint nextEntryNavPoint = new NavPoint();
 
-						trimStartPosition = bodyIntervals[0];
-						trimEndPosition = bodyIntervals[1];
-					}
-				}
+							nextEntryNavPoint.setTypeCode(2);
+							nextEntryNavPoint.setEntryName(entryName);
+							nextEntryNavPoint.setBodyTrimStartPosition(calculatedTrimEndPosition);
+							nextEntryNavPoint.setOpenTags(openedTags);
 
-				String extension = getFileExtension(fileName);
-				String mediaType = getMediaType(fileName);
+							getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 
-				// trimStartPosition and trimEndPosition may be saved in the current index, to avoid calculation again.
-				String htmlBodyToReplace = null;
+							// Inserting calculated info to avoid calculating this navPoint again. In the future these data could be written to Term of Contents file.
+							getToc().getNavMap().getNavPoints().get(index).setTypeCode(2); // To indicate that, this is a trimmed part.
+							getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
+							getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
+							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition);
+							getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 
-				// TODO: The problem is probably here. When turning back to already calculated navPoints, it throws an exception.
+							if (lastBookSectionInfo == null) {
+								lastBookSectionInfo = new BookSection();
+							}
 
-				// If fileContentStr is too long; crop it by the maxContentPerSection.
-				// Save the fileContent and position within a new navPoint, insert it after current index.
-				if (maxContentPerSection != 0) { // maxContentPerSection is given.
-					int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition);
-
-					if (calculatedTrimEndPosition != -1) {
-						List<String> openedTags = getOpenedTags(entryName, trimStartPosition, calculatedTrimEndPosition);
-
-						htmlBodyToReplace = htmlBody.substring(trimStartPosition, calculatedTrimEndPosition);
-
-						String closingTags = null;
-						if (openedTags != null) {
-							closingTags = prepareClosingTags(openedTags);
-							htmlBodyToReplace += closingTags;
-						}
-
-						NavPoint nextEntryNavPoint = new NavPoint();
-
-						nextEntryNavPoint.setEntryName(entryName);
-						nextEntryNavPoint.setBodyTrimStartPosition(calculatedTrimEndPosition);
-						nextEntryNavPoint.setOpenTags(openedTags);
-
-						getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
-
-						// Inserting calculated info to avoid calculating this navPoint again. In the future these data could be written to Term of Contents file.
-						getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName); // To indicate that this is a trimmed part.
-						getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
-						getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition);
-						getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
-
-						if (lastBookSectionInfo == null) {
-							lastBookSectionInfo = new BookSection();
-						}
-
-						lastBookSectionInfo.setExtension(extension);
-						lastBookSectionInfo.setLabel(label);
-						lastBookSectionInfo.setMediaType(mediaType);
-					} else {
-						if (trimEndPosition == 0) {
-							htmlBodyToReplace = htmlBody.substring(trimStartPosition);
+							lastBookSectionInfo.setExtension(extension);
+							lastBookSectionInfo.setLabel(label);
+							lastBookSectionInfo.setMediaType(mediaType);
 						} else {
-							htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+							htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, trimStartPosition, trimEndPosition, entryName);
 						}
-					}
-				} else {
-					if (trimEndPosition == 0) {
-						htmlBodyToReplace = htmlBody.substring(trimStartPosition);
 					} else {
-						htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+						htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, trimStartPosition, trimEndPosition, entryName);
 					}
+
+					htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
+					fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
+
+					bookSection.setSectionContent(fileContentStr);
+					bookSection.setExtension(extension);
+					bookSection.setLabel(label);
+					bookSection.setMediaType(mediaType);
+
+					return bookSection;
 				}
-
-				htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
-				fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
-
-				bookSection.setSectionContent(fileContentStr);
-				bookSection.setExtension(extension);
-				bookSection.setLabel(label);
-				bookSection.setMediaType(mediaType);
-
-				return bookSection;
 			}
+		} else { // Calculated before.
+			String fileContentStr = readFileContent(entryEntryName);
+			String htmlBody = getHtmlBody(fileContentStr);
+
+			String htmlBodyToReplace = null;
+
+			if (entryEndPosition != 0) {
+				htmlBodyToReplace = htmlBody.substring(entryStartPosition, entryEndPosition);
+			} else {
+				htmlBodyToReplace = htmlBody.substring(entryStartPosition);
+			}
+
+			htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
+			fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
+
+			bookSection.setSectionContent(fileContentStr);
+			return bookSection;
 		}
 
 		throw new ReadingException("Referenced file not found!");
+	}
+
+	private String getNonTrimmedHtmlBody(int index, String htmlBody, int trimStartPosition, int trimEndPosition, String entryName) {
+		String htmlBodyToReplace = null;
+
+		if (trimEndPosition == 0) {
+			htmlBodyToReplace = htmlBody.substring(trimStartPosition);
+		} else {
+			htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+		}
+
+		getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
+		getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(trimEndPosition);
+		getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
+
+		return htmlBodyToReplace;
 	}
 
 	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException {
@@ -328,14 +356,13 @@ public class Content {
 						anchorIndex--;
 					}
 
-					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
 					bodyTrimEndPosition = anchorIndex;
 				} else { // NextAnchor not found in the htmlContent. Invalidate it by removing it from navPoints and search for the next one.
 					bodyTrimEndPosition = getNextAvailableAnchorIndex(index, entryName, bodyTrimStartPosition, htmlBody);
 				}
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, 0);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, calculatedTrimEndPosition);
@@ -350,6 +377,7 @@ public class Content {
 
 				NavPoint nextEntryNavPoint = new NavPoint();
 
+				nextEntryNavPoint.setTypeCode(2);
 				nextEntryNavPoint.setEntryName(entryName);
 				nextEntryNavPoint.setBodyTrimStartPosition(calculatedTrimEndPosition);
 				nextEntryNavPoint.setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
@@ -360,12 +388,18 @@ public class Content {
 				getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 			} else {
 				if (bodyTrimEndPosition != 0) {
-					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
+					htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, entryName);
+
+					// htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
+					// getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(bodyTrimEndPosition);
+					// getToc().getNavMap().getNavPoints().get(index + 1).setEntryName(entryName);
 				} else {
 					// make it null here htmlBody
+					// htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, entryName);
+
 					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
-					getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length() + bodyTrimStartPosition); // Sets endPosition to avoid
-																																				// calculating again.
+					// getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length() + bodyTrimStartPosition);
+					// getToc().getNavMap().getNavPoints().get(index + 1).setEntryName(entryName);
 				}
 			}
 		} else { // Calculated before.
@@ -437,7 +471,7 @@ public class Content {
 								TagInfo openedTag = listIterator.previous();
 
 								if (openedTag.getTagName().equals(tagName)) { // Found the last open tag with the same name.
-									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagPosition(), i - tagName.length()); // i - tagName.length()
+									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagPosition(), i - tagName.length() - 2);
 									listIterator.remove();
 									break;
 								}
@@ -448,13 +482,12 @@ public class Content {
 							}
 
 							String fullTagName = getFullTagName(tagStr, true);
-
 							String tagName = getTagName(fullTagName);
 
 							TagInfo tag = new TagInfo();
 							tag.setTagName(tagName);
 							tag.setFullTagName(fullTagName);
-							tag.setOpeningTagPosition(i - fullTagName.length()); // i - fullTagName.length()
+							tag.setOpeningTagPosition(i - fullTagName.length());
 
 							openedTags.add(tag);
 						}
@@ -468,7 +501,7 @@ public class Content {
 						int closingBracletIndex = tagStr.indexOf(Constants.TAG_CLOSING);
 						String tagName = tagStr.substring(1, closingBracletIndex - 1);
 
-						addEntryTagPosition(entryName, tagName, i, i);
+						addEntryTagPosition(entryName, tagName, i - tagName.length(), i - tagName.length() - 1);
 					}
 				}
 
@@ -558,7 +591,7 @@ public class Content {
 						}
 
 						if (bodyTrimStartPosition <= anchorIndex) {
-							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
+//							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
 							isNextAnchorFound = true;
 							break;
 						}
@@ -664,7 +697,7 @@ public class Content {
 				return -1;
 			}
 
-			if (((trimEndPosition - trimStartPosition) + tagsLength) >= maxContentPerSection) {
+			if (((trimEndPosition - trimStartPosition) - tagsLength) >= maxContentPerSection) {
 				break;
 			}
 
@@ -672,8 +705,56 @@ public class Content {
 			loopCount++;
 		}
 
-		while (htmlBody.charAt(trimEndPosition) != ' ') {
-			trimEndPosition--;
+		// Check here if we are in an html tag. If so, move forward or backward until the tag is over. Else, backwards until we hit the blank.
+		boolean isMovedToEndOfTag = false;
+
+		for (int i = 0; i < tagStartEndPositions.size(); i++) {
+			TagInfo tagInfo = tagStartEndPositions.get(i);
+
+			if (tagInfo.getOpeningTagPosition() == tagInfo.getClosingTagPosition()) { // Empty tag.
+
+				// Inside an empty tag.
+				if (tagInfo.getOpeningTagPosition() < trimEndPosition && (tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 3) > trimEndPosition) {
+					while (htmlBody.charAt(trimEndPosition) != '>') {
+						trimEndPosition++;
+					}
+
+					isMovedToEndOfTag = true;
+					break;
+				}
+			} else {
+				// Inside opening tag.
+				if (tagInfo.getOpeningTagPosition() < trimEndPosition && (tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
+					while (htmlBody.charAt(trimEndPosition) != '<') {
+						trimEndPosition--;
+					}
+
+					isMovedToEndOfTag = true;
+					break;
+				} else if (tagInfo.getClosingTagPosition() < trimEndPosition && (tagInfo.getClosingTagPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
+					while (htmlBody.charAt(trimEndPosition) != '>') {
+						trimEndPosition++;
+					}
+
+					isMovedToEndOfTag = true;
+					break;
+				}
+			}
+		}
+
+		// !This may move into a tag!
+		if (!isMovedToEndOfTag) {
+			int tmpEndPosition = trimEndPosition;
+
+			while (htmlBody.charAt(trimEndPosition) != ' ') {
+				trimEndPosition--;
+
+				// We may have hit a tag.
+				if (htmlBody.charAt(trimEndPosition) == '<' || htmlBody.charAt(trimEndPosition) == '>') {
+					trimEndPosition = tmpEndPosition;
+					break;
+				}
+			}
 		}
 
 		return trimEndPosition;
@@ -705,7 +786,7 @@ public class Content {
 		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) {
 			NavPoint nextNavPoint = getNavPoint(index + 1);
 
-			if (nextNavPoint.getEntryName() == null) { // Real navPoint. Only real navPoints are anchored.
+			if (nextNavPoint.getTypeCode() != 2) { // Real navPoint. Only real navPoints are anchored.
 				String[] nextEntryLabel = findEntryNameAndLabel(nextNavPoint);
 
 				String nextHref = nextEntryLabel[0];
@@ -743,16 +824,16 @@ public class Content {
 	}
 
 	private String getFileExtension(String fileName) {
-		int dotIndex = fileName.lastIndexOf('.');
-		if (dotIndex != -1) {
-			return fileName.substring(dotIndex + 1);
+		int lastDotIndex = fileName.lastIndexOf(Constants.DOT);
+		if (lastDotIndex != -1) {
+			return fileName.substring(lastDotIndex + 1); // +1 to exclude dot from extension.
 		}
 
 		return null;
 	}
 
-	// This operation is getting more expensive. File Content could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
-	// If map doesn't contain that entryName -> then this method can be used. But replacing the whole file content's css and img parts everyTime is quite redundant.
+	// This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
+	// If map doesn't contain that entryName -> then this method can be used.
 	private String readFileContent(String entryName) throws ReadingException {
 
 		ZipFile epubFile = null;
@@ -923,17 +1004,13 @@ public class Content {
 
 						epubFile = new ZipFile(this.zipFilePath);
 						ZipEntry zipEntry = epubFile.getEntry(entryName);
-						InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
+						InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry); // Convert inputStream to Base64Binary.
+						byte[] imageAsBytes = convertIsToByteArray(zipEntryInputStream);
 
-						BufferedImage bufferedImage = ImageIO.read(zipEntryInputStream);
+						byte[] imageAsBase64 = Base64.encodeBase64(imageAsBytes);
+						String imageContent = new String(imageAsBase64);
 
-						ByteArrayOutputStream out = new ByteArrayOutputStream();
-						ImageIO.write(bufferedImage, extension, out);
-
-						byte[] imageAsBytes = out.toByteArray();
-
-						String imageAsByte64 = DatatypeConverter.printBase64Binary(imageAsBytes);
-						String src = "data:image/png;base64," + imageAsByte64;
+						String src = "data:image/" + extension + ";base64," + imageContent;
 
 						htmlBody = htmlBody.replace(srcHref, src);
 
@@ -956,6 +1033,17 @@ public class Content {
 		}
 
 		return htmlBody;
+	}
+
+	private byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
+		byte[] buffer = new byte[8192];
+		int bytesRead;
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		while ((bytesRead = inputStream.read(buffer)) != -1) {
+			output.write(buffer, 0, bytesRead);
+		}
+
+		return output.toByteArray();
 	}
 
 	private String[] getCssHrefAndLinkPart(String htmlContent) {
@@ -999,7 +1087,7 @@ public class Content {
 
 		return null;
 	}
-	
+
 	private String encodeToHtml(String fileName) {
 		return fileName.replace("&", "&amp;").replace("Œ", "&OElig;").replace("œ", "&oelig;").replace("Ÿ", "&Yuml;");
 	}
