@@ -106,7 +106,7 @@ public class Content {
 		BookSection bookSection = new BookSection();
 
 		int entryStartPosition = navPoint.getBodyTrimStartPosition();
-		int entryEndPosition = navPoint.getBodyTrimEndPosition(); // How the fuck is this not 0 (Zero).
+		int entryEndPosition = navPoint.getBodyTrimEndPosition();
 		String entryEntryName = navPoint.getEntryName();
 
 		if (entryStartPosition == 0 && entryEndPosition == 0) { // Not calculated before.
@@ -387,20 +387,7 @@ public class Content {
 				getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition); // Sets endPosition to avoid calculating again.
 				getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 			} else {
-				if (bodyTrimEndPosition != 0) {
-					htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, entryName);
-
-					// htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
-					// getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(bodyTrimEndPosition);
-					// getToc().getNavMap().getNavPoints().get(index + 1).setEntryName(entryName);
-				} else {
-					// make it null here htmlBody
-					// htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, entryName);
-
-					htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition);
-					// getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(htmlBodyToReplace.length() + bodyTrimStartPosition);
-					// getToc().getNavMap().getNavPoints().get(index + 1).setEntryName(entryName);
-				}
+				htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, entryName);
 			}
 		} else { // Calculated before.
 			htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
@@ -591,7 +578,7 @@ public class Content {
 						}
 
 						if (bodyTrimStartPosition <= anchorIndex) {
-//							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
+							// getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(anchorIndex); // Sets endPosition to avoid calculating again.
 							isNextAnchorFound = true;
 							break;
 						}
