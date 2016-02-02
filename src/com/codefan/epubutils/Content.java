@@ -699,10 +699,9 @@ public class Content {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
 
 			if (tagInfo.getOpeningTagPosition() == tagInfo.getClosingTagPosition()) { // Empty tag.
-
 				// Inside an empty tag.
 				if (tagInfo.getOpeningTagPosition() < trimEndPosition && (tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 3) > trimEndPosition) {
-					while (htmlBody.charAt(trimEndPosition) != '>') {
+					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
 					}
 
@@ -712,14 +711,14 @@ public class Content {
 			} else {
 				// Inside opening tag.
 				if (tagInfo.getOpeningTagPosition() < trimEndPosition && (tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
-					while (htmlBody.charAt(trimEndPosition) != '<') {
+					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_OPENING) {
 						trimEndPosition--;
 					}
 
 					isMovedToEndOfTag = true;
 					break;
 				} else if (tagInfo.getClosingTagPosition() < trimEndPosition && (tagInfo.getClosingTagPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
-					while (htmlBody.charAt(trimEndPosition) != '>') {
+					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
 					}
 
