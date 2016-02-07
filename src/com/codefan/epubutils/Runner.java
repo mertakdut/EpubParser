@@ -6,7 +6,12 @@ public class Runner {
 		try {
 
 			Reader reader = new Reader();
-			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub", 1000); // IN THE YEAR 2889.epub
+			reader.setMaxContentPerSection(1000);
+			reader.setIsDissolvingStyleTag(true);
+
+			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub"); // IN THE YEAR 2889.epub
+
+			reader.readSection(epubContent, 0);
 
 			BookSection bookSection;
 
@@ -25,18 +30,18 @@ public class Runner {
 			// }
 
 			for (int i = 0; i < 50; i++) {
-				bookSection = epubContent.getBookSection(i);
+				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
 			}
 
 			System.out.println("\n-------------------------------Going backwards!-------------------------------------\n");
-			
+
 			// Alice - 10. entry'de baþa dönüyor. trimStartPosition ve trimEndPosition 0 olarak alýnýyor.
 
 			for (int i = 48; i >= 0; i--) {
-				bookSection = epubContent.getBookSection(i);
+				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));

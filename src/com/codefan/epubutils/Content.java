@@ -36,7 +36,7 @@ public class Content {
 
 	// private int playOrder;
 
-	private int maxContentPerSection; // String length.
+	// private int maxContentPerSection; // String length.
 	private BookSection lastBookSectionInfo;
 
 	public Content() {
@@ -72,15 +72,15 @@ public class Content {
 	// return prepareBookSection(navPoint, this.playOrder);
 	// }
 
-	public BookSection getBookSection(int index) throws ReadingException {
+	public BookSection getBookSection(int index, int maxContentPerSection, boolean isDissolvingStyleTag) throws ReadingException {
 		NavPoint navPoint = getNavPoint(index);
 
 		if (maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
 			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
-			return prepareBookSection(navPoint, index);
+			return prepareBookSection(navPoint, index, maxContentPerSection, isDissolvingStyleTag);
 		} else { // Pseudo navPoint - trimmed file entry.
 			// logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
-			return prepareTrimmedBookSection(navPoint, index);
+			return prepareTrimmedBookSection(navPoint, index, maxContentPerSection, isDissolvingStyleTag);
 		}
 	}
 
@@ -102,7 +102,7 @@ public class Content {
 		}
 	}
 
-	private BookSection prepareBookSection(NavPoint navPoint, int index) throws ReadingException {
+	private BookSection prepareBookSection(NavPoint navPoint, int index, int maxContentPerSection, boolean isDissolvingStyleTag) throws ReadingException {
 		BookSection bookSection = new BookSection();
 
 		int entryStartPosition = navPoint.getBodyTrimStartPosition();
@@ -135,7 +135,7 @@ public class Content {
 						nextAnchor = getNextAnchor(index, entryName);
 					}
 
-					String fileContentStr = readFileContent(entryName);
+					String fileContentStr = readFileContent(entryName, isDissolvingStyleTag);
 					htmlBody = getHtmlBody(fileContentStr);
 
 					if (maxContentPerSection != 0 && maxContentPerSection < htmlBody.length()) {
@@ -235,7 +235,7 @@ public class Content {
 					// If fileContentStr is too long; crop it by the maxContentPerSection.
 					// Save the fileContent and position within a new navPoint, insert it after current index.
 					if (maxContentPerSection != 0) { // maxContentPerSection is given.
-						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition);
+						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition, maxContentPerSection);
 
 						if (calculatedTrimEndPosition != -1) {
 							List<String> openedTags = getOpenedTags(entryName, trimStartPosition, calculatedTrimEndPosition);
@@ -278,7 +278,7 @@ public class Content {
 						htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, trimStartPosition, trimEndPosition, entryName);
 					}
 
-					htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
+					htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
 					fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 					bookSection.setSectionContent(fileContentStr);
@@ -290,7 +290,7 @@ public class Content {
 				}
 			}
 		} else { // Calculated before.
-			String fileContentStr = readFileContent(entryEntryName);
+			String fileContentStr = readFileContent(entryEntryName, isDissolvingStyleTag);
 			String htmlBody = getHtmlBody(fileContentStr);
 
 			String htmlBodyToReplace = null;
@@ -301,7 +301,7 @@ public class Content {
 				htmlBodyToReplace = htmlBody.substring(entryStartPosition);
 			}
 
-			htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
+			htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
 			fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 			bookSection.setSectionContent(fileContentStr);
@@ -327,7 +327,7 @@ public class Content {
 		return htmlBodyToReplace;
 	}
 
-	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException {
+	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, boolean isDissolvingStyleTag) throws ReadingException {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
@@ -337,7 +337,7 @@ public class Content {
 		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
 		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
 
-		String fileContent = readFileContent(entryName);
+		String fileContent = readFileContent(entryName, isDissolvingStyleTag);
 
 		String htmlBody = getHtmlBody(fileContent);
 
@@ -362,7 +362,7 @@ public class Content {
 				}
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, maxContentPerSection);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, calculatedTrimEndPosition);
@@ -404,7 +404,7 @@ public class Content {
 			htmlBodyToReplace += closingTags;
 		}
 
-		htmlBodyToReplace = replaceLinkWithActualImage(htmlBodyToReplace);
+		htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
 
 		BookSection bookSection = new BookSection();
@@ -632,7 +632,7 @@ public class Content {
 		return openingTags.toString();
 	}
 
-	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
+	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos, int maxContentPerSection) {
 		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
 
 		int htmlBodyLength = htmlBody.length();
@@ -820,7 +820,7 @@ public class Content {
 
 	// This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
 	// If map doesn't contain that entryName -> then this method can be used.
-	private String readFileContent(String entryName) throws ReadingException {
+	private String readFileContent(String entryName, boolean isDissolvingStyleTag) throws ReadingException {
 
 		ZipFile epubFile = null;
 
@@ -843,7 +843,7 @@ public class Content {
 				bufferedReader.close();
 			}
 
-			return replaceLinkedWithActualCss(epubFile, fileContent.toString());
+			return replaceCssLinkWithActualCss(epubFile, fileContent.toString(), isDissolvingStyleTag);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new ReadingException("IO Exception while reading content " + entryName + e.getMessage());
@@ -918,7 +918,7 @@ public class Content {
 		return null;
 	}
 
-	private String replaceLinkedWithActualCss(ZipFile epubFile, String htmlContent) throws IOException {
+	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent, boolean isDissolvingStyleTag) throws IOException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
@@ -942,6 +942,7 @@ public class Content {
 					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
 
 					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
+
 					StringBuilder fileContent = new StringBuilder();
 
 					fileContent.append("<style type=\"text/css\">");
@@ -957,7 +958,48 @@ public class Content {
 
 					fileContent.append("</style>");
 
-					htmlContent = htmlContent.replace(linkPart, fileContent.toString());
+					if (!isDissolvingStyleTag) {
+						htmlContent = htmlContent.replace(linkPart, fileContent.toString());
+					} else { // Distributing the css parts in the style tag to the belonging html tags.
+						Pattern cssPattern = Pattern.compile("\\{(.*?)\\}");
+
+						Matcher matcher = cssPattern.matcher(fileContent);
+						while (matcher.find()) {
+							String cssValue = matcher.group(1);
+
+							int indexOfCurlyStart = matcher.start();
+							int indexOfCssNameStart = indexOfCurlyStart;
+
+							StringBuilder cssNameBuilder = new StringBuilder();
+							while (true) {
+
+								if (fileContent.charAt(indexOfCssNameStart) == ' ') {
+									if (cssNameBuilder.toString().trim().length() > 0) {
+										break;
+									}
+								}
+
+								if (fileContent.charAt(indexOfCssNameStart) == '.') {
+									if (fileContent.charAt(indexOfCssNameStart - 1) == ' ') {
+										break;
+									}
+
+								}
+
+								cssNameBuilder.append(fileContent.charAt(indexOfCssNameStart));
+								indexOfCssNameStart--;
+							}
+
+							String cssName = fileContent.substring(indexOfCssNameStart, indexOfCurlyStart);
+
+							// TODO: Search htmlBody tags by cssName and put cssValues where they found.
+							// e.g. div.mert, "margin-left:30px; padding-top:25px"
+							// <div class="mert"> -> <div style="margin-left:30px; padding-top:25px">
+
+						}
+
+						// TODO: Delete linkPart at the end of the operation to avoid infinite loop.
+					}
 
 					cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
 
@@ -969,7 +1011,7 @@ public class Content {
 		return htmlContent;
 	}
 
-	private String replaceLinkWithActualImage(String htmlBody) {
+	private String replaceImgTagWithBase64Image(String htmlBody) {
 
 		String srcHref = getImgSrcHref(htmlBody);
 
@@ -1096,10 +1138,6 @@ public class Content {
 
 	Toc getToc() {
 		return toc;
-	}
-
-	void setMaxContentPerSection(int maxContentPerSection) {
-		this.maxContentPerSection = maxContentPerSection;
 	}
 
 	void setZipFilePath(String zipFilePath) {

@@ -18,6 +18,9 @@ import org.xml.sax.SAXException;
 
 public class Reader {
 
+	private int maxContentPerSection;
+	private boolean isDissolvingStyleTag;
+
 	public Content getContent(String filePath) throws ReadingException {
 		Content content = new Content();
 		content.setZipFilePath(filePath);
@@ -25,27 +28,9 @@ public class Reader {
 		return getContent(filePath, content);
 	}
 
-	public Content getContent(String filePath, int maxContentPerSection) throws ReadingException {
-		Content content = new Content();
-
-		content.setZipFilePath(filePath);
-		content.setMaxContentPerSection(maxContentPerSection);
-
-		return getContent(filePath, content);
-	}
-
 	public Content getContent(File file) throws ReadingException {
 		Content content = new Content();
 		content.setZipFilePath(file.getPath());
-
-		return getContent(file.getPath(), content);
-	}
-
-	public Content getContent(File file, int maxContentPerSection) throws ReadingException {
-		Content content = new Content();
-
-		content.setZipFilePath(file.getPath());
-		content.setMaxContentPerSection(maxContentPerSection);
 
 		return getContent(file.getPath(), content);
 	}
@@ -213,6 +198,18 @@ public class Reader {
 				}
 			}
 		}
+	}
+
+	public BookSection readSection(Content content, int index) throws ReadingException {
+		return content.getBookSection(index, this.maxContentPerSection, this.isDissolvingStyleTag);
+	}
+
+	public void setMaxContentPerSection(int maxContentPerSection) {
+		this.maxContentPerSection = maxContentPerSection;
+	}
+
+	public void setIsDissolvingStyleTag(boolean isDissolvingStyleTag) {
+		this.isDissolvingStyleTag = isDissolvingStyleTag;
 	}
 
 }
