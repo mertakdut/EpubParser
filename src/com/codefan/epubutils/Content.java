@@ -23,7 +23,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -881,6 +880,9 @@ public class Content {
 		} catch (SAXException e) {
 			e.printStackTrace();
 			throw new ReadingException("SAXException while reading content " + entryName + e.getMessage());
+		} catch (TransformerException e) {
+			e.printStackTrace();
+			throw new ReadingException("TransformerException while reading content " + entryName + e.getMessage());
 		} finally {
 			try {
 				if (epubFile != null) {
@@ -953,7 +955,7 @@ public class Content {
 	}
 
 	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent, boolean isDissolvingStyleTag)
-			throws IOException, ParserConfigurationException, ReadingException, SAXException {
+			throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
@@ -1042,6 +1044,10 @@ public class Content {
 						InputStream inputStream = new ByteArrayInputStream(htmLBody.getBytes(StandardCharsets.UTF_8));
 						Document document = docBuilder.parse(inputStream);
 
+						String htmlBodyToReplace = traverseDocumentNodesAndAddStyles(document, cssMap);
+
+						htmlContent = htmlContent.replace(htmLBody, htmlBodyToReplace);
+
 						// TODO: Search htmlBody tags by cssName and put cssValues where they found.
 						// e.g. div.mert, "margin-left:30px; padding-top:25px"
 						// <div class="mert"> -> <div style="margin-left:30px; padding-top:25px">
@@ -1059,27 +1065,36 @@ public class Content {
 		return htmlContent;
 	}
 
-	private void traverseDocumentNodesAndAddStyles(NodeList nodeList) {
-		for (int i = 0; i < nodeList.getLength(); i++) {
-			Element element = (Element) nodeList.item(i);
+	private String traverseDocumentNodesAndAddStyles(Document document, Map<String, String> cssMap) throws TransformerException {
 
-			// make sure it's element node.
-			if (element.getNodeType() == Node.ELEMENT_NODE) {
-				element.setAttribute(zipFilePath, zipFilePath); // Adds an attribute.
+		NodeList nodeList = document.getChildNodes();
+
+		for (Map.Entry<String, String> cssEntry : cssMap.entrySet()) {
+
+			for (int i = 0; i < nodeList.getLength(); i++) {
+				Element element = (Element) nodeList.item(i);
+
+				// make sure it's element node.
+				if (element.getNodeType() == Node.ELEMENT_NODE) {
+
+					if (element.getNodeName().equals(cssEntry.getKey())) {
+						element.setAttribute("style", cssEntry.getValue()); // Adds an attribute.
+					}
+				}
 			}
-
 		}
-		
+
+		return convertDocumentToString(document);
 	}
-	
-	private String convertDocumentToString(Document document) throws TransformerException{
+
+	private String convertDocumentToString(Document document) throws TransformerException {
 		DOMSource domSource = new DOMSource(document);
 		StringWriter writer = new StringWriter();
 		StreamResult result = new StreamResult(writer);
 		TransformerFactory tf = TransformerFactory.newInstance();
 		Transformer transformer = tf.newTransformer();
 		transformer.transform(domSource, result);
-		
+
 		return writer.toString();
 	}
 
