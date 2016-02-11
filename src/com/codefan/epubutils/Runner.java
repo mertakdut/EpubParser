@@ -9,7 +9,7 @@ public class Runner {
 			reader.setMaxContentPerSection(1000);
 			reader.setIsDissolvingStyleTag(true);
 
-			Content epubContent = reader.getContent("C:\\eBooks/shute-lonely-road.epub"); // IN THE YEAR 2889.epub
+			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub"); // IN THE YEAR 2889.epub
 
 			reader.readSection(epubContent, 0);
 

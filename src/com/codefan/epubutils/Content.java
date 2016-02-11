@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -139,7 +140,7 @@ public class Content {
 						nextAnchor = getNextAnchor(index, entryName);
 					}
 
-					String fileContentStr = readFileContent(entryName, isDissolvingStyleTag);
+					String fileContentStr = readFileContent(entryName);
 					htmlBody = getHtmlBody(fileContentStr);
 
 					if (maxContentPerSection != 0 && maxContentPerSection < htmlBody.length()) {
@@ -285,6 +286,10 @@ public class Content {
 					htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
 					fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
+					if (isDissolvingStyleTag) {
+						fileContentStr = dissolveStyleTag(fileContentStr);
+					}
+
 					bookSection.setSectionContent(fileContentStr);
 					bookSection.setExtension(extension);
 					bookSection.setLabel(label);
@@ -294,7 +299,7 @@ public class Content {
 				}
 			}
 		} else { // Calculated before.
-			String fileContentStr = readFileContent(entryEntryName, isDissolvingStyleTag);
+			String fileContentStr = readFileContent(entryEntryName);
 			String htmlBody = getHtmlBody(fileContentStr);
 
 			String htmlBodyToReplace = null;
@@ -307,6 +312,10 @@ public class Content {
 
 			htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
 			fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
+
+			if (isDissolvingStyleTag) {
+				fileContentStr = dissolveStyleTag(fileContentStr);
+			}
 
 			bookSection.setSectionContent(fileContentStr);
 			return bookSection;
@@ -341,7 +350,7 @@ public class Content {
 		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
 		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
 
-		String fileContent = readFileContent(entryName, isDissolvingStyleTag);
+		String fileContent = readFileContent(entryName);
 
 		String htmlBody = getHtmlBody(fileContent);
 
@@ -410,6 +419,10 @@ public class Content {
 
 		htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
+
+		if (isDissolvingStyleTag) {
+			fileContent = dissolveStyleTag(fileContent);
+		}
 
 		BookSection bookSection = new BookSection();
 
@@ -823,7 +836,7 @@ public class Content {
 
 	// This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
 	// If map doesn't contain that entryName -> then this method can be used.
-	private String readFileContent(String entryName, boolean isDissolvingStyleTag) throws ReadingException {
+	private String readFileContent(String entryName) throws ReadingException {
 
 		ZipFile epubFile = null;
 
@@ -846,7 +859,7 @@ public class Content {
 				bufferedReader.close();
 			}
 
-			return replaceCssLinkWithActualCss(epubFile, fileContent.toString(), isDissolvingStyleTag);
+			return replaceCssLinkWithActualCss(epubFile, fileContent.toString());
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new ReadingException("IOException while reading content " + entryName + e.getMessage());
@@ -930,8 +943,7 @@ public class Content {
 		return null;
 	}
 
-	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent, boolean isDissolvingStyleTag)
-			throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
+	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent) throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
@@ -971,19 +983,7 @@ public class Content {
 
 					fileContent.append("</style>");
 
-					if (!isDissolvingStyleTag) {
-						htmlContent = htmlContent.replace(linkPart, fileContent.toString());
-					} else { // Distributing the css parts in the style tag to the belonging html tags.
-						Map<String, String> cssMap = getCssMap(fileContent.toString());
-
-						String htmlBody = getHtmlBody(htmlContent);
-
-						String htmlBodyToReplace = putCssIntoTags(cssMap, htmlBody);
-
-						// Delete linkPart at the end of the operation to avoid infinite loop.
-						htmlContent = htmlContent.replace(linkPart, "");
-						htmlContent = htmlContent.replace(htmlBody, htmlBodyToReplace);
-					}
+					htmlContent = htmlContent.replace(linkPart, fileContent.toString());
 
 					cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
 
@@ -995,12 +995,34 @@ public class Content {
 		return htmlContent;
 	}
 
-	private Map<String, String> getCssMap(String fileContent) {
+	// Distributing the css parts in the style tag to the belonging html tags.
+	private String dissolveStyleTag(String trimmedFileContent) throws ReadingException {
+
+		Pattern cssPattern = Pattern.compile("<style(.*?)</style>");
+
+		Matcher matcher = cssPattern.matcher(trimmedFileContent);
+
+		while (matcher.find()) { // There may be multiple style tags.
+			String styleTagStr = matcher.group(1);
+
+			Map<String, String> cssMap = getCssMap(styleTagStr);
+
+			String htmlBody = getHtmlBody(trimmedFileContent);
+			String htmlBodyToReplace = putCssIntoTags(cssMap, htmlBody);
+
+			trimmedFileContent = trimmedFileContent.replace(htmlBody, htmlBodyToReplace);
+			trimmedFileContent = trimmedFileContent.replace("<style" + styleTagStr + "</syle>", "");
+		}
+
+		return trimmedFileContent;
+	}
+
+	private Map<String, String> getCssMap(String cssfileContent) {
 		Map<String, String> cssMap = new HashMap<>();
 
 		Pattern cssPattern = Pattern.compile("\\{(.*?)\\}");
 
-		Matcher matcher = cssPattern.matcher(fileContent);
+		Matcher matcher = cssPattern.matcher(cssfileContent);
 		while (matcher.find()) {
 			String cssValue = matcher.group(1);
 
@@ -1008,24 +1030,55 @@ public class Content {
 			int indexOfCssNameStart = indexOfCurlyStart - 1;
 
 			StringBuilder cssNameBuilder = new StringBuilder();
-			while (true) {
-				// TODO: There may be multiple css names pointing to one cssValue e.g. .legalnotice p { text-align: left; } OR .legalnotice, p { text-align: left; }
+			String cssName = null;
+			while (indexOfCssNameStart >= 0) {
 
-				if (fileContent.charAt(indexOfCssNameStart) == '}' || fileContent.charAt(indexOfCssNameStart) == '/' || indexOfCssNameStart < 0) {
-					if (cssNameBuilder.toString().trim().length() > 0) {
+				// TODO: There may be multiple css names pointing to one cssValue e.g. .legalnotice p { text-align: left; } OR .legalnotice, p { text-align: left; }
+				if (cssfileContent.charAt(indexOfCssNameStart) == '}' || cssfileContent.charAt(indexOfCssNameStart) == '/') {
+
+					String builtCssName = cssNameBuilder.toString().trim();
+
+					if (builtCssName.length() > 0) {
+						cssName = cssNameBuilder.reverse().toString().trim();
 						break;
 					}
 				}
 
-				cssNameBuilder.append(fileContent.charAt(indexOfCssNameStart));
+				cssNameBuilder.append(cssfileContent.charAt(indexOfCssNameStart));
 				indexOfCssNameStart--;
 			}
 
-			String cssName = cssNameBuilder.reverse().toString();
-			// Seperate them here by ' ', ',' '>' (known seperators)
+			List<String> cssNameList = null;
 
-			// Append cssValue if cssName already exists to reduce looping count later.
-			cssMap.put(cssName, cssValue);
+			// Seperate them here by ' ', ',' '>' (known seperators)
+			String seperator = null;
+			if (cssName.contains(",")) {
+				seperator = ",";
+			} else if (cssName.contains(">")) {
+				seperator = ">";
+			} else if (cssName.contains(" ")) {
+				seperator = " ";
+			}
+
+			if (seperator != null) {
+				cssNameList = Arrays.asList(cssName.split(seperator));
+			}
+
+			if (cssNameList == null) { // Has one css name
+				if (cssMap.containsKey(cssName)) {
+					cssMap.put(cssName, cssMap.get(cssName) + " " + cssValue);
+				} else {
+					cssMap.put(cssName, cssValue);
+				}
+			} else { // Has multiple css names
+				for (String cssNameItem : cssNameList) {
+					if (cssMap.containsKey(cssNameItem)) {
+						cssMap.put(cssNameItem, cssMap.get(cssNameItem) + " " + cssValue);
+					} else {
+						cssMap.put(cssNameItem, cssValue);
+					}
+				}
+			}
 		}
 
 		return cssMap;
@@ -1034,44 +1087,48 @@ public class Content {
 	// TODO: Search htmlBody tags by cssName and put cssValues where they found.
 	// e.g. div.mert, "margin-left:30px; padding-top:25px"
 	// <div class="mert"> -> <div style="margin-left:30px; padding-top:25px">
-	private String putCssIntoTags(Map<String, String> cssMap, String htmlBody) {
+	private String putCssIntoTags(Map<String, String> cssMap, String trimmedHtmlBody) {
 		for (Map.Entry<String, String> cssEntry : cssMap.entrySet()) {
 
 			String tagName = cssEntry.getKey();
 			String className = null;
+			int classNameLength = 0;
 
 			int dotIndex = cssEntry.getKey().indexOf(".");
-			if (dotIndex != -1 && dotIndex > 0) { // e.g. div.mert
+			if (dotIndex > 0) { // e.g. div.mert
 				className = cssEntry.getKey().substring(dotIndex + 1);
+				classNameLength = className.length();
 				tagName = cssEntry.getKey().substring(0, dotIndex);
 			}
 
-			int startTagIndex = htmlBody.indexOf("<" + tagName);
+			int startTagIndex = trimmedHtmlBody.indexOf("<" + tagName);
 
 			while (startTagIndex != -1) {
 
 				int endTagIndex = startTagIndex;
 
-				while (htmlBody.charAt(endTagIndex) != '>') {
-					endTagIndex--;
+				while (trimmedHtmlBody.charAt(endTagIndex) != '>') {
+					endTagIndex++;
 				}
+				endTagIndex++;
 
-				if (htmlBody.charAt(endTagIndex - 1) != '/' && (endTagIndex - startTagIndex) > 5) { // Not an empty tag.
+				// Not an empty tag and big enough for class attribute.
+				if (trimmedHtmlBody.charAt(endTagIndex - 1) != '/' && (endTagIndex - startTagIndex) > (5 + classNameLength)) {
 
-					String tag = htmlBody.substring(startTagIndex, endTagIndex);
+					String tag = trimmedHtmlBody.substring(startTagIndex, endTagIndex);
 
-					if (className.equals(null) || tag.contains(className)) {
+					if (className == null || tag.contains(className)) {
 
 						// Remove redundant class.
 						if (className != null) {
-							int classEndIndex = tag.indexOf(className) + className.length();
-							int classStartIndex = classEndIndex;
+							int classEndIndex = tag.indexOf(className);
+							int classStartIndex = classEndIndex - 1;
 
 							while (tag.charAt(classStartIndex) != 'c') {
 								classStartIndex--;
 							}
 
-							tag = tag.substring(0, classStartIndex) + tag.substring(classEndIndex, tag.length());
+							tag = tag.substring(0, classStartIndex) + tag.substring(classEndIndex + classNameLength + 1, tag.length());
 						}
 
 						int styleIndex = tag.indexOf("style=\"");
@@ -1080,19 +1137,19 @@ public class Content {
 						if (styleIndex != -1) { // Already has a style tag. Put the value into it.
 							tagToReplace = tag.substring(0, styleIndex + 6) + cssEntry.getValue() + tag.substring(styleIndex + 6, tag.length());
 						} else {
-							int insertStyleIndex = startTagIndex + 1 + ((String) cssEntry.getKey()).length() + 1; // '<' and ' '
-							tagToReplace = tag.substring(0, insertStyleIndex) + "style=\"" + cssEntry.getValue() + "\"" + tag.substring(insertStyleIndex, tag.length());
+							int insertStyleIndex = 1 + tagName.length() + 1; // '<' and ' '
+							tagToReplace = tag.substring(0, insertStyleIndex) + "style=\"" + cssEntry.getValue() + "\" " + tag.substring(insertStyleIndex, tag.length());
 						}
 
-						htmlBody = htmlBody.replaceFirst(tag, tagToReplace);
+						trimmedHtmlBody = trimmedHtmlBody.replaceFirst(tag, tagToReplace);
 					}
 				}
 
-				startTagIndex = htmlBody.indexOf("<" + tagName, startTagIndex + 1);
+				startTagIndex = trimmedHtmlBody.indexOf("<" + tagName, startTagIndex + 1);
 			}
 		}
 
-		return htmlBody;
+		return trimmedHtmlBody;
 	}
 
 	private String replaceImgTagWithBase64Image(String htmlBody) {

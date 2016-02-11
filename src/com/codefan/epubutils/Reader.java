@@ -203,6 +203,10 @@ public class Reader {
 	public BookSection readSection(Content content, int index) throws ReadingException {
 		return content.getBookSection(index, this.maxContentPerSection, this.isDissolvingStyleTag);
 	}
+	
+	public BookSection readSection(Content content, int index, int maxContentPerSection) throws ReadingException {
+		return content.getBookSection(index, maxContentPerSection, this.isDissolvingStyleTag);
+	}
 
 	public void setMaxContentPerSection(int maxContentPerSection) {
 		this.maxContentPerSection = maxContentPerSection;
