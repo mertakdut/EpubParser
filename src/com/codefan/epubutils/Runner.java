@@ -33,7 +33,8 @@ public class Runner {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+				System.out.println("content: " + bookSection.getSectionContent());
+//				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
 			}
 
 			System.out.println("\n-------------------------------Going backwards!-------------------------------------\n");
@@ -44,7 +45,8 @@ public class Runner {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+//				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+				System.out.println("content: " + bookSection.getSectionContent());
 			}
 
 			// int x = 5;

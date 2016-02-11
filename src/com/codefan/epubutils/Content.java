@@ -1011,7 +1011,7 @@ public class Content {
 			String htmlBodyToReplace = putCssIntoTags(cssMap, htmlBody);
 
 			trimmedFileContent = trimmedFileContent.replace(htmlBody, htmlBodyToReplace);
-			trimmedFileContent = trimmedFileContent.replace("<style" + styleTagStr + "</syle>", "");
+			trimmedFileContent = trimmedFileContent.replace("<style" + styleTagStr + "</style>", "");
 		}
 
 		return trimmedFileContent;
