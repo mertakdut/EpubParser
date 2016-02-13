@@ -709,14 +709,22 @@ public class Content {
 			// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
 			// Or are they already sorted?
 			for (TagInfo tagInfo : tagStartEndPositions) {
-				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) {
-					if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty tag.
+				if ((tagInfo.getOpeningTagStartPosition() > trimEndPosition) || (tagInfo.getClosingTagStartPosition() > trimEndPosition)) { // This may not work correctly.
+					break;
+				}
+
+				if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) {
+					if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
 						tagsLength += tagInfo.getFullTagName().length() + 3; // < />
-					} else { // Opening tag.
+					}
+				} else {
+					if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
 						tagsLength += tagInfo.getFullTagName().length() + 2; // < >
 					}
-				} else if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
-					tagsLength += tagInfo.getTagName().length() + 3; // < />
+
+					if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
+						tagsLength += tagInfo.getTagName().length() + 3; // < />
+					}
 				}
 			}
 
