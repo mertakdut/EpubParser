@@ -333,7 +333,7 @@ public class Content {
 		// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
 		// Or are they already sorted?
 		for (TagInfo tagInfo : tagStartEndPositions) {
-			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition || tagInfo.getClosingTagStartPosition() > trimEndPosition) { // This may not work correctly.
+			if ((tagInfo.getOpeningTagStartPosition() > trimEndPosition) || (tagInfo.getClosingTagStartPosition() > trimEndPosition)) { // This may not work correctly.
 				break;
 			}
 
