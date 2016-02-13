@@ -77,15 +77,15 @@ public class Content {
 	// return prepareBookSection(navPoint, this.playOrder);
 	// }
 
-	public BookSection getBookSection(int index, int maxContentPerSection, boolean isDissolvingStyleTag) throws ReadingException {
+	public BookSection getBookSection(int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingOnlyTextContent) throws ReadingException {
 		NavPoint navPoint = getNavPoint(index);
 
 		if (maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
 			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
-			return prepareBookSection(navPoint, index, maxContentPerSection, isDissolvingStyleTag);
+			return prepareBookSection(navPoint, index, maxContentPerSection, cssStatus, isIncludingOnlyTextContent);
 		} else { // Pseudo navPoint - trimmed file entry.
 			// logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
-			return prepareTrimmedBookSection(navPoint, index, maxContentPerSection, isDissolvingStyleTag);
+			return prepareTrimmedBookSection(navPoint, index, maxContentPerSection, cssStatus, isIncludingOnlyTextContent);
 		}
 	}
 
@@ -107,12 +107,16 @@ public class Content {
 		}
 	}
 
-	private BookSection prepareBookSection(NavPoint navPoint, int index, int maxContentPerSection, boolean isDissolvingStyleTag) throws ReadingException {
+	private BookSection prepareBookSection(NavPoint navPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingOnlyTextContent) throws ReadingException {
 		BookSection bookSection = new BookSection();
 
 		int entryStartPosition = navPoint.getBodyTrimStartPosition();
 		int entryEndPosition = navPoint.getBodyTrimEndPosition();
 		String entryEntryName = navPoint.getEntryName();
+
+		String fileContentStr = null;
+		String htmlBody = null;
+		String htmlBodyToReplace = null;
 
 		if (entryStartPosition == 0 && entryEndPosition == 0) { // Not calculated before.
 			String[] entryNameAndLabel = findEntryNameAndLabel(navPoint);
@@ -126,8 +130,6 @@ public class Content {
 			int trimStartPosition = 0;
 			int trimEndPosition = 0;
 
-			String htmlBody = null;
-
 			for (int i = 0; i < getEntryNames().size(); i++) {
 				String entryName = getEntryNames().get(i);
 
@@ -140,7 +142,7 @@ public class Content {
 						nextAnchor = getNextAnchor(index, entryName);
 					}
 
-					String fileContentStr = readFileContent(entryName);
+					fileContentStr = readFileContent(entryName, cssStatus);
 					htmlBody = getHtmlBody(fileContentStr);
 
 					if (maxContentPerSection != 0 && maxContentPerSection < htmlBody.length()) {
@@ -234,18 +236,15 @@ public class Content {
 					String extension = getFileExtension(fileName);
 					String mediaType = getMediaType(fileName);
 
-					// trimStartPosition and trimEndPosition may be saved in the current index, to avoid calculation again.
-					String htmlBodyToReplace = null;
-
 					// If fileContentStr is too long; crop it by the maxContentPerSection.
 					// Save the fileContent and position within a new navPoint, insert it after current index.
 					if (maxContentPerSection != 0) { // maxContentPerSection is given.
-						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition, maxContentPerSection);
+						trimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition, maxContentPerSection);
 
-						if (calculatedTrimEndPosition != -1) {
-							List<String> openedTags = getOpenedTags(entryName, trimStartPosition, calculatedTrimEndPosition);
+						if (trimEndPosition != -1) {
+							List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition);
 
-							htmlBodyToReplace = htmlBody.substring(trimStartPosition, calculatedTrimEndPosition);
+							htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
 
 							String closingTags = null;
 							if (openedTags != null) {
@@ -257,7 +256,7 @@ public class Content {
 
 							nextEntryNavPoint.setTypeCode(2);
 							nextEntryNavPoint.setEntryName(entryName);
-							nextEntryNavPoint.setBodyTrimStartPosition(calculatedTrimEndPosition);
+							nextEntryNavPoint.setBodyTrimStartPosition(trimEndPosition);
 							nextEntryNavPoint.setOpenTags(openedTags);
 
 							getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
@@ -266,7 +265,7 @@ public class Content {
 							getToc().getNavMap().getNavPoints().get(index).setTypeCode(2); // To indicate that, this is a trimmed part.
 							getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
 							getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
-							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(calculatedTrimEndPosition);
+							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(trimEndPosition);
 							getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 
 							if (lastBookSectionInfo == null) {
@@ -283,26 +282,18 @@ public class Content {
 						htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, trimStartPosition, trimEndPosition, entryName);
 					}
 
-					htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
-					fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
-
-					if (isDissolvingStyleTag) {
-						fileContentStr = dissolveStyleTag(fileContentStr);
-					}
-
-					bookSection.setSectionContent(fileContentStr);
 					bookSection.setExtension(extension);
 					bookSection.setLabel(label);
 					bookSection.setMediaType(mediaType);
 
-					return bookSection;
+					if (isIncludingOnlyTextContent) {
+						bookSection.setTextSectionContent(getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition));
+					}
 				}
 			}
 		} else { // Calculated before.
-			String fileContentStr = readFileContent(entryEntryName);
-			String htmlBody = getHtmlBody(fileContentStr);
-
-			String htmlBodyToReplace = null;
+			fileContentStr = readFileContent(entryEntryName, cssStatus);
+			htmlBody = getHtmlBody(fileContentStr);
 
 			if (entryEndPosition != 0) {
 				htmlBodyToReplace = htmlBody.substring(entryStartPosition, entryEndPosition);
@@ -310,18 +301,55 @@ public class Content {
 				htmlBodyToReplace = htmlBody.substring(entryStartPosition);
 			}
 
-			htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
-			fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
-
-			if (isDissolvingStyleTag) {
-				fileContentStr = dissolveStyleTag(fileContentStr);
+			if (isIncludingOnlyTextContent) {
+				bookSection.setTextSectionContent(getOnlyTextContent(entryEntryName, htmlBody, entryStartPosition, entryEndPosition));
 			}
-
-			bookSection.setSectionContent(fileContentStr);
-			return bookSection;
 		}
 
-		throw new ReadingException("Referenced file not found!");
+		htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
+		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
+
+		if (cssStatus == CssStatus.DISTRIBUTE) {
+			fileContentStr = dissolveStyleTag(fileContentStr);
+		}
+
+		bookSection.setSectionContent(fileContentStr);
+		return bookSection;
+	}
+
+	// Removes all the tags from htmlBody and returns it.
+	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition) {
+		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
+
+		StringBuilder textContentBuilder = new StringBuilder();
+		int lastTrimmedPosition = 0;
+
+		// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
+		// Or are they already sorted?
+		for (TagInfo tagInfo : tagStartEndPositions) {
+			if (tagInfo.getOpeningTagPosition() > trimEndPosition || tagInfo.getClosingTagPosition() > trimEndPosition) { // This may not work correctly.
+				break;
+			}
+
+			if (tagInfo.getOpeningTagPosition() > trimStartPosition && tagInfo.getOpeningTagPosition() < trimEndPosition) {
+				int tagEndIndex;
+
+				if (tagInfo.getOpeningTagPosition() == tagInfo.getClosingTagPosition()) { // Empty tag.
+					tagEndIndex = tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 3; // < />
+				} else { // Opening tag.
+					tagEndIndex = tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 2; // < >
+				}
+
+				textContentBuilder.append(htmlBody.substring(lastTrimmedPosition, tagInfo.getOpeningTagPosition()));
+				lastTrimmedPosition = tagEndIndex;
+			} else if (tagInfo.getClosingTagPosition() > trimStartPosition && tagInfo.getClosingTagPosition() < trimEndPosition) { // Closing tag.
+				int tagEndIndex = tagInfo.getClosingTagPosition() + tagInfo.getTagName().length() + 3; // < />
+				textContentBuilder.append(htmlBody.substring(lastTrimmedPosition, tagInfo.getClosingTagPosition()));
+				lastTrimmedPosition = tagEndIndex;
+			}
+		}
+
+		return textContentBuilder.toString();
 	}
 
 	private String getNonTrimmedHtmlBody(int index, String htmlBody, int trimStartPosition, int trimEndPosition, String entryName) {
@@ -340,7 +368,8 @@ public class Content {
 		return htmlBodyToReplace;
 	}
 
-	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, boolean isDissolvingStyleTag) throws ReadingException {
+	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingOnlyTextContent)
+			throws ReadingException {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
@@ -350,7 +379,7 @@ public class Content {
 		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
 		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
 
-		String fileContent = readFileContent(entryName);
+		String fileContent = readFileContent(entryName, cssStatus);
 
 		String htmlBody = getHtmlBody(fileContent);
 
@@ -420,13 +449,17 @@ public class Content {
 		htmlBodyToReplace = replaceImgTagWithBase64Image(htmlBodyToReplace);
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
 
-		if (isDissolvingStyleTag) {
+		if (cssStatus == CssStatus.DISTRIBUTE) {
 			fileContent = dissolveStyleTag(fileContent);
 		}
 
 		BookSection bookSection = new BookSection();
 
 		bookSection.setSectionContent(fileContent);
+
+		if (isIncludingOnlyTextContent) {
+			bookSection.setTextSectionContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
+		}
 
 		if (this.lastBookSectionInfo != null) {
 			bookSection.setExtension(this.lastBookSectionInfo.getExtension());
@@ -667,17 +700,17 @@ public class Content {
 		while (true) {
 			int tagsLength = 0;
 
-			// TODO: Sort these lists to be able to break when greater than the endPositions. This way, we won't have to traverse all the list. Or are they already sorted?
-			for (int i = 0; i < tagStartEndPositions.size(); i++) {
-				TagInfo tagInfo = tagStartEndPositions.get(i);
-
-				// An Opening Tag or a Closing Tag is within the trimming part.
+			// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
+			// Or are they already sorted?
+			for (TagInfo tagInfo : tagStartEndPositions) {
 				if (tagInfo.getOpeningTagPosition() > trimStartPosition && tagInfo.getOpeningTagPosition() < trimEndPosition) {
-					tagsLength += tagInfo.getFullTagName().length() + 2; // < >
-				}
-
-				if (tagInfo.getOpeningTagPosition() != tagInfo.getClosingTagPosition() && tagInfo.getClosingTagPosition() > trimStartPosition && tagInfo.getClosingTagPosition() < trimEndPosition) {
-					tagsLength += tagInfo.getTagName().length() + 3; // </>
+					if (tagInfo.getOpeningTagPosition() == tagInfo.getClosingTagPosition()) { // Empty tag.
+						tagsLength += tagInfo.getFullTagName().length() + 3; // < />
+					} else { // Opening tag.
+						tagsLength += tagInfo.getFullTagName().length() + 2; // < >
+					}
+				} else if (tagInfo.getClosingTagPosition() > trimStartPosition && tagInfo.getClosingTagPosition() < trimEndPosition) { // Closing tag.
+					tagsLength += tagInfo.getTagName().length() + 3; // < />
 				}
 			}
 
@@ -708,7 +741,8 @@ public class Content {
 			loopCount++;
 		}
 
-		// Check here if we are in an html tag. If so, move forward or backward until the tag is over. Else, backwards until we hit the blank.
+		// Check here if we are in an html tag. If so, move forward or backward until the tag is over.
+		// Else, move backwards until we hit the blank.
 		boolean isMovedToEndOfTag = false;
 
 		for (int i = 0; i < tagStartEndPositions.size(); i++) {
@@ -717,6 +751,7 @@ public class Content {
 			if (tagInfo.getOpeningTagPosition() == tagInfo.getClosingTagPosition()) { // Empty tag.
 				// Inside an empty tag.
 				if (tagInfo.getOpeningTagPosition() < trimEndPosition && (tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 3) > trimEndPosition) {
+
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
 					}
@@ -727,6 +762,7 @@ public class Content {
 			} else {
 				// Inside opening tag.
 				if (tagInfo.getOpeningTagPosition() < trimEndPosition && (tagInfo.getOpeningTagPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
+
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_OPENING) {
 						trimEndPosition--;
 					}
@@ -734,6 +770,7 @@ public class Content {
 					isMovedToEndOfTag = true;
 					break;
 				} else if (tagInfo.getClosingTagPosition() < trimEndPosition && (tagInfo.getClosingTagPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
+
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
 					}
@@ -836,7 +873,7 @@ public class Content {
 
 	// This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
 	// If map doesn't contain that entryName -> then this method can be used.
-	private String readFileContent(String entryName) throws ReadingException {
+	private String readFileContent(String entryName, CssStatus cssStatus) throws ReadingException {
 
 		ZipFile epubFile = null;
 
@@ -859,7 +896,13 @@ public class Content {
 				bufferedReader.close();
 			}
 
-			return replaceCssLinkWithActualCss(epubFile, fileContent.toString());
+			String fileContentStr = fileContent.toString();
+
+			if (cssStatus != CssStatus.OMIT) {
+				fileContentStr = replaceCssLinkWithActualCss(epubFile, fileContentStr);
+			}
+
+			return fileContentStr;
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new ReadingException("IOException while reading content " + entryName + e.getMessage());
@@ -943,7 +986,8 @@ public class Content {
 		return null;
 	}
 
-	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent) throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
+	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent)
+			throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 

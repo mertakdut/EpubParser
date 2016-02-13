@@ -19,7 +19,8 @@ import org.xml.sax.SAXException;
 public class Reader {
 
 	private int maxContentPerSection;
-	private boolean isDissolvingStyleTag;
+	private CssStatus cssStatus = CssStatus.INCLUDE;
+	private boolean isIncludingOnlyTextContent;
 
 	public Content getContent(String filePath) throws ReadingException {
 		Content content = new Content();
@@ -201,19 +202,23 @@ public class Reader {
 	}
 
 	public BookSection readSection(Content content, int index) throws ReadingException {
-		return content.getBookSection(index, this.maxContentPerSection, this.isDissolvingStyleTag);
+		return content.getBookSection(index, this.maxContentPerSection, this.cssStatus, this.isIncludingOnlyTextContent);
 	}
-	
+
 	public BookSection readSection(Content content, int index, int maxContentPerSection) throws ReadingException {
-		return content.getBookSection(index, maxContentPerSection, this.isDissolvingStyleTag);
+		return content.getBookSection(index, maxContentPerSection, this.cssStatus, this.isIncludingOnlyTextContent);
 	}
 
 	public void setMaxContentPerSection(int maxContentPerSection) {
 		this.maxContentPerSection = maxContentPerSection;
 	}
+	
+	public void setCssStatus(CssStatus cssStatus){
+		this.cssStatus = cssStatus;
+	}
 
-	public void setIsDissolvingStyleTag(boolean isDissolvingStyleTag) {
-		this.isDissolvingStyleTag = isDissolvingStyleTag;
+	public void setIsIncludingOnlyTextContent(boolean isIncludingOnlyTextContent) {
+		this.isIncludingOnlyTextContent = isIncludingOnlyTextContent;
 	}
 
 }

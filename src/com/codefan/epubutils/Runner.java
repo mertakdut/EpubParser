@@ -7,7 +7,8 @@ public class Runner {
 
 			Reader reader = new Reader();
 			reader.setMaxContentPerSection(1000);
-			reader.setIsDissolvingStyleTag(true);
+			reader.setCssStatus(CssStatus.INCLUDE);
+			reader.setIsIncludingOnlyTextContent(true);
 
 			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub"); // IN THE YEAR 2889.epub
 
@@ -33,8 +34,8 @@ public class Runner {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-				System.out.println("content: " + bookSection.getSectionContent());
-//				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+				// System.out.println("content: " + bookSection.getSectionContent());
+				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
 			}
 
 			System.out.println("\n-------------------------------Going backwards!-------------------------------------\n");
@@ -45,8 +46,8 @@ public class Runner {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-//				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
-				System.out.println("content: " + bookSection.getSectionContent());
+				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+				// System.out.println("content: " + bookSection.getSectionContent());
 			}
 
 			// int x = 5;
