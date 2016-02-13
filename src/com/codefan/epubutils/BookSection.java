@@ -5,7 +5,7 @@ public class BookSection {
 	private String extension;
 	private String sectionContent;
 	private String mediaType;
-	private String textSectionContent;
+	private String sectionTextContent;
 
 	public String getLabel() {
 		return label;
@@ -39,12 +39,12 @@ public class BookSection {
 		this.mediaType = mediaType;
 	}
 
-	public String getTextSectionContent() {
-		return textSectionContent;
+	public String getSectionTextContent() {
+		return sectionTextContent;
 	}
 
-	public void setTextSectionContent(String textSectionContent) {
-		this.textSectionContent = textSectionContent;
+	public void setSectionTextContent(String sectionTextContent) {
+		this.sectionTextContent = sectionTextContent;
 	}
 
 }

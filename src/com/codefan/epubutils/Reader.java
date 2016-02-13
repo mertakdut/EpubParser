@@ -20,7 +20,7 @@ public class Reader {
 
 	private int maxContentPerSection;
 	private CssStatus cssStatus = CssStatus.INCLUDE;
-	private boolean isIncludingOnlyTextContent;
+	private boolean isIncludingTextContent;
 
 	public Content getContent(String filePath) throws ReadingException {
 		Content content = new Content();
@@ -202,11 +202,11 @@ public class Reader {
 	}
 
 	public BookSection readSection(Content content, int index) throws ReadingException {
-		return content.getBookSection(index, this.maxContentPerSection, this.cssStatus, this.isIncludingOnlyTextContent);
+		return content.getBookSection(index, this.maxContentPerSection, this.cssStatus, this.isIncludingTextContent);
 	}
 
 	public BookSection readSection(Content content, int index, int maxContentPerSection) throws ReadingException {
-		return content.getBookSection(index, maxContentPerSection, this.cssStatus, this.isIncludingOnlyTextContent);
+		return content.getBookSection(index, maxContentPerSection, this.cssStatus, this.isIncludingTextContent);
 	}
 
 	public void setMaxContentPerSection(int maxContentPerSection) {
@@ -217,8 +217,12 @@ public class Reader {
 		this.cssStatus = cssStatus;
 	}
 
-	public void setIsIncludingOnlyTextContent(boolean isIncludingOnlyTextContent) {
-		this.isIncludingOnlyTextContent = isIncludingOnlyTextContent;
+	public boolean isIncludingTextContent() {
+		return isIncludingTextContent;
+	}
+
+	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
+		this.isIncludingTextContent = isIncludingTextContent;
 	}
 
 }

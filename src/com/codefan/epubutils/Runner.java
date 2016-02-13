@@ -8,9 +8,9 @@ public class Runner {
 			Reader reader = new Reader();
 			reader.setMaxContentPerSection(1000);
 			reader.setCssStatus(CssStatus.INCLUDE);
-			reader.setIsIncludingOnlyTextContent(true);
+			reader.setIsIncludingTextContent(true);
 
-			Content epubContent = reader.getContent("C:\\eBooks/Alice in Wonderland.epub"); // IN THE YEAR 2889.epub
+			Content epubContent = reader.getContent("C:\\eBooks/shute-lonely-road.epub"); // IN THE YEAR 2889.epub
 
 			reader.readSection(epubContent, 0);
 
