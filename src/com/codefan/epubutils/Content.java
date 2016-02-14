@@ -145,7 +145,7 @@ public class Content {
 					fileContentStr = readFileContent(entryName, cssStatus);
 					htmlBody = getHtmlBody(fileContentStr);
 
-					// entryTagPositions only used in either in trimming the part or getting sole text content.
+					// entryTagPositions only used in either in trimming or including text content.
 					if ((maxContentPerSection != 0 && maxContentPerSection < htmlBody.length()) || isIncludingTextContent) {
 						// Calculate the tag positions of the current entry, if it hasn't done before.
 						if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
@@ -320,65 +320,6 @@ public class Content {
 		return bookSection;
 	}
 
-	// Removes all the tags from htmlBody and returns it.
-	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition) {
-		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
-
-		List<String> stringsToRemove = new ArrayList<>();
-
-		if (trimEndPosition == 0) {
-			trimEndPosition = htmlBody.length();
-		}
-
-		// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
-		// Or are they already sorted?
-		for (TagInfo tagInfo : tagStartEndPositions) {
-
-			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
-				break;
-			}
-
-			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) {
-				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
-					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getTagName().length() + 2));
-				}
-			} else {
-				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
-					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1));
-				}
-
-				if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
-					stringsToRemove.add(htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1, tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2));
-				}
-			}
-		}
-
-		htmlBody = htmlBody.substring(trimStartPosition, trimEndPosition);
-
-		for (String stringToRemove : stringsToRemove) {
-			htmlBody = htmlBody.replace(stringToRemove, "");
-		}
-
-		return htmlBody;
-	}
-
-	private String getNonTrimmedHtmlBody(int index, String htmlBody, int trimStartPosition, int trimEndPosition, String entryName) {
-		String htmlBodyToReplace = null;
-
-		if (trimEndPosition == 0) {
-			htmlBodyToReplace = htmlBody.substring(trimStartPosition);
-		} else {
-			htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
-		}
-
-		getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
-		getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(trimEndPosition);
-		getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
-
-		return htmlBodyToReplace;
-	}
-
 	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
@@ -390,9 +331,7 @@ public class Content {
 		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
 
 		String fileContent = readFileContent(entryName, cssStatus);
-
 		String htmlBody = getHtmlBody(fileContent);
-
 		String htmlBodyToReplace = null;
 
 		if (bodyTrimEndPosition == 0) { // Not calculated before.
@@ -480,6 +419,22 @@ public class Content {
 		}
 
 		return bookSection;
+	}
+
+	private String getNonTrimmedHtmlBody(int index, String htmlBody, int trimStartPosition, int trimEndPosition, String entryName) {
+		String htmlBodyToReplace = null;
+
+		if (trimEndPosition == 0) {
+			htmlBodyToReplace = htmlBody.substring(trimStartPosition);
+		} else {
+			htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
+		}
+
+		getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
+		getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(trimEndPosition);
+		getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
+
+		return htmlBodyToReplace;
 	}
 
 	/*
@@ -756,6 +711,20 @@ public class Content {
 			loopCount++;
 		}
 
+		int tableStartIndex = htmlBody.indexOf(Constants.TAG_TABLE_START, trimStartPosition);
+
+		// If interval has table, don't break the table.
+		if (tableStartIndex != -1 && tableStartIndex < trimEndPosition) {
+			int tableEndIndex = htmlBody.indexOf(Constants.TAG_TABLE_END, tableStartIndex);
+			trimEndPosition = tableEndIndex + Constants.TAG_TABLE_END.length();
+		} else {
+			trimEndPosition = findEligibleEndPosition(tagStartEndPositions, htmlBody, trimEndPosition);
+		}
+
+		return trimEndPosition;
+	}
+
+	private int findEligibleEndPosition(List<TagInfo> tagStartEndPositions, String htmlBody, int trimEndPosition) {
 		// Check here if we are in an html tag. If so, move forward or backward until the tag is over.
 		// Else, move backwards until we hit the blank.
 		boolean isMovedToEndOfTag = false;
@@ -775,6 +744,7 @@ public class Content {
 						trimEndPosition++;
 					}
 
+					trimEndPosition++;
 					isMovedToEndOfTag = true;
 					break;
 				}
@@ -786,6 +756,7 @@ public class Content {
 						trimEndPosition--;
 					}
 
+					trimEndPosition--;
 					isMovedToEndOfTag = true;
 					break;
 				}
@@ -796,6 +767,7 @@ public class Content {
 						trimEndPosition++;
 					}
 
+					trimEndPosition++;
 					isMovedToEndOfTag = true;
 					break;
 				}
@@ -804,14 +776,15 @@ public class Content {
 
 		// !This may move into a tag!
 		if (!isMovedToEndOfTag) {
-			int tmpEndPosition = trimEndPosition;
 
 			while (htmlBody.charAt(trimEndPosition) != ' ') {
 				trimEndPosition--;
 
 				// We may have hit a tag.
-				if (htmlBody.charAt(trimEndPosition) == '<' || htmlBody.charAt(trimEndPosition) == '>') {
-					trimEndPosition = tmpEndPosition;
+				if (htmlBody.charAt(trimEndPosition) == Constants.TAG_CLOSING) {
+					trimEndPosition++;
+					break;
+				} else if (htmlBody.charAt(trimEndPosition) == Constants.TAG_OPENING) {
 					break;
 				}
 			}
@@ -1319,6 +1292,49 @@ public class Content {
 		}
 
 		return null;
+	}
+
+	// Removes all the tags from htmlBody and returns it.
+	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition) {
+		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
+
+		List<String> stringsToRemove = new ArrayList<>();
+
+		if (trimEndPosition == 0) {
+			trimEndPosition = htmlBody.length();
+		}
+
+		// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
+		// Or are they already sorted?
+		for (TagInfo tagInfo : tagStartEndPositions) {
+
+			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
+			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
+				break;
+			}
+
+			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) {
+				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
+					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getTagName().length() + 2));
+				}
+			} else {
+				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
+					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1));
+				}
+
+				if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
+					stringsToRemove.add(htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1, tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2));
+				}
+			}
+		}
+
+		htmlBody = htmlBody.substring(trimStartPosition, trimEndPosition);
+
+		for (String stringToRemove : stringsToRemove) {
+			htmlBody = htmlBody.replace(stringToRemove, "");
+		}
+
+		return htmlBody;
 	}
 
 	private String encodeToHtml(String fileName) {

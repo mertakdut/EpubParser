@@ -10,7 +10,7 @@ public class Runner {
 			reader.setCssStatus(CssStatus.INCLUDE);
 			reader.setIsIncludingTextContent(true);
 
-			Content epubContent = reader.getContent("C:\\eBooks/shute-lonely-road.epub"); // IN THE YEAR 2889.epub
+			Content epubContent = reader.getContent("C:\\eBooks/feedbooks_book_3796.epub"); // shute-lonely-road
 
 			reader.readSection(epubContent, 0);
 
@@ -29,10 +29,8 @@ public class Runner {
 			// if (k < 0)
 			// k += 2;
 			// }
-			
-			// TODO: shute - 50.index'te tag açýlýþý var sonda. < 51.de de p/>
 
-			for (int i = 0; i < 51; i++) {
+			for (int i = 0; i < 50; i++) {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
@@ -44,7 +42,7 @@ public class Runner {
 
 			// Alice - 10. entry'de baþa dönüyor. trimStartPosition ve trimEndPosition 0 olarak alýnýyor.
 
-			for (int i = 49; i >= 0; i--) {
+			for (int i = 48; i >= 0; i--) {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
