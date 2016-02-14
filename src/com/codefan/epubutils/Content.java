@@ -716,7 +716,12 @@ public class Content {
 		// If interval has table, don't break the table.
 		if (tableStartIndex != -1 && tableStartIndex < trimEndPosition) {
 			int tableEndIndex = htmlBody.indexOf(Constants.TAG_TABLE_END, tableStartIndex);
-			trimEndPosition = tableEndIndex + Constants.TAG_TABLE_END.length();
+
+			if (tableEndIndex != -1) {
+				trimEndPosition = tableEndIndex + Constants.TAG_TABLE_END.length();
+			} else {
+				trimEndPosition = findEligibleEndPosition(tagStartEndPositions, htmlBody, trimEndPosition);
+			}
 		} else {
 			trimEndPosition = findEligibleEndPosition(tagStartEndPositions, htmlBody, trimEndPosition);
 		}
