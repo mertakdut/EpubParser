@@ -6,15 +6,16 @@ public class Runner {
 		try {
 
 			Reader reader = new Reader();
+
 			reader.setMaxContentPerSection(1000);
 			reader.setCssStatus(CssStatus.INCLUDE);
 			reader.setIsIncludingTextContent(true);
 
-			Content epubContent = reader.getContent("C:\\eBooks/feedbooks_book_3796.epub"); // shute-lonely-road
+			reader.setFullContent("C:\\eBooks/feedbooks_book_3796.epub"); // shute-lonely-road
 
-			reader.readSection(epubContent, 0);
+			Package infoPackage = reader.getInfoPackage();
 
-			BookSection bookSection;
+			// infoPackage.getMetadata().getLanguage()
 
 			// int k = 0;
 			// for (int i = 0; i < 50; i++) {
@@ -30,8 +31,10 @@ public class Runner {
 			// k += 2;
 			// }
 
+			BookSection bookSection;
+
 			for (int i = 0; i < 50; i++) {
-				bookSection = reader.readSection(epubContent, i);
+				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 				// System.out.println("content: " + bookSection.getSectionContent());
@@ -43,7 +46,7 @@ public class Runner {
 			// Alice - 10. entry'de baþa dönüyor. trimStartPosition ve trimEndPosition 0 olarak alýnýyor.
 
 			for (int i = 48; i >= 0; i--) {
-				bookSection = reader.readSection(epubContent, i);
+				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 				System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));

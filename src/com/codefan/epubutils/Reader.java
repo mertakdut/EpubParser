@@ -18,25 +18,41 @@ import org.xml.sax.SAXException;
 
 public class Reader {
 
+	private Content content;
+
 	private int maxContentPerSection;
 	private CssStatus cssStatus = CssStatus.INCLUDE;
 	private boolean isIncludingTextContent;
 
-	public Content getContent(String filePath) throws ReadingException {
-		Content content = new Content();
-		content.setZipFilePath(filePath);
+	public void setFullContent(String filePath) throws ReadingException {
+		this.content = new Content();
+		this.content.setZipFilePath(filePath);
 
-		return getContent(filePath, content);
+		fillContent(filePath, true);
 	}
 
-	public Content getContent(File file) throws ReadingException {
-		Content content = new Content();
+	public void setFullContent(File file) throws ReadingException {
+		content = new Content();
 		content.setZipFilePath(file.getPath());
 
-		return getContent(file.getPath(), content);
+		fillContent(file.getPath(), true);
 	}
 
-	private Content getContent(String zipFilePath, Content content) throws ReadingException {
+	public void setInfoContent(String filePath) throws ReadingException {
+		this.content = new Content();
+		this.content.setZipFilePath(filePath);
+
+		fillContent(filePath, false);
+	}
+
+	public void setInfoContent(File file) throws ReadingException {
+		content = new Content();
+		content.setZipFilePath(file.getPath());
+
+		fillContent(file.getPath(), false);
+	}
+
+	private Content fillContent(String zipFilePath, boolean isFullContent) throws ReadingException {
 
 		ZipFile epubFile = null;
 		try {
@@ -47,15 +63,17 @@ public class Reader {
 				throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
 			}
 
-			Enumeration<? extends ZipEntry> files = epubFile.entries();
+			if (isFullContent) {
+				Enumeration<? extends ZipEntry> files = epubFile.entries();
 
-			while (files.hasMoreElements()) {
-				ZipEntry entry = (ZipEntry) files.nextElement();
-				if (!entry.isDirectory()) {
-					String entryName = entry.getName();
+				while (files.hasMoreElements()) {
+					ZipEntry entry = (ZipEntry) files.nextElement();
+					if (!entry.isDirectory()) {
+						String entryName = entry.getName();
 
-					if (entryName != null) {
-						content.addEntryName(entryName);
+						if (entryName != null) {
+							content.addEntryName(entryName);
+						}
 					}
 				}
 			}
@@ -75,7 +93,7 @@ public class Reader {
 
 			for (int i = 0; i < content.getEntryNames().size(); i++) {
 
-				if (isContainerXmlFound && isTocXmlFound) {
+				if (isContainerXmlFound && (isTocXmlFound || !isFullContent)) {
 					break;
 				}
 
@@ -96,7 +114,7 @@ public class Reader {
 
 					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
 					parseContainerXml(docBuilder, document, content, epubFile);
-				} else if (currentEntryName.contains(".ncx")) {
+				} else if (isFullContent && currentEntryName.contains(".ncx")) {
 					isTocXmlFound = true;
 
 					ZipEntry toc = epubFile.getEntry(currentEntryName);
@@ -118,12 +136,12 @@ public class Reader {
 				throw new ReadingException("container.xml not found.");
 			}
 
-			if (!isTocXmlFound) {
+			if (!isTocXmlFound && isFullContent) {
 				throw new ReadingException("toc.ncx not found.");
 			}
 
 			// Debug
-//			content.print();
+			content.print();
 
 			return content;
 
@@ -201,19 +219,23 @@ public class Reader {
 		}
 	}
 
-	public BookSection readSection(Content content, int index) throws ReadingException {
+	Package getInfoPackage() {
+		return content.getPackage();
+	}
+
+	public BookSection readSection(int index) throws ReadingException {
 		return content.getBookSection(index, this.maxContentPerSection, this.cssStatus, this.isIncludingTextContent);
 	}
 
-	public BookSection readSection(Content content, int index, int maxContentPerSection) throws ReadingException {
+	public BookSection readSection(int index, int maxContentPerSection) throws ReadingException {
 		return content.getBookSection(index, maxContentPerSection, this.cssStatus, this.isIncludingTextContent);
 	}
 
 	public void setMaxContentPerSection(int maxContentPerSection) {
 		this.maxContentPerSection = maxContentPerSection;
 	}
-	
-	public void setCssStatus(CssStatus cssStatus){
+
+	public void setCssStatus(CssStatus cssStatus) {
 		this.cssStatus = cssStatus;
 	}
 

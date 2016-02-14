@@ -42,64 +42,64 @@ public class Package extends BaseFindings {
 		private XmlItem coverage;
 		private XmlItem rights;
 
-		public XmlItem getRights() {
-			return rights;
+		public String getRights() {
+			return rights != null ? rights.getValue() : null;
 		}
 
-		public XmlItem getIdentifier() {
-			return identifier;
+		public String getIdentifier() {
+			return identifier != null ? identifier.getValue() : null;
 		}
 
-		public XmlItem getContributor() {
-			return contributor;
+		public String getContributor() {
+			return contributor != null ? contributor.getValue() : null;
 		}
 
-		public XmlItem getCreator() {
-			return creator;
+		public String getCreator() {
+			return creator != null ? creator.getValue() : null;
 		}
 
-		public XmlItem getTitle() {
-			return title;
+		public String getTitle() {
+			return title != null ? title.getValue() : null;
 		}
 
-		public XmlItem getLanguage() {
-			return language;
+		public String getLanguage() {
+			return language != null ? language.getValue() : null;
 		}
 
-		public XmlItem getSubject() {
-			return subject;
+		public String getSubject() {
+			return subject != null ? subject.getValue() : null;
 		}
 
-		public XmlItem getDescription() {
-			return description;
+		public String getDescription() {
+			return description != null ? description.getValue() : null;
 		}
 
-		public XmlItem getPublisher() {
-			return publisher;
+		public String getPublisher() {
+			return publisher != null ? publisher.getValue() : null;
 		}
 
-		public XmlItem getDate() {
-			return date;
+		public String getDate() {
+			return date != null ? date.getValue() : null;
 		}
 
-		public XmlItem getType() {
-			return type;
+		public String getType() {
+			return type != null ? type.getValue() : null;
 		}
 
-		public XmlItem getFormat() {
-			return format;
+		public String getFormat() {
+			return format != null ? format.getValue() : null;
 		}
 
-		public XmlItem getSource() {
-			return source;
+		public String getSource() {
+			return source != null ? source.getValue() : null;
 		}
 
-		public XmlItem getRelation() {
-			return relation;
+		public String getRelation() {
+			return relation != null ? relation.getValue() : null;
 		}
 
-		public XmlItem getCoverage() {
-			return coverage;
+		public String getCoverage() {
+			return coverage != null ? coverage.getValue() : null;
 		}
 
 		public void fillAttributes(NodeList nodeList) throws ReadingException {
@@ -120,25 +120,25 @@ public class Package extends BaseFindings {
 			}
 		}
 
-		public void print() {
+		void print() {
 			System.out.println("\n\nPrinting Metadata...\n");
 
-			System.out.println("title: " + (getTitle() != null ? getTitle().getValue() : null));
-			System.out.println("language: " + (getLanguage() != null ? getLanguage().getValue() : null));
-			System.out.println("identifier: " + (getIdentifier() != null ? getIdentifier().getValue() : null));
+			System.out.println("title: " + getTitle());
+			System.out.println("language: " + getLanguage());
+			System.out.println("identifier: " + getIdentifier());
 
-			System.out.println("creator: " + (getCreator() != null ? getCreator().getValue() : null));
-			System.out.println("contributor: " + (getContributor() != null ? getContributor().getValue() : null));
-			System.out.println("publisher: " + (getPublisher() != null ? getPublisher().getValue() : null));
-			System.out.println("subject: " + (getSubject() != null ? getSubject().getValue() : null));
-			System.out.println("description: " + (getDescription() != null ? getDescription().getValue() : null));
-			System.out.println("date: " + (getDate() != null ? getDate().getValue() : null));
-			System.out.println("type: " + (getType() != null ? getType().getValue() : null));
-			System.out.println("format: " + (getFormat() != null ? getFormat().getValue() : null));
-			System.out.println("source: " + (getSource() != null ? getSource().getValue() : null));
-			System.out.println("relation: " + (getRelation() != null ? getRelation().getValue() : null));
-			System.out.println("coverage: " + (getCoverage() != null ? getCoverage().getValue() : null));
-			System.out.println("rights: " + (getRights() != null ? getRights().getValue() : null));
+			System.out.println("creator: " + getCreator());
+			System.out.println("contributor: " + getContributor());
+			System.out.println("publisher: " + getPublisher());
+			System.out.println("subject: " + getSubject());
+			System.out.println("description: " + getDescription());
+			System.out.println("date: " + getDate());
+			System.out.println("type: " + getType());
+			System.out.println("format: " + getFormat());
+			System.out.println("source: " + getSource());
+			System.out.println("relation: " + getRelation());
+			System.out.println("coverage: " + getCoverage());
+			System.out.println("rights: " + getRights());
 		}
 	}
 
@@ -210,7 +210,7 @@ public class Package extends BaseFindings {
 		// return this.xmlItemList;
 		// }
 
-		public void print() {
+		void print() {
 			System.out.println("\n\nPrinting Guide...\n");
 
 			for (int i = 0; i < xmlItemList.size(); i++) {

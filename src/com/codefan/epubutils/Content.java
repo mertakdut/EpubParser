@@ -77,7 +77,7 @@ public class Content {
 	// return prepareBookSection(navPoint, this.playOrder);
 	// }
 
-	public BookSection getBookSection(int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
+	BookSection getBookSection(int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
 		NavPoint navPoint = getNavPoint(index);
 
 		if (maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
@@ -560,6 +560,7 @@ public class Content {
 		return tagName;
 	}
 
+	// TODO: Similar method happens in the prepareBookSection method. Merge them into this.
 	private int getNextAvailableAnchorIndex(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
 		getToc().getNavMap().getNavPoints().remove(++index); // Removing the nextAnchor from navPoints; 'cause it's already not found.
 
