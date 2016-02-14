@@ -333,7 +333,9 @@ public class Content {
 		// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
 		// Or are they already sorted?
 		for (TagInfo tagInfo : tagStartEndPositions) {
-			if ((tagInfo.getOpeningTagStartPosition() > trimEndPosition) || (tagInfo.getClosingTagStartPosition() > trimEndPosition)) { // This may not work correctly.
+
+			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
+			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
 			}
 
@@ -706,10 +708,9 @@ public class Content {
 		while (true) {
 			int tagsLength = 0;
 
-			// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
-			// Or are they already sorted?
 			for (TagInfo tagInfo : tagStartEndPositions) {
-				if ((tagInfo.getOpeningTagStartPosition() > trimEndPosition) || (tagInfo.getClosingTagStartPosition() > trimEndPosition)) { // This may not work correctly.
+				// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
+				if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) { // (tagInfo.getClosingTagStartPosition() > trimEndPosition)
 					break;
 				}
 
@@ -759,8 +760,12 @@ public class Content {
 		// Else, move backwards until we hit the blank.
 		boolean isMovedToEndOfTag = false;
 
-		for (int i = 0; i < tagStartEndPositions.size(); i++) {
-			TagInfo tagInfo = tagStartEndPositions.get(i);
+		for (TagInfo tagInfo : tagStartEndPositions) {
+
+			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
+			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) { // (tagInfo.getClosingTagStartPosition() > trimEndPosition)
+				break;
+			}
 
 			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty tag.
 				// Inside an empty tag.
@@ -783,7 +788,9 @@ public class Content {
 
 					isMovedToEndOfTag = true;
 					break;
-				} else if (tagInfo.getClosingTagStartPosition() < trimEndPosition && (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
+				}
+
+				if (tagInfo.getClosingTagStartPosition() < trimEndPosition && (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;

@@ -29,8 +29,10 @@ public class Runner {
 			// if (k < 0)
 			// k += 2;
 			// }
+			
+			// TODO: shute - 50.index'te tag açýlýþý var sonda. < 51.de de p/>
 
-			for (int i = 0; i < 50; i++) {
+			for (int i = 0; i < 51; i++) {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
@@ -42,7 +44,7 @@ public class Runner {
 
 			// Alice - 10. entry'de baþa dönüyor. trimStartPosition ve trimEndPosition 0 olarak alýnýyor.
 
-			for (int i = 48; i >= 0; i--) {
+			for (int i = 49; i >= 0; i--) {
 				bookSection = reader.readSection(epubContent, i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
