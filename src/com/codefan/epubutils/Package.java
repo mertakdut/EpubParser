@@ -22,7 +22,7 @@ public class Package extends BaseFindings {
 		guide = new Guide();
 	}
 
-	private class Metadata {
+	public class Metadata {
 		// Required Terms
 		private XmlItem title;
 		private XmlItem language;
@@ -142,7 +142,7 @@ public class Package extends BaseFindings {
 		}
 	}
 
-	class Manifest {
+	public class Manifest {
 		private List<XmlItem> xmlItemList;
 
 		public Manifest() {
@@ -169,7 +169,7 @@ public class Package extends BaseFindings {
 	}
 
 	// <b>Ordered</b> Term of Contents, mostly filled with ids of application/xhtml+xml files in manifest node.
-	class Spine {
+	public class Spine {
 		private List<XmlItem> xmlItemList;
 
 		public Spine() {
@@ -195,7 +195,7 @@ public class Package extends BaseFindings {
 		}
 	}
 
-	private class Guide {
+	public class Guide {
 		private List<XmlItem> xmlItemList;
 
 		public Guide() {

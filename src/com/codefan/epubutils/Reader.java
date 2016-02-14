@@ -219,7 +219,7 @@ public class Reader {
 		}
 	}
 
-	Package getInfoPackage() {
+	public Package getInfoPackage() {
 		return content.getPackage();
 	}
 
@@ -237,10 +237,6 @@ public class Reader {
 
 	public void setCssStatus(CssStatus cssStatus) {
 		this.cssStatus = cssStatus;
-	}
-
-	public boolean isIncludingTextContent() {
-		return isIncludingTextContent;
 	}
 
 	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
