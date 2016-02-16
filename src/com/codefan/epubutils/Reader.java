@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -15,6 +16,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
+import com.codefan.epubutils.BaseFindings.XmlItem;
+import com.codefan.epubutils.Package.Metadata;
 
 public class Reader {
 
@@ -63,17 +67,15 @@ public class Reader {
 				throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
 			}
 
-			if (isFullContent) {
-				Enumeration<? extends ZipEntry> files = epubFile.entries();
+			Enumeration<? extends ZipEntry> files = epubFile.entries();
 
-				while (files.hasMoreElements()) {
-					ZipEntry entry = (ZipEntry) files.nextElement();
-					if (!entry.isDirectory()) {
-						String entryName = entry.getName();
+			while (files.hasMoreElements()) {
+				ZipEntry entry = (ZipEntry) files.nextElement();
+				if (!entry.isDirectory()) {
+					String entryName = entry.getName();
 
-						if (entryName != null) {
-							content.addEntryName(entryName);
-						}
+					if (entryName != null) {
+						content.addEntryName(entryName);
 					}
 				}
 			}
@@ -221,6 +223,79 @@ public class Reader {
 
 	public Package getInfoPackage() {
 		return content.getPackage();
+	}
+
+	public byte[] getCoverImage() throws ReadingException {
+
+		if (content != null) {
+			Package pckage = content.getPackage();
+			Metadata metadata = pckage.getMetadata();
+
+			if (pckage != null && metadata != null) {
+				String coverImageId = metadata.getCoverImageId();
+
+				if (coverImageId != null && !coverImageId.equals("")) {
+					List<XmlItem> manifestXmlItems = pckage.getManifest().getXmlItemList();
+
+					for (XmlItem xmlItem : manifestXmlItems) {
+						if (xmlItem.getAttributes().get("id").equals(coverImageId)) {
+							String coverImageEntryName = xmlItem.getAttributes().get("href");
+
+							if (coverImageEntryName != null && !coverImageEntryName.equals("")) {
+								ZipFile epubFile = null;
+								try {
+									try {
+										epubFile = new ZipFile(content.getZipFilePath());
+									} catch (IOException e) {
+										e.printStackTrace();
+										throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+									}
+
+									for (String entryName : content.getEntryNames()) {
+
+										if (entryName.contains(coverImageEntryName)) {
+											ZipEntry coverImageEntry = epubFile.getEntry(entryName);
+
+											InputStream inputStream;
+											try {
+												inputStream = epubFile.getInputStream(coverImageEntry);
+											} catch (IOException e) {
+												e.printStackTrace();
+												throw new ReadingException("IOException while reading " + entryName + " file: " + e.getMessage());
+											}
+
+											try {
+												return ContextHelper.convertIsToByteArray(inputStream);
+											} catch (IOException e) {
+												e.printStackTrace();
+												throw new ReadingException("IOException while converting inputStream to byte array: " + e.getMessage());
+											}
+										}
+									}
+
+								} finally {
+									try {
+										epubFile.close();
+									} catch (IOException e) {
+										e.printStackTrace();
+										throw new ReadingException("Error closing ZipFile: " + e.getMessage());
+									}
+								}
+							}
+						}
+					}
+				} else {
+					throw new ReadingException("Cover image not found in ebook metadata.");
+				}
+
+			} else {
+				throw new ReadingException("Content is empty. Call setInfoContent or setFullContent methods first.");
+			}
+		} else {
+			throw new ReadingException("Content is empty. Call setInfoContent or setFullContent methods first.");
+		}
+
+		throw new ReadingException("Cover image not found.");
 	}
 
 	public BookSection readSection(int index) throws ReadingException {

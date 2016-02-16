@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -41,6 +42,7 @@ public class Package extends BaseFindings {
 		private XmlItem relation;
 		private XmlItem coverage;
 		private XmlItem rights;
+		private String coverImageId;
 
 		public String getRights() {
 			return rights != null ? rights.getValue() : null;
@@ -101,11 +103,42 @@ public class Package extends BaseFindings {
 		public String getCoverage() {
 			return coverage != null ? coverage.getValue() : null;
 		}
+		
+		public String getCoverImageId(){
+			return coverImageId;
+		}
+		
+		void setCoverImageId(String coverImageId){
+			this.coverImageId = coverImageId;
+		}
 
 		public void fillAttributes(NodeList nodeList) throws ReadingException {
 			Field[] fields = Package.Metadata.class.getDeclaredFields();
 
 			for (int i = 0; i < nodeList.getLength(); i++) {
+
+				Node node = nodeList.item(i);
+
+				if (node.getNodeName().equals("meta")) {
+					if (node.hasAttributes()) {
+						NamedNodeMap nodeMap = node.getAttributes();
+
+						boolean isCoverImageNodeFound = false;
+						for (int j = 0; j < nodeMap.getLength(); j++) {
+							Node attribute = nodeMap.item(j);
+
+							if (!isCoverImageNodeFound && attribute.getNodeName().equals("name") && attribute.getNodeValue().equals("cover")) { // This node states cover-image id.
+								isCoverImageNodeFound = true;
+								j = -1; // Start the search from the beginng to find 'content' value.
+							} else if (isCoverImageNodeFound && attribute.getNodeName().equals("content")) {
+								this.coverImageId = attribute.getNodeValue();
+								break;
+							}
+
+						}
+					}
+				}
+
 				for (int j = 0; j < fields.length; j++) {
 					if (nodeList.item(i).getNodeName().contains(fields[j].getName())) {
 						fields[j].setAccessible(true);
@@ -139,6 +172,8 @@ public class Package extends BaseFindings {
 			System.out.println("relation: " + getRelation());
 			System.out.println("coverage: " + getCoverage());
 			System.out.println("rights: " + getRights());
+
+			System.out.println("coverImageHref: " + coverImageId);
 		}
 	}
 

@@ -15,6 +15,8 @@ public class Runner {
 
 			Package infoPackage = reader.getInfoPackage();
 			infoPackage.getMetadata().getLanguage();
+			
+			reader.getCoverImage();
 
 			// infoPackage.getMetadata().getLanguage()
 

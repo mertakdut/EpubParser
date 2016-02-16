@@ -1370,5 +1370,9 @@ public class Content {
 	void setZipFilePath(String zipFilePath) {
 		this.zipFilePath = zipFilePath;
 	}
+	
+	String getZipFilePath() {
+		return this.zipFilePath;
+	}
 
 }
