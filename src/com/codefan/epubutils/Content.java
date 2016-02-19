@@ -107,8 +107,7 @@ public class Content {
 		}
 	}
 
-	private BookSection prepareBookSection(NavPoint navPoint, int index, int maxContentPerSection, CssStatus cssStatus,
-			boolean isIncludingTextContent) throws ReadingException {
+	private BookSection prepareBookSection(NavPoint navPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
 		BookSection bookSection = new BookSection();
 
 		int entryStartPosition = navPoint.getBodyTrimStartPosition();
@@ -241,8 +240,7 @@ public class Content {
 					// If fileContentStr is too long; crop it by the maxContentPerSection.
 					// Save the fileContent and position within a new navPoint, insert it after current index.
 					if (maxContentPerSection != 0) { // maxContentPerSection is given.
-						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition,
-								maxContentPerSection);
+						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition, maxContentPerSection);
 
 						if (calculatedTrimEndPosition != -1) {
 							trimEndPosition = calculatedTrimEndPosition;
@@ -322,8 +320,7 @@ public class Content {
 		return bookSection;
 	}
 
-	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus,
-			boolean isIncludingTextContent) throws ReadingException {
+	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
@@ -356,8 +353,7 @@ public class Content {
 				}
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition,
-					maxContentPerSection);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, maxContentPerSection);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				bodyTrimEndPosition = calculatedTrimEndPosition;
@@ -479,8 +475,7 @@ public class Content {
 								TagInfo openedTag = listIterator.previous();
 
 								if (openedTag.getTagName().equals(tagName)) { // Found the last open tag with the same name.
-									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagStartPosition(),
-											i - tagName.length() - 1);
+									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagStartPosition(), i - tagName.length() - 1);
 									listIterator.remove();
 									break;
 								}
@@ -652,8 +647,7 @@ public class Content {
 	}
 
 	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos, int maxContentPerSection) {
-		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos
-				: trimStartPosition + maxContentPerSection;
+		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
 
 		int htmlBodyLength = htmlBody.length();
 
@@ -750,8 +744,7 @@ public class Content {
 
 			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty tag.
 				// Inside an empty tag.
-				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition
-						&& (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 3) > trimEndPosition) {
+				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 3) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
@@ -763,8 +756,7 @@ public class Content {
 				}
 			} else {
 				// Inside opening tag.
-				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition
-						&& (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
+				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_OPENING) {
 						trimEndPosition--;
@@ -775,8 +767,7 @@ public class Content {
 					break;
 				}
 
-				if (tagInfo.getClosingTagStartPosition() < trimEndPosition
-						&& (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
+				if (tagInfo.getClosingTagStartPosition() < trimEndPosition && (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
@@ -818,8 +809,7 @@ public class Content {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
 
 			// Opened in the trimmed part, closed after the trimmed part.
-			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex
-					&& tagInfo.getClosingTagStartPosition() > trimEndIndex) {
+			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex && tagInfo.getClosingTagStartPosition() > trimEndIndex) {
 				if (openedTags == null) {
 					openedTags = new ArrayList<>();
 				}
@@ -996,8 +986,7 @@ public class Content {
 		return null;
 	}
 
-	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent)
-			throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
+	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent) throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
@@ -1192,8 +1181,7 @@ public class Content {
 							tagToReplace = tag.substring(0, styleIndex + 6) + cssEntry.getValue() + tag.substring(styleIndex + 6, tag.length());
 						} else {
 							int insertStyleIndex = 1 + tagName.length() + 1; // '<' and ' '
-							tagToReplace = tag.substring(0, insertStyleIndex) + "style=\"" + cssEntry.getValue() + "\" "
-									+ tag.substring(insertStyleIndex, tag.length());
+							tagToReplace = tag.substring(0, insertStyleIndex) + "style=\"" + cssEntry.getValue() + "\" " + tag.substring(insertStyleIndex, tag.length());
 						}
 
 						trimmedHtmlBody = trimmedHtmlBody.replaceFirst(tag, tagToReplace);
@@ -1213,52 +1201,45 @@ public class Content {
 
 		while (srcHref != null) { // There may be multiple img tags.
 
-			if (cssStatus != CssStatus.OMIT) {
+			for (int i = 0; i < getEntryNames().size(); i++) {
+				String entryName = getEntryNames().get(i);
 
-				for (int i = 0; i < getEntryNames().size(); i++) {
-					String entryName = getEntryNames().get(i);
+				int lastSlashIndex = entryName.lastIndexOf("/");
+				String fileName = entryName.substring(lastSlashIndex + 1);
+				fileName = encodeToHtml(fileName);
 
-					int lastSlashIndex = entryName.lastIndexOf("/");
-					String fileName = entryName.substring(lastSlashIndex + 1);
-					fileName = encodeToHtml(fileName);
+				if (srcHref.contains(fileName)) { // image exists.
+					ZipFile epubFile = null;
 
-					if (srcHref.contains(fileName)) { // image exists.
-						ZipFile epubFile = null;
+					try {
+						String extension = getFileExtension(fileName);
 
-						try {
-							String extension = getFileExtension(fileName);
+						epubFile = new ZipFile(this.zipFilePath);
+						ZipEntry zipEntry = epubFile.getEntry(entryName);
+						InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry); // Convert inputStream to Base64Binary.
+						byte[] imageAsBytes = convertIsToByteArray(zipEntryInputStream);
 
-							epubFile = new ZipFile(this.zipFilePath);
-							ZipEntry zipEntry = epubFile.getEntry(entryName);
-							InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry); // Convert inputStream to Base64Binary.
-							byte[] imageAsBytes = convertIsToByteArray(zipEntryInputStream);
+						byte[] imageAsBase64 = Base64.encodeBase64(imageAsBytes);
+						String imageContent = new String(imageAsBase64);
 
-							byte[] imageAsBase64 = Base64.encodeBase64(imageAsBytes);
-							String imageContent = new String(imageAsBase64);
+						String src = "data:image/" + extension + ";base64," + imageContent;
 
-							String src = "data:image/" + extension + ";base64," + imageContent;
+						htmlBody = htmlBody.replace(srcHref, src);
+						srcHref = getImgSrcHref(htmlBody);
 
-							htmlBody = htmlBody.replace(srcHref, src);
-
-							srcHref = getImgSrcHref(htmlBody);
-
-							break;
-						} catch (IOException e) {
-							e.printStackTrace();
-						} finally {
-							if (epubFile != null) {
-								try {
-									epubFile.close();
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
+						break;
+					} catch (IOException e) {
+						e.printStackTrace();
+					} finally {
+						if (epubFile != null) {
+							try {
+								epubFile.close();
+							} catch (IOException e) {
+								e.printStackTrace();
 							}
 						}
 					}
 				}
-			} else {
-				htmlBody = htmlBody.replace(srcHref, "");
-				srcHref = getImgSrcHref(htmlBody);
 			}
 
 		}
@@ -1340,18 +1321,15 @@ public class Content {
 
 			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) {
 				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
-					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1,
-							tagInfo.getOpeningTagStartPosition() + tagInfo.getTagName().length() + 2));
+					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getTagName().length() + 2));
 				}
 			} else {
 				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
-					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1,
-							tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1));
+					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1));
 				}
 
 				if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
-					stringsToRemove.add(htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1,
-							tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2));
+					stringsToRemove.add(htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1, tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2));
 				}
 			}
 		}
