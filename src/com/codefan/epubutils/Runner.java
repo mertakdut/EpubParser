@@ -7,8 +7,8 @@ public class Runner {
 
 			Reader reader = new Reader();
 
-			reader.setMaxContentPerSection(1000);
-			reader.setCssStatus(CssStatus.INCLUDE);
+			reader.setMaxContentPerSection(1250);
+			reader.setCssStatus(CssStatus.OMIT);
 			reader.setIsIncludingTextContent(true);
 
 			reader.setFullContent("C:\\eBooks/feedbooks_book_3796.epub"); // shute-lonely-road
@@ -40,8 +40,8 @@ public class Runner {
 				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-				System.out.println("content: " + bookSection.getSectionContent());
-				// System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+//				System.out.println("content: " + bookSection.getSectionContent());
+				 System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
 			}
 
 			System.out.println("\n-------------------------------Going backwards!-------------------------------------\n");
@@ -52,8 +52,8 @@ public class Runner {
 				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-				// System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
-				System.out.println("content: " + bookSection.getSectionContent());
+				 System.out.println("content: " + getHtmlBody(bookSection.getSectionContent()));
+//				System.out.println("content: " + bookSection.getSectionContent());
 			}
 
 			// int x = 5;
@@ -76,16 +76,16 @@ public class Runner {
 		}
 	}
 
-	// private static String getHtmlBody(String htmlContent) throws ReadingException {
-	// int startOfBody = htmlContent.indexOf(Constants.TAG_BODY_START);
-	// int endOfBody = htmlContent.indexOf(Constants.TAG_BODY_END);
-	//
-	// if (startOfBody != -1 && endOfBody != -1) {
-	// return htmlContent.substring(startOfBody + Constants.TAG_BODY_START.length(), endOfBody);
-	// } else {
-	// throw new ReadingException("Exception while getting book section : Html body tags not found.");
-	// }
-	// }
+	 private static String getHtmlBody(String htmlContent) throws ReadingException {
+	 int startOfBody = htmlContent.indexOf(Constants.TAG_BODY_START);
+	 int endOfBody = htmlContent.indexOf(Constants.TAG_BODY_END);
+	
+	 if (startOfBody != -1 && endOfBody != -1) {
+	 return htmlContent.substring(startOfBody + Constants.TAG_BODY_START.length(), endOfBody);
+	 } else {
+	 throw new ReadingException("Exception while getting book section : Html body tags not found.");
+	 }
+	 }
 
 	public static boolean getRandomBoolean() {
 		return Math.random() < 0.5;

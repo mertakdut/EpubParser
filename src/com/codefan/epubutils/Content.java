@@ -309,6 +309,10 @@ public class Content {
 			}
 		}
 
+		if (cssStatus == CssStatus.OMIT) {
+			htmlBodyToReplace = replaceTableTag(htmlBodyToReplace);
+		}
+
 		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace, cssStatus);
 		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
@@ -395,6 +399,10 @@ public class Content {
 
 			String closingTags = prepareClosingTags(entryOpenedTags);
 			htmlBodyToReplace += closingTags;
+		}
+
+		if (cssStatus == CssStatus.OMIT) {
+			htmlBodyToReplace = replaceTableTag(htmlBodyToReplace);
 		}
 
 		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace, cssStatus);
@@ -545,22 +553,22 @@ public class Content {
 	}
 
 	private String getTagName(String fullTagName) {
-		String tagName = fullTagName;
 
-		if (tagName.contains(" ")) {
-			int endIndex = 2;
+		if (fullTagName.contains(" ")) {
+			fullTagName = fullTagName.trim();
 
+			int endIndex = 1;
 			while (fullTagName.length() > endIndex && fullTagName.charAt(endIndex) != ' ') {
 				endIndex++;
 			}
 
-			tagName = fullTagName.substring(0, endIndex);
+			return fullTagName.substring(0, endIndex);
+		} else {
+			return fullTagName;
 		}
-
-		return tagName;
 	}
 
-	// TODO: Similar method happens in the prepareBookSection method. Merge them into this.
+	// TODO: Similar functionality happens in the prepareBookSection method. Merge them into this.
 	private int getNextAvailableAnchorIndex(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
 		getToc().getNavMap().getNavPoints().remove(++index); // Removing the nextAnchor from navPoints; 'cause it's already not found.
 
@@ -1245,6 +1253,49 @@ public class Content {
 		}
 
 		return htmlBody;
+	}
+
+	private String replaceTableTag(String htmlBodyToReplace) {
+		int tableStartIndex = htmlBodyToReplace.indexOf(Constants.TAG_TABLE_START);
+
+		while (tableStartIndex != -1) {
+			int tableEndIndex = htmlBodyToReplace.indexOf(Constants.TAG_TABLE_END, tableStartIndex);
+
+			if (tableEndIndex != -1) {
+				Pattern rowPattern = Pattern.compile("<tr>(.*?)</tr>");
+				Pattern cellPattern = Pattern.compile("<td>(.*?)</td>");
+
+				String table = htmlBodyToReplace.substring(tableStartIndex, tableEndIndex);
+				StringBuilder tableToReplace = null;
+
+				Matcher rowMatcher = rowPattern.matcher(table);
+
+				while (rowMatcher.find()) {
+					String row = rowMatcher.group(1);
+
+					if (tableToReplace == null) {
+						tableToReplace = new StringBuilder();
+					} else {
+						tableToReplace.append("<br>");
+						// tableToReplace.substring(0, tableToReplace.length() - 4); // Remove the last \t code.
+					}
+
+					Matcher cellMatcher = cellPattern.matcher(row);
+
+					while (cellMatcher.find()) {
+						String cell = cellMatcher.group(1);
+						String strippedCell = cell.replaceAll("<[^>]*>", "");
+
+						tableToReplace.append(strippedCell); // &#9; &nbsp;
+					}
+				}
+
+				htmlBodyToReplace = htmlBodyToReplace.replace(table, tableToReplace.toString());
+				tableStartIndex = htmlBodyToReplace.indexOf(Constants.TAG_TABLE_START);
+			}
+		}
+
+		return htmlBodyToReplace;
 	}
 
 	private byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
