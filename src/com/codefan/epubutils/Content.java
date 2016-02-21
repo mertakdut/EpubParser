@@ -77,7 +77,7 @@ public class Content {
 	// return prepareBookSection(navPoint, this.playOrder);
 	// }
 
-	BookSection getBookSection(int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
+	BookSection getBookSection(int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException, IndexOutOfBoundsException {
 		NavPoint navPoint = getNavPoint(index);
 
 		if (maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
@@ -89,13 +89,13 @@ public class Content {
 		}
 	}
 
-	private NavPoint getNavPoint(int index) throws ReadingException {
+	private NavPoint getNavPoint(int index) throws ReadingException, IndexOutOfBoundsException {
 		if (index >= 0) {
 			if (getToc() != null) {
 				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
 
 				if (index >= navPoints.size()) {
-					throw new ReadingException("Index is greater than (or equal) TOC (Term of Contents) size");
+					throw new IndexOutOfBoundsException();
 				}
 
 				return navPoints.get(index);
@@ -788,7 +788,6 @@ public class Content {
 			}
 		}
 
-		// !This may move into a tag!
 		if (!isMovedToEndOfTag) {
 
 			while (htmlBody.charAt(trimEndPosition) != ' ') {

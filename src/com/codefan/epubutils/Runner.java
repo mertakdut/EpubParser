@@ -73,6 +73,9 @@ public class Runner {
 		} catch (ReadingException e) {
 			e.printStackTrace();
 			System.out.println(e.toString());
+		} catch(IndexOutOfBoundsException e){
+			e.printStackTrace();
+			System.out.println(e.toString() + "--------------------------------------------------------------------------------");
 		}
 	}
 
