@@ -11,14 +11,11 @@ public class Runner {
 			reader.setCssStatus(CssStatus.OMIT);
 			reader.setIsIncludingTextContent(true);
 
-			reader.setFullContent("C:\\eBooks/feedbooks_book_3796.epub"); // shute-lonely-road
+			reader.setFullContent("C:\\eBooks/shute-lonely-road.epub"); // shute-lonely-road
 
 			Package infoPackage = reader.getInfoPackage();
 			infoPackage.getMetadata().getLanguage();
-			
 			reader.getCoverImage();
-
-			// infoPackage.getMetadata().getLanguage()
 
 			// int k = 0;
 			// for (int i = 0; i < 50; i++) {
@@ -33,10 +30,12 @@ public class Runner {
 			// if (k < 0)
 			// k += 2;
 			// }
+			
+			//TODO: shute-lonely-road 219. index calculateTrimEndPosition yanlýþ hesaplanýyor.
 
 			BookSection bookSection;
 
-			for (int i = 0; i < 50; i++) {
+			for (int i = 0; i < 250; i++) {
 				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
@@ -48,7 +47,7 @@ public class Runner {
 
 			// Alice - 10. entry'de baþa dönüyor. trimStartPosition ve trimEndPosition 0 olarak alýnýyor.
 
-			for (int i = 48; i >= 0; i--) {
+			for (int i = 248; i >= 0; i--) {
 				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
