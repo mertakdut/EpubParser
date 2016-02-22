@@ -78,11 +78,6 @@ public class Content {
 	// }
 
 	BookSection getBookSection(int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException, IndexOutOfBoundsException {
-
-		if (index == 219) {
-			int x = 5;
-		}
-
 		NavPoint navPoint = getNavPoint(index);
 
 		if (maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
@@ -467,20 +462,12 @@ public class Content {
 		Pattern pattern = Pattern.compile(Constants.HTML_TAG_PATTERN);
 		Matcher matcher;
 
-		if (entryName.contains("ch08")) {
-			int x = 5;
-		}
-
 		for (int i = 0; i < htmlBody.length(); i++) {
 			if (htmlBody.charAt(i) == Constants.TAG_OPENING) { // Tag might have been opened.
 				isPossiblyTagOpened = true;
 				possiblyTag.setLength(0); // In case of double occurence of '<' start from the next found tag opening; e.g. '< <p>'.
 			} else if (htmlBody.charAt(i) == Constants.TAG_CLOSING) { // Tag might have been closed.
 				possiblyTag.append(Constants.TAG_CLOSING);
-
-				if (possiblyTag.toString().contains("class=\"emphasis\"")) {
-					int x = 5;
-				}
 
 				if (htmlBody.charAt(i - 1) != '/') { // Not an empty tag.
 					String tagStr = possiblyTag.toString();
