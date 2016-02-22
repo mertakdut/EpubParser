@@ -329,7 +329,8 @@ public class Content {
 		return bookSection;
 	}
 
-	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
+	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent)
+			throws ReadingException {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
@@ -688,7 +689,7 @@ public class Content {
 
 			for (TagInfo tagInfo : tagStartEndPositions) {
 				// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-				if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) { // (tagInfo.getClosingTagStartPosition() > trimEndPosition)
+				if (tagInfo.getClosingTagStartPosition() > trimEndPosition) {
 					break;
 				}
 
@@ -759,15 +760,10 @@ public class Content {
 
 		for (TagInfo tagInfo : tagStartEndPositions) {
 
-			if (tagInfo.getOpeningTagStartPosition() == 22122) {
-				int x = 5;
-			}
-
-			// Burada sorun çýkarýyor. Ama yine de bunu kullanabilmem lazým performans açýsýndan.
 			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-			// if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) { // (tagInfo.getClosingTagStartPosition() > trimEndPosition)
-			// break;
-			// }
+			if (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3 > trimEndPosition) { // (tagInfo.getClosingTagStartPosition() > trimEndPosition)
+				break;
+			}
 
 			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty tag.
 				// Inside an empty tag.
@@ -777,30 +773,31 @@ public class Content {
 						trimEndPosition++;
 					}
 
-					trimEndPosition++;
+					// trimEndPosition++;
 					isMovedToEndOfTag = true;
 					break;
 				}
 			} else {
-				// Inside opening tag.
+				// Inside an opening tag.
 				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_OPENING) {
 						trimEndPosition--;
 					}
 
-					trimEndPosition--;
+					// trimEndPosition--;
 					isMovedToEndOfTag = true;
 					break;
 				}
 
+				// Inside a closing tag.
 				if (tagInfo.getClosingTagStartPosition() < trimEndPosition && (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
 					}
 
-					trimEndPosition++;
+					// trimEndPosition++;
 					isMovedToEndOfTag = true;
 					break;
 				}
@@ -835,7 +832,8 @@ public class Content {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
 
 			// Opened in the trimmed part, closed after the trimmed part.
-			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex && tagInfo.getClosingTagStartPosition() > trimEndIndex) {
+			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex
+					&& tagInfo.getClosingTagStartPosition() > trimEndIndex) {
 				if (openedTags == null) {
 					openedTags = new ArrayList<>();
 				}
@@ -1012,7 +1010,8 @@ public class Content {
 		return null;
 	}
 
-	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent) throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
+	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent)
+			throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
@@ -1384,7 +1383,7 @@ public class Content {
 		for (TagInfo tagInfo : tagStartEndPositions) {
 
 			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
+			if (tagInfo.getClosingTagStartPosition() > trimEndPosition) {
 				break;
 			}
 
