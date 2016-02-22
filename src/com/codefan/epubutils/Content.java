@@ -329,8 +329,7 @@ public class Content {
 		return bookSection;
 	}
 
-	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent)
-			throws ReadingException {
+	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
@@ -773,7 +772,7 @@ public class Content {
 						trimEndPosition++;
 					}
 
-					// trimEndPosition++;
+					trimEndPosition++;
 					isMovedToEndOfTag = true;
 					break;
 				}
@@ -797,7 +796,7 @@ public class Content {
 						trimEndPosition++;
 					}
 
-					// trimEndPosition++;
+					trimEndPosition++;
 					isMovedToEndOfTag = true;
 					break;
 				}
@@ -832,8 +831,7 @@ public class Content {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
 
 			// Opened in the trimmed part, closed after the trimmed part.
-			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex
-					&& tagInfo.getClosingTagStartPosition() > trimEndIndex) {
+			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex && tagInfo.getClosingTagStartPosition() > trimEndIndex) {
 				if (openedTags == null) {
 					openedTags = new ArrayList<>();
 				}
@@ -1010,8 +1008,7 @@ public class Content {
 		return null;
 	}
 
-	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent)
-			throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
+	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent) throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
