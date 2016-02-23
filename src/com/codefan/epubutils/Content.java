@@ -674,8 +674,9 @@ public class Content {
 			int tagsLength = 0;
 
 			for (TagInfo tagInfo : tagStartEndPositions) {
-				// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-				if (tagInfo.getClosingTagStartPosition() > trimEndPosition) {
+
+				// This may not work correctly.
+				if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
 					break;
 				}
 
@@ -745,9 +746,9 @@ public class Content {
 		boolean isMovedToEndOfTag = false;
 
 		for (TagInfo tagInfo : tagStartEndPositions) {
-
+			
 			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-			if (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3 > trimEndPosition) { // (tagInfo.getClosingTagStartPosition() > trimEndPosition)
+			if(tagInfo.getOpeningTagStartPosition() > trimEndPosition){
 				break;
 			}
 
@@ -1362,12 +1363,10 @@ public class Content {
 			trimEndPosition = htmlBody.length();
 		}
 
-		// TODO: Sort these lists (or insert in order) to be able to break when greater than the endPositions. This way, we won't have to traverse all the list.
-		// Or are they already sorted?
 		for (TagInfo tagInfo : tagStartEndPositions) {
 
-			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-			if (tagInfo.getClosingTagStartPosition() > trimEndPosition) {
+			// This may not work correctly.
+			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
 			}
 

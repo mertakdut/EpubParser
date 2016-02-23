@@ -11,7 +11,7 @@ public class Runner {
 			reader.setCssStatus(CssStatus.OMIT);
 			reader.setIsIncludingTextContent(true);
 
-			reader.setFullContent("C:\\eBooks/shute-lonely-road.epub"); // shute-lonely-road
+			reader.setFullContent("C:\\eBooks/feedbooks_book_3796.epub"); // shute-lonely-road
 
 			Package infoPackage = reader.getInfoPackage();
 			infoPackage.getMetadata().getLanguage();
