@@ -1,5 +1,6 @@
 package com.codefan.epubutils;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,99 +26,104 @@ public class Package extends BaseFindings {
 
 	public class Metadata {
 		// Required Terms
-		private XmlItem title;
-		private XmlItem language;
-		private XmlItem identifier;
+		private String title;
+		private String language;
+		private String identifier;
 
 		// Optional Terms
-		private XmlItem creator;
-		private XmlItem contributor;
-		private XmlItem publisher;
-		private XmlItem subject;
-		private XmlItem description;
-		private XmlItem date;
-		private XmlItem type;
-		private XmlItem format;
-		private XmlItem source;
-		private XmlItem relation;
-		private XmlItem coverage;
-		private XmlItem rights;
+		private String creator;
+		private String contributor;
+		private String publisher;
+		private String[] subject;
+		private String description;
+		private String date;
+		private String type;
+		private String format;
+		private String source;
+		private String relation;
+		private String coverage;
+		private String rights;
 		private String coverImageId;
 
 		public String getRights() {
-			return rights != null ? rights.getValue() : null;
+			return rights;
 		}
 
 		public String getIdentifier() {
-			return identifier != null ? identifier.getValue() : null;
+			return identifier;
 		}
 
 		public String getContributor() {
-			return contributor != null ? contributor.getValue() : null;
+			return contributor;
 		}
 
 		public String getCreator() {
-			return creator != null ? creator.getValue() : null;
+			return creator;
 		}
 
 		public String getTitle() {
-			return title != null ? title.getValue() : null;
+			return title;
 		}
 
 		public String getLanguage() {
-			return language != null ? language.getValue() : null;
+			return language;
 		}
 
-		public String getSubject() {
-			return subject != null ? subject.getValue() : null;
+		public String[] getSubjects() {
+			return subject;
 		}
 
 		public String getDescription() {
-			return description != null ? description.getValue() : null;
+			return description;
 		}
 
 		public String getPublisher() {
-			return publisher != null ? publisher.getValue() : null;
+			return publisher;
 		}
 
 		public String getDate() {
-			return date != null ? date.getValue() : null;
+			return date;
 		}
 
 		public String getType() {
-			return type != null ? type.getValue() : null;
+			return type;
 		}
 
 		public String getFormat() {
-			return format != null ? format.getValue() : null;
+			return format;
 		}
 
 		public String getSource() {
-			return source != null ? source.getValue() : null;
+			return source;
 		}
 
 		public String getRelation() {
-			return relation != null ? relation.getValue() : null;
+			return relation;
 		}
 
 		public String getCoverage() {
-			return coverage != null ? coverage.getValue() : null;
+			return coverage;
 		}
-		
-		public String getCoverImageId(){
+
+		public String getCoverImageId() {
 			return coverImageId;
 		}
-		
-		void setCoverImageId(String coverImageId){
+
+		void setCoverImageId(String coverImageId) {
 			this.coverImageId = coverImageId;
 		}
 
 		public void fillAttributes(NodeList nodeList) throws ReadingException {
 			Field[] fields = Package.Metadata.class.getDeclaredFields();
 
-			for (int i = 0; i < nodeList.getLength(); i++) {
+			List<String> subjectList = null;
 
+			for (int i = 0; i < nodeList.getLength(); i++) {
 				Node node = nodeList.item(i);
+
+				if (node.getNodeValue() != null && node.getNodeValue().matches("\\s+")) {
+					continue;
+				}
 
 				if (node.getNodeName().equals("meta")) {
 					if (node.hasAttributes()) {
@@ -141,15 +147,35 @@ public class Package extends BaseFindings {
 
 				for (int j = 0; j < fields.length; j++) {
 					if (nodeList.item(i).getNodeName().contains(fields[j].getName())) {
-						fields[j].setAccessible(true);
-						try {
-							fields[j].set(this, nodeToXmlItem(nodeList.item(i)));
-						} catch (IllegalArgumentException | IllegalAccessException e) {
-							e.printStackTrace();
-							throw new ReadingException("Exception while parsing " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
+
+						if (fields[j].getName().equals("subject")) {
+							if (subjectList == null) {
+								subjectList = new ArrayList<>();
+							}
+							subjectList.add(nodeList.item(i).getTextContent());
+						} else {
+							fields[j].setAccessible(true);
+
+							try {
+								fields[j].set(this, nodeList.item(i).getTextContent());
+								break;
+							} catch (IllegalArgumentException | IllegalAccessException e) {
+								e.printStackTrace();
+								throw new ReadingException("Exception while parsing " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
+							}
 						}
 					}
 				}
+			}
+
+			Field field;
+			try {
+				field = Package.Metadata.class.getDeclaredField("subject");
+				field.setAccessible(true);
+				field.set(this, subjectList.toArray((String[]) Array.newInstance(field.getType().getComponentType(), subjectList.size())));
+			} catch (IllegalArgumentException | IllegalAccessException | NegativeArraySizeException | NoSuchFieldException | SecurityException e) {
+				e.printStackTrace();
+				throw new ReadingException("Exception while parsing subjects " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
 			}
 		}
 
@@ -163,7 +189,7 @@ public class Package extends BaseFindings {
 			System.out.println("creator: " + getCreator());
 			System.out.println("contributor: " + getContributor());
 			System.out.println("publisher: " + getPublisher());
-			System.out.println("subject: " + getSubject());
+			System.out.println("subject: " + getSubjects());
 			System.out.println("description: " + getDescription());
 			System.out.println("date: " + getDate());
 			System.out.println("type: " + getType());
