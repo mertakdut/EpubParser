@@ -168,14 +168,16 @@ public class Package extends BaseFindings {
 				}
 			}
 
-			Field field;
-			try {
-				field = Package.Metadata.class.getDeclaredField("subject");
-				field.setAccessible(true);
-				field.set(this, subjectList.toArray((String[]) Array.newInstance(field.getType().getComponentType(), subjectList.size())));
-			} catch (IllegalArgumentException | IllegalAccessException | NegativeArraySizeException | NoSuchFieldException | SecurityException e) {
-				e.printStackTrace();
-				throw new ReadingException("Exception while parsing subjects " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
+			if (subjectList != null) {
+				Field field;
+				try {
+					field = Package.Metadata.class.getDeclaredField("subject");
+					field.setAccessible(true);
+					field.set(this, subjectList.toArray((String[]) Array.newInstance(field.getType().getComponentType(), subjectList.size())));
+				} catch (IllegalArgumentException | IllegalAccessException | NegativeArraySizeException | NoSuchFieldException | SecurityException e) {
+					e.printStackTrace();
+					throw new ReadingException("Exception while parsing subjects " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
+				}
 			}
 		}
 
