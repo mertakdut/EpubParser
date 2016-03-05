@@ -24,10 +24,6 @@ public class Reader {
 
 	private Content content;
 
-	private int maxContentPerSection;
-	private CssStatus cssStatus = CssStatus.INCLUDE;
-	private boolean isIncludingTextContent;
-
 	public void setFullContent(String filePath) throws ReadingException {
 		this.content = new Content();
 		this.content.setZipFilePath(filePath);
@@ -225,6 +221,7 @@ public class Reader {
 		return content.getPackage();
 	}
 
+	// TODO: More aggressive searching.
 	public byte[] getCoverImage() throws ReadingException {
 
 		if (content != null) {
@@ -298,24 +295,25 @@ public class Reader {
 		throw new ReadingException("Cover image not found.");
 	}
 
-	public BookSection readSection(int index) throws ReadingException {
-		return content.getBookSection(index, this.maxContentPerSection, this.cssStatus, this.isIncludingTextContent);
+	public BookSection readSection(int index) throws ReadingException, OutOfPagesException {
+		return content.getBookSection(index);
 	}
 
-	public BookSection readSection(int index, int maxContentPerSection) throws ReadingException {
-		return content.getBookSection(index, maxContentPerSection, this.cssStatus, this.isIncludingTextContent);
+	public BookSection readSection(int index, int maxContentPerSection) throws ReadingException, OutOfPagesException {
+		Optionals.maxContentPerSection = maxContentPerSection;
+		return content.getBookSection(index);
 	}
 
 	public void setMaxContentPerSection(int maxContentPerSection) {
-		this.maxContentPerSection = maxContentPerSection;
+		Optionals.maxContentPerSection = maxContentPerSection;
 	}
 
 	public void setCssStatus(CssStatus cssStatus) {
-		this.cssStatus = cssStatus;
+		Optionals.cssStatus = cssStatus;
 	}
 
 	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
-		this.isIncludingTextContent = isIncludingTextContent;
+		Optionals.isIncludingTextContent = isIncludingTextContent;
 	}
 
 }

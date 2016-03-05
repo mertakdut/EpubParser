@@ -39,7 +39,7 @@ public class Content {
 
 	private Map<String, List<TagInfo>> entryTagPositions;
 
-	// private int playOrder;
+	private int playOrder;
 
 	// private int maxContentPerSection; // String length.
 	private BookSection lastBookSectionInfo;
@@ -77,25 +77,35 @@ public class Content {
 	// return prepareBookSection(navPoint, this.playOrder);
 	// }
 
-	BookSection getBookSection(int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException, IndexOutOfBoundsException {
+	BookSection getBookSection(int index) throws ReadingException, OutOfPagesException {
+		BookSection bookSection = null;
+
+		int orderDiff = index - this.playOrder;
+		while (orderDiff > 0) { // Out of order. Calculate the ones before first.
+			calculateBookSection(--orderDiff);
+		}
+
 		NavPoint navPoint = getNavPoint(index);
 
-		if (maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
+		if (Optionals.maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
 			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
-			return prepareBookSection(navPoint, index, maxContentPerSection, cssStatus, isIncludingTextContent);
+			bookSection = prepareBookSection(navPoint, index);
 		} else { // Pseudo navPoint - trimmed file entry.
 			// logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
-			return prepareTrimmedBookSection(navPoint, index, maxContentPerSection, cssStatus, isIncludingTextContent);
+			bookSection = prepareTrimmedBookSection(navPoint, index);
 		}
+
+		this.playOrder++;
+		return bookSection;
 	}
 
-	private NavPoint getNavPoint(int index) throws ReadingException, IndexOutOfBoundsException {
+	private NavPoint getNavPoint(int index) throws ReadingException, OutOfPagesException {
 		if (index >= 0) {
 			if (getToc() != null) {
 				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
 
 				if (index >= navPoints.size()) {
-					throw new IndexOutOfBoundsException();
+					throw new OutOfPagesException("Out of bounds at position: " + index);
 				}
 
 				return navPoints.get(index);
@@ -107,7 +117,20 @@ public class Content {
 		}
 	}
 
-	private BookSection prepareBookSection(NavPoint navPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
+	// TODO: A new method for only calculating book sections. This will also be useful for pre-loading the whole book.
+	private void calculateBookSection(int index) throws ReadingException, OutOfPagesException {
+		NavPoint navPoint = getNavPoint(index);
+
+		if (Optionals.maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
+			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
+			prepareBookSection(navPoint, index);
+		} else { // Pseudo navPoint - trimmed file entry.
+			// logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
+			prepareTrimmedBookSection(navPoint, index);
+		}
+	}
+
+	private BookSection prepareBookSection(NavPoint navPoint, int index) throws ReadingException, OutOfPagesException {
 		BookSection bookSection = new BookSection();
 
 		int entryStartPosition = navPoint.getBodyTrimStartPosition();
@@ -142,11 +165,11 @@ public class Content {
 						nextAnchor = getNextAnchor(index, entryName);
 					}
 
-					fileContentStr = readFileContent(entryName, cssStatus);
+					fileContentStr = readFileContent(entryName);
 					htmlBody = getHtmlBody(fileContentStr);
 
 					// entryTagPositions only used in either in trimming or including text content.
-					if ((maxContentPerSection != 0 && maxContentPerSection < htmlBody.length()) || isIncludingTextContent) {
+					if ((Optionals.maxContentPerSection != 0 && Optionals.maxContentPerSection < htmlBody.length()) || Optionals.isIncludingTextContent) {
 						// Calculate the tag positions of the current entry, if it hasn't done before.
 						if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
 							if (entryTagPositions == null) {
@@ -239,8 +262,8 @@ public class Content {
 
 					// If fileContentStr is too long; crop it by the maxContentPerSection.
 					// Save the fileContent and position within a new navPoint, insert it after current index.
-					if (maxContentPerSection != 0) { // maxContentPerSection is given.
-						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition, maxContentPerSection);
+					if (Optionals.maxContentPerSection != 0) { // maxContentPerSection is given.
+						int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, trimStartPosition, trimEndPosition);
 
 						if (calculatedTrimEndPosition != -1) {
 							trimEndPosition = calculatedTrimEndPosition;
@@ -289,13 +312,13 @@ public class Content {
 					bookSection.setLabel(label);
 					bookSection.setMediaType(mediaType);
 
-					if (isIncludingTextContent) {
+					if (Optionals.isIncludingTextContent) {
 						bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition));
 					}
 				}
 			}
 		} else { // Calculated before.
-			fileContentStr = readFileContent(entryEntryName, cssStatus);
+			fileContentStr = readFileContent(entryEntryName);
 			htmlBody = getHtmlBody(fileContentStr);
 
 			if (entryEndPosition != 0) {
@@ -304,19 +327,19 @@ public class Content {
 				htmlBodyToReplace = htmlBody.substring(entryStartPosition);
 			}
 
-			if (isIncludingTextContent) {
+			if (Optionals.isIncludingTextContent) {
 				bookSection.setSectionTextContent(getOnlyTextContent(entryEntryName, htmlBody, entryStartPosition, entryEndPosition));
 			}
 		}
 
-		if (cssStatus == CssStatus.OMIT) {
+		if (Optionals.cssStatus == CssStatus.OMIT) {
 			htmlBodyToReplace = replaceTableTag(htmlBodyToReplace);
 		}
 
-		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace, cssStatus);
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
-		if (cssStatus == CssStatus.DISTRIBUTE) {
+		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
 			fileContentStr = dissolveStyleTag(fileContentStr);
 		}
 
@@ -324,7 +347,7 @@ public class Content {
 		return bookSection;
 	}
 
-	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index, int maxContentPerSection, CssStatus cssStatus, boolean isIncludingTextContent) throws ReadingException {
+	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException, OutOfPagesException {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
@@ -334,7 +357,7 @@ public class Content {
 		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
 		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
 
-		String fileContent = readFileContent(entryName, cssStatus);
+		String fileContent = readFileContent(entryName);
 		String htmlBody = getHtmlBody(fileContent);
 		String htmlBodyToReplace = null;
 
@@ -357,7 +380,7 @@ public class Content {
 				}
 			}
 
-			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, maxContentPerSection);
+			int calculatedTrimEndPosition = calculateTrimEndPosition(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition);
 
 			if (calculatedTrimEndPosition != -1) { // Trimming again if needed.
 				bodyTrimEndPosition = calculatedTrimEndPosition;
@@ -401,14 +424,14 @@ public class Content {
 			htmlBodyToReplace += closingTags;
 		}
 
-		if (cssStatus == CssStatus.OMIT) {
+		if (Optionals.cssStatus == CssStatus.OMIT) {
 			htmlBodyToReplace = replaceTableTag(htmlBodyToReplace);
 		}
 
-		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace, cssStatus);
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
 
-		if (cssStatus == CssStatus.DISTRIBUTE) {
+		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
 			fileContent = dissolveStyleTag(fileContent);
 		}
 
@@ -416,7 +439,7 @@ public class Content {
 
 		bookSection.setSectionContent(fileContent);
 
-		if (isIncludingTextContent) {
+		if (Optionals.isIncludingTextContent) {
 			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
 		}
 
@@ -570,7 +593,7 @@ public class Content {
 	}
 
 	// TODO: Similar functionality happens in the prepareBookSection method. Merge them into this.
-	private int getNextAvailableAnchorIndex(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException {
+	private int getNextAvailableAnchorIndex(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException, OutOfPagesException {
 		getToc().getNavMap().getNavPoints().remove(++index); // Removing the nextAnchor from navPoints; 'cause it's already not found.
 
 		int markedNavPoints = 0;
@@ -655,13 +678,13 @@ public class Content {
 		return openingTags.toString();
 	}
 
-	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos, int maxContentPerSection) {
-		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < maxContentPerSection) ? trimEndPos : trimStartPosition + maxContentPerSection;
+	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
+		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < Optionals.maxContentPerSection) ? trimEndPos : trimStartPosition + Optionals.maxContentPerSection;
 
 		int htmlBodyLength = htmlBody.length();
 
 		// Don't need to trim. HtmlBody with tags are already below limit.
-		if (htmlBodyLength < trimEndPosition || (trimEndPosition - trimStartPosition) < maxContentPerSection) {
+		if (htmlBodyLength < trimEndPosition || (trimEndPosition - trimStartPosition) < Optionals.maxContentPerSection) {
 			return -1;
 		}
 
@@ -714,7 +737,7 @@ public class Content {
 				return -1;
 			}
 
-			if (((trimEndPosition - trimStartPosition) - tagsLength) >= maxContentPerSection) {
+			if (((trimEndPosition - trimStartPosition) - tagsLength) >= Optionals.maxContentPerSection) {
 				break;
 			}
 
@@ -746,9 +769,9 @@ public class Content {
 		boolean isMovedToEndOfTag = false;
 
 		for (TagInfo tagInfo : tagStartEndPositions) {
-			
+
 			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
-			if(tagInfo.getOpeningTagStartPosition() > trimEndPosition){
+			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
 			}
 
@@ -831,7 +854,7 @@ public class Content {
 		return openedTags;
 	}
 
-	private String getNextAnchor(int index, String entryName) throws ReadingException {
+	private String getNextAnchor(int index, String entryName) throws ReadingException, OutOfPagesException {
 		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) {
 			NavPoint nextNavPoint = getNavPoint(index + 1);
 
@@ -883,7 +906,7 @@ public class Content {
 
 	// This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
 	// If map doesn't contain that entryName -> then this method can be used.
-	private String readFileContent(String entryName, CssStatus cssStatus) throws ReadingException {
+	private String readFileContent(String entryName) throws ReadingException {
 
 		ZipFile epubFile = null;
 
@@ -908,7 +931,7 @@ public class Content {
 
 			String fileContentStr = fileContent.toString();
 
-			if (cssStatus != CssStatus.OMIT) {
+			if (Optionals.cssStatus != CssStatus.OMIT) {
 				fileContentStr = replaceCssLinkWithActualCss(epubFile, fileContentStr);
 			}
 
@@ -1205,7 +1228,7 @@ public class Content {
 		return trimmedHtmlBody;
 	}
 
-	private String replaceImgTag(String htmlBody, CssStatus cssStatus) {
+	private String replaceImgTag(String htmlBody) {
 
 		String srcHref = getImgSrcHref(htmlBody);
 
