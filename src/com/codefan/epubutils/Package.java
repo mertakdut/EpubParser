@@ -1,6 +1,5 @@
 package com.codefan.epubutils;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -173,7 +172,7 @@ public class Package extends BaseFindings {
 				try {
 					field = Package.Metadata.class.getDeclaredField("subject");
 					field.setAccessible(true);
-					field.set(this, subjectList.toArray((String[]) Array.newInstance(field.getType().getComponentType(), subjectList.size())));
+					field.set(this, subjectList.toArray(new String[subjectList.size()]));
 				} catch (IllegalArgumentException | IllegalAccessException | NegativeArraySizeException | NoSuchFieldException | SecurityException e) {
 					e.printStackTrace();
 					throw new ReadingException("Exception while parsing subjects " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());

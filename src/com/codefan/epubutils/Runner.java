@@ -11,11 +11,11 @@ public class Runner {
 			reader.setCssStatus(CssStatus.OMIT);
 			reader.setIsIncludingTextContent(true);
 
-			reader.setFullContent("C:\\eBooks/feedbooks_book_3796.epub"); // shute-lonely-road
+			reader.setFullContent("C:\\eBooks/The Man Who Would Be King.epub"); // shute-lonely-road
 
-			Package infoPackage = reader.getInfoPackage();
-			infoPackage.getMetadata().getLanguage();
-			reader.getCoverImage();
+//			Package infoPackage = reader.getInfoPackage();
+//			infoPackage.getMetadata().getLanguage();
+//			reader.getCoverImage();
 
 			// int k = 0;
 			// for (int i = 0; i < 50; i++) {
