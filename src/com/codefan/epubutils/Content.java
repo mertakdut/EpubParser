@@ -1102,7 +1102,6 @@ public class Content {
 					fileContent.append("</style>");
 
 					htmlContent = htmlContent.replace(linkPart, fileContent.toString());
-
 					cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
 
 					break;
@@ -1110,7 +1109,9 @@ public class Content {
 			}
 
 			if (!isCssFileFound) {
-				throw new ReadingException("Css file not found.");
+				logger.log(Logger.Severity.warning, "Referenced css file not found!");
+				htmlContent = htmlContent.replace(linkPart, "");
+				cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
 			}
 		}
 
