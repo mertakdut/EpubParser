@@ -171,7 +171,7 @@ public class Content {
 				}
 
 				// TODO: This may lead to wrong file. Maybe I should only check startsWith or equals.
-				if (href.equals(fileName) || (href.startsWith(fileName) && href.matches(".*?#*"))) { // href.contains(fileName)
+				if (href.equals(fileName) || (href.startsWith(fileName) && href.replace(fileName, "").matches("%23.*"))) { // href.contains(fileName)
 
 					isFileFound = true;
 
@@ -1029,6 +1029,8 @@ public class Content {
 	private String convertAnchorToHtml(String anchor) throws ReadingException { // #Page_1 to id="Page_1" converter
 		if (anchor.startsWith("#")) { // Anchors should start with #
 			return "id=\"" + anchor.substring(1) + "\"";
+		} else if (anchor.startsWith("%23")) { // Or UTF-8 equivalent of #
+			return "id=\"" + anchor.substring(3) + "\"";
 		} else {
 			throw new ReadingException("Anchor does not start with #");
 		}
