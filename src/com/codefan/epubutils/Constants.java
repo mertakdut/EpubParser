@@ -8,7 +8,7 @@ class Constants {
 	static final String FILE_NAME_PACKAGE_OPF = ".opf";
 
 	// Keywords
-	static final String TAG_BODY_START = "<body>";
+	static final String TAG_BODY_START = "<body";
 	static final String TAG_BODY_END = "</body>";
 	static final String TAG_TABLE_START = "<table";
 	static final String TAG_TABLE_END = "</table>";

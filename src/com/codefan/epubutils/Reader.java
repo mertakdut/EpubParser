@@ -15,7 +15,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 import com.codefan.epubutils.BaseFindings.XmlItem;
 import com.codefan.epubutils.Package.Metadata;
@@ -58,7 +57,7 @@ public class Reader {
 		try {
 			try {
 				epubFile = new ZipFile(zipFilePath);
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 				throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
 			}
@@ -77,6 +76,18 @@ public class Reader {
 			}
 
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			factory.setNamespaceAware(false);
+			factory.setValidating(false);
+			try {
+				factory.setFeature("http://xml.org/sax/features/namespaces", false);
+				factory.setFeature("http://xml.org/sax/features/validation", false);
+				factory.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
+				factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+			} catch (ParserConfigurationException e) {
+				e.printStackTrace();
+				throw new ReadingException("Error initializing DocumentBuilderFactory: " + e.getMessage());
+			}
+
 			DocumentBuilder docBuilder;
 
 			try {
@@ -139,13 +150,15 @@ public class Reader {
 			}
 
 			// Debug
-			content.print();
+			// content.print();
 
 			return content;
 
 		} finally {
 			try {
-				epubFile.close();
+				if (epubFile != null) {
+					epubFile.close();
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 				throw new ReadingException("Error closing ZipFile: " + e.getMessage());
@@ -191,12 +204,9 @@ public class Reader {
 			document = docBuilder.parse(inputStream);
 			inputStream.close();
 			return document;
-		} catch (SAXException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw new ReadingException("Parse error while parsing " + fileName + " file: " + e.getMessage());
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new ReadingException("IO error while parsing/closing " + fileName + " file: " + e.getMessage());
 		}
 	}
 

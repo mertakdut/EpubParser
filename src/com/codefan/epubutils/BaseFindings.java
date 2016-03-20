@@ -11,6 +11,8 @@ import org.w3c.dom.NodeList;
 
 //Helper classes and methods used in Findings
 public abstract class BaseFindings {
+	
+	Logger logger = new Logger();
 
 	public abstract void fillContent(Node node) throws ReadingException;
 

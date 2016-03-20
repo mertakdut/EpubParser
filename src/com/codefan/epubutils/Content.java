@@ -5,6 +5,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -153,12 +156,24 @@ public class Content {
 			int trimStartPosition = 0;
 			int trimEndPosition = 0;
 
-			for (int i = 0; i < getEntryNames().size(); i++) {
-				String entryName = getEntryNames().get(i);
+			boolean isFileFound = false;
 
+			for (int i = 0; i < getEntryNames().size(); i++) {
+
+				String entryName = getEntryNames().get(i);
 				String fileName = getFileName(entryName);
 
-				if (href.contains(fileName)) { // href actually exists.
+				try {
+					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName: " + e.getMessage());
+				}
+
+				// TODO: This may lead to wrong file. Maybe I should only check startsWith or equals.
+				if (href.equals(fileName) || (href.startsWith(fileName) && href.matches(".*?#*"))) { // href.contains(fileName)
+
+					isFileFound = true;
 
 					if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
 						currentAnchor = href.replace(fileName, "");
@@ -315,8 +330,15 @@ public class Content {
 					if (Optionals.isIncludingTextContent) {
 						bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition));
 					}
+
+					break;
 				}
 			}
+
+			if (!isFileFound) {
+				throw new ReadingException("Source file not found.");
+			}
+
 		} else { // Calculated before.
 			fileContentStr = readFileContent(entryEntryName);
 			htmlBody = getHtmlBody(fileContentStr);
@@ -777,7 +799,7 @@ public class Content {
 
 			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty tag.
 				// Inside an empty tag.
-				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 3) > trimEndPosition) {
+				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
@@ -789,7 +811,7 @@ public class Content {
 				}
 			} else {
 				// Inside an opening tag.
-				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
+				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_OPENING) {
 						trimEndPosition--;
@@ -801,7 +823,7 @@ public class Content {
 				}
 
 				// Inside a closing tag.
-				if (tagInfo.getClosingTagStartPosition() < trimEndPosition && (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 3) > trimEndPosition) {
+				if (tagInfo.getClosingTagStartPosition() < trimEndPosition && (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
@@ -881,8 +903,9 @@ public class Content {
 			return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
 		} else { // Find from id
 			List<XmlItem> xmlItemList = getPackage().getManifest().getXmlItemList();
-			for (int j = 0; j < xmlItemList.size(); j++) {
-				Map<String, String> attributeMap = xmlItemList.get(j).getAttributes();
+
+			for (XmlItem xmlItem : xmlItemList) {
+				Map<String, String> attributeMap = xmlItem.getAttributes();
 
 				String id = attributeMap.get("id");
 
@@ -966,11 +989,17 @@ public class Content {
 	}
 
 	private String getHtmlBody(String htmlContent) throws ReadingException {
-		int startOfBody = htmlContent.indexOf(Constants.TAG_BODY_START);
-		int endOfBody = htmlContent.indexOf(Constants.TAG_BODY_END);
+		int startOfBody = htmlContent.lastIndexOf(Constants.TAG_BODY_START);
+		int endOfBody = htmlContent.lastIndexOf(Constants.TAG_BODY_END);
+
+		int bodyStartEndIndex = startOfBody + Constants.TAG_BODY_START.length();
+
+		while (htmlContent.charAt(bodyStartEndIndex) != Constants.TAG_CLOSING) {
+			bodyStartEndIndex++;
+		}
 
 		if (startOfBody != -1 && endOfBody != -1) {
-			return htmlContent.substring(startOfBody + Constants.TAG_BODY_START.length(), endOfBody);
+			return htmlContent.substring(bodyStartEndIndex + 1, endOfBody);
 		} else {
 			throw new ReadingException("Exception while getting book section : Html body tags not found.");
 		}
@@ -1030,14 +1059,25 @@ public class Content {
 			String cssHref = cssHrefAndLinkPart[0];
 			String linkPart = cssHrefAndLinkPart[1];
 
+			boolean isCssFileFound = false;
+
 			for (int i = 0; i < getEntryNames().size(); i++) {
 				String entryName = getEntryNames().get(i);
 
 				int lastSlashIndex = entryName.lastIndexOf("/");
 				String fileName = entryName.substring(lastSlashIndex + 1);
-				fileName = encodeToHtml(fileName);
+				// fileName = encodeToHtml(fileName);
+
+				try {
+					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Css): " + e.getMessage());
+				}
 
 				if (cssHref.contains(fileName)) { // css exists.
+					isCssFileFound = true;
+
 					ZipEntry zipEntry = epubFile.getEntry(entryName);
 
 					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
@@ -1065,6 +1105,10 @@ public class Content {
 
 					break;
 				}
+			}
+
+			if (!isCssFileFound) {
+				throw new ReadingException("Css file not found.");
 			}
 		}
 
@@ -1230,9 +1274,11 @@ public class Content {
 
 	private String replaceImgTag(String htmlBody) {
 
-		String srcHref = getImgSrcHref(htmlBody);
+		String[] srcHrefAndImgPart = getImgSrcHrefAndImgPart(htmlBody);
 
-		while (srcHref != null) { // There may be multiple img tags.
+		while (srcHrefAndImgPart != null) { // There may be multiple img tags.
+
+			boolean isImageFileFound = false;
 
 			for (int i = 0; i < getEntryNames().size(); i++) {
 				String entryName = getEntryNames().get(i);
@@ -1241,7 +1287,7 @@ public class Content {
 				String fileName = entryName.substring(lastSlashIndex + 1);
 				fileName = encodeToHtml(fileName);
 
-				if (srcHref.contains(fileName)) { // image exists.
+				if (srcHrefAndImgPart[0].contains(fileName)) { // image exists.
 					ZipFile epubFile = null;
 
 					try {
@@ -1257,9 +1303,10 @@ public class Content {
 
 						String src = "data:image/" + extension + ";base64," + imageContent;
 
-						htmlBody = htmlBody.replace(srcHref, src);
-						srcHref = getImgSrcHref(htmlBody);
+						htmlBody = htmlBody.replace(srcHrefAndImgPart[0], src);
+						srcHrefAndImgPart = getImgSrcHrefAndImgPart(htmlBody);
 
+						isImageFileFound = true;
 						break;
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -1273,6 +1320,12 @@ public class Content {
 						}
 					}
 				}
+			}
+
+			if (!isImageFileFound) {
+				htmlBody = htmlBody.replace(srcHrefAndImgPart[1], "");
+				srcHrefAndImgPart = getImgSrcHrefAndImgPart(htmlBody);
+				logger.log(Logger.Severity.warning, "Referenced image file not found!");
 			}
 
 		}
@@ -1355,7 +1408,7 @@ public class Content {
 		return null;
 	}
 
-	private String getImgSrcHref(String htmlBody) {
+	private String[] getImgSrcHrefAndImgPart(String htmlBody) {
 		int indexOfImgStart = htmlBody.indexOf("<img");
 
 		if (indexOfImgStart != -1) {
@@ -1369,7 +1422,7 @@ public class Content {
 			String srcHref = imgPart.substring(indexOfSrcStart + 5, indexOfSrcEnd);
 
 			if (!srcHref.contains("data:image")) { // Not replaced before.
-				return srcHref;
+				return new String[] { srcHref, imgPart };
 			}
 		}
 

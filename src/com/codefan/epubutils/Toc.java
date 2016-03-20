@@ -1,6 +1,9 @@
 package com.codefan.epubutils;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -146,14 +149,40 @@ public class Toc extends BaseFindings {
 								Node contentAttribute = contentAttributes.item(m);
 
 								if (contentAttribute.getNodeName().equals("src")) {
-									navPoint.setContentSrc(contentAttribute.getNodeValue());
+									String contentSrc = contentAttribute.getNodeValue();
+
+									int slashIndex = contentSrc.lastIndexOf('/');
+									if (slashIndex != -1) {
+										contentSrc = contentSrc.substring(slashIndex + 1);
+									}
+
+									try {
+										contentSrc = URLDecoder.decode(contentSrc, "UTF-8");
+										contentSrc = URLEncoder.encode(contentSrc, "UTF-8");
+									} catch (UnsupportedEncodingException e) {
+										e.printStackTrace();
+										logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding/decoding contentSrc: " + e.getMessage());
+									}
+
+									navPoint.setContentSrc(contentSrc);
 								}
 							}
 
 						}
 					}
 
-					this.navPoints.add(navPoint);
+					boolean duplicateContentSrc = false;
+
+					for (NavPoint navPointItem : this.navPoints) {
+						if (navPoint.getContentSrc().equals(navPointItem.getContentSrc())) { // NullPointer?
+							duplicateContentSrc = true;
+							break;
+						}
+					}
+
+					if (!duplicateContentSrc) {
+						this.navPoints.add(navPoint);
+					}
 				}
 			}
 
@@ -170,8 +199,8 @@ public class Toc extends BaseFindings {
 			for (int i = 0; i < this.navPoints.size(); i++) {
 				NavPoint navPoint = this.navPoints.get(i);
 
-				System.out.println("navPoint (" + i + ") id: " + navPoint.getId() + ", playOrder: " + navPoint.getPlayOrder() + ", navLabel(Text): " + navPoint.getNavLabel()
-						+ ", content src: " + navPoint.getContentSrc());
+				System.out.println("navPoint (" + i + ") id: " + navPoint.getId() + ", playOrder: " + navPoint.getPlayOrder() + ", navLabel(Text): " + navPoint.getNavLabel() + ", content src: "
+						+ navPoint.getContentSrc());
 			}
 		}
 	}
