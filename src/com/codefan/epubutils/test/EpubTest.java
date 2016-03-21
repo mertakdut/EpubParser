@@ -32,9 +32,16 @@ public class EpubTest {
 
 		if (epubFiles != null) {
 
+			List<String> sectionContents = new ArrayList<>();
+
 			for (CssStatus cssStatus : cssStatuses) {
 				for (int maxContent : maxContents) {
 					for (File epubFile : epubFiles) {
+
+						if (!sectionContents.isEmpty()) {
+							sectionContents.clear();
+						}
+
 						String epubFilePath = epubFile.getAbsolutePath();
 
 						System.out.println("Reading file content (cssStatus: " + cssStatus + ", " + "maxContent: " + maxContent + " : " + epubFilePath);
@@ -47,13 +54,13 @@ public class EpubTest {
 							reader.setFullContent(epubFilePath);
 						} catch (Exception e) {
 							e.printStackTrace();
-							System.out.println("Content Exception: " + e.getMessage() + "\n MaxContent: " + maxContent + ", CssStatus: " + cssStatus + "\n FilePath: " + epubFilePath);
+							System.out.println("---------------------\nContent Exception: " + e.getMessage() + "\nMaxContent: " + maxContent + ", CssStatus: " + cssStatus + "\nFilePath: "
+									+ epubFilePath + "\n---------------------");
 						}
 
 						// System.out.println("Reading book section (cssStatus: " + cssStatus + ", " + "maxContent: " + maxContent + " : " + epubFilePath);
 
 						BookSection bookSection;
-						List<String> sectionContents = new ArrayList<>();
 
 						int pageCount = -1;
 
@@ -70,7 +77,8 @@ public class EpubTest {
 							}
 						} catch (ReadingException e) {
 							e.printStackTrace();
-							System.out.println("BookSection Exception: " + e.getMessage() + "\n MaxContent: " + maxContent + ", CssStatus: " + cssStatus + "\n FilePath: " + epubFilePath);
+							System.out.println("---------------------\nBookSection Exception: " + e.getMessage() + "\nMaxContent: " + maxContent + ", CssStatus: " + cssStatus + "\nFilePath: "
+									+ epubFilePath + "\n---------------------");
 						} catch (OutOfPagesException e) {
 							// e.printStackTrace();
 						} catch (Exception e) {
@@ -93,7 +101,6 @@ public class EpubTest {
 							System.out.println("GoingBackwards Exception: " + e.getMessage() + "\n MaxContent: " + maxContent + ", CssStatus: " + cssStatus + "\n FilePath: " + epubFilePath);
 							e.printStackTrace();
 						}
-
 					}
 				}
 			}

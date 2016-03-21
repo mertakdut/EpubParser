@@ -158,7 +158,7 @@ public class Toc extends BaseFindings {
 
 									try {
 										contentSrc = URLDecoder.decode(contentSrc, "UTF-8");
-										contentSrc = URLEncoder.encode(contentSrc, "UTF-8");
+										contentSrc = URLEncoder.encode(contentSrc, "UTF-8").replace("+", "%20");
 									} catch (UnsupportedEncodingException e) {
 										e.printStackTrace();
 										logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding/decoding contentSrc: " + e.getMessage());

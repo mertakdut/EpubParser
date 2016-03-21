@@ -26,7 +26,7 @@ public class EpubSingleTest {
 		reader.setCssStatus(CssStatus.INCLUDE);
 		reader.setIsIncludingTextContent(true);
 
-		reader.setFullContent("C:\\eBooks/test/The Mockingbird Next Door_ Life With Har - Marja Mills.epub");
+		reader.setFullContent("C:\\eBooks/test/Mark Bowden - Doctor Dealer.epub");
 
 		// bookSection = reader.readSection(1);
 		// System.out.println("\n" + 1 + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
@@ -52,10 +52,12 @@ public class EpubSingleTest {
 			}
 		} catch (ReadingException e) {
 			e.printStackTrace();
+			throw e;
 		} catch (OutOfPagesException e) {
 			// e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
+			throw e;
 		}
 
 		// System.out.println("\n-------------------------------Going backwards!-------------------------------------\n");
@@ -72,6 +74,7 @@ public class EpubSingleTest {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+			throw e;
 		}
 	}
 

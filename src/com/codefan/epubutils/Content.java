@@ -41,6 +41,7 @@ public class Content {
 	private List<String> entryNames;
 
 	private Map<String, List<TagInfo>> entryTagPositions;
+	private List<String> nonExistingHrefList;
 
 	private int playOrder;
 
@@ -156,7 +157,7 @@ public class Content {
 			int trimStartPosition = 0;
 			int trimEndPosition = 0;
 
-			boolean isFileFound = false;
+			boolean isSourceFileFound = false;
 
 			for (int i = 0; i < getEntryNames().size(); i++) {
 
@@ -171,9 +172,9 @@ public class Content {
 				}
 
 				// TODO: This may lead to wrong file. Maybe I should only check startsWith or equals.
-				if (href.equals(fileName) || (href.startsWith(fileName) && href.replace(fileName, "").matches("%23.*"))) { // href.contains(fileName)
+				if (href.equals(fileName) || (href.startsWith(fileName) && href.replace(fileName, "").startsWith("%23"))) { // href.contains(fileName)
 
-					isFileFound = true;
+					isSourceFileFound = true;
 
 					if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
 						currentAnchor = href.replace(fileName, "");
@@ -335,8 +336,10 @@ public class Content {
 				}
 			}
 
-			if (!isFileFound) {
-				throw new ReadingException("Source file not found.");
+			if (!isSourceFileFound) {
+				logger.log(Logger.Severity.warning, "Source file not found!");
+				getToc().getNavMap().getNavPoints().remove(index);
+				return getBookSection(index);
 			}
 
 		} else { // Calculated before.
@@ -888,7 +891,14 @@ public class Content {
 				if (nextHref != null) {
 					String fileName = getFileName(entryName);
 
-					if (nextHref.contains(fileName)) { // Both anchors are in the same file.
+					try {
+						fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+					} catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+						logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(anchor): " + e.getMessage());
+					}
+
+					if (nextHref.startsWith(fileName) && nextHref.replace(fileName, "").startsWith("%23")) { // Both anchors are in the same file.
 						return nextHref.replace(fileName, "");
 					}
 				}
@@ -1061,6 +1071,11 @@ public class Content {
 			String cssHref = cssHrefAndLinkPart[0];
 			String linkPart = cssHrefAndLinkPart[1];
 
+			if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
+				logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
+				break;
+			}
+
 			boolean isCssFileFound = false;
 
 			for (int i = 0; i < getEntryNames().size(); i++) {
@@ -1068,7 +1083,6 @@ public class Content {
 
 				int lastSlashIndex = entryName.lastIndexOf("/");
 				String fileName = entryName.substring(lastSlashIndex + 1);
-				// fileName = encodeToHtml(fileName);
 
 				try {
 					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
@@ -1077,7 +1091,7 @@ public class Content {
 					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Css): " + e.getMessage());
 				}
 
-				if (cssHref.contains(fileName)) { // css exists.
+				if (cssHref.equals(fileName)) { // css exists.
 					isCssFileFound = true;
 
 					ZipEntry zipEntry = epubFile.getEntry(entryName);
@@ -1112,6 +1126,12 @@ public class Content {
 				logger.log(Logger.Severity.warning, "Referenced css file not found!");
 				htmlContent = htmlContent.replace(linkPart, "");
 				cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
+
+				if (nonExistingHrefList == null) {
+					nonExistingHrefList = new ArrayList<>();
+				}
+
+				nonExistingHrefList.add(cssHref);
 			}
 		}
 
@@ -1281,6 +1301,11 @@ public class Content {
 
 		while (srcHrefAndImgPart != null) { // There may be multiple img tags.
 
+			if (nonExistingHrefList != null && nonExistingHrefList.contains(srcHrefAndImgPart[0])) {
+				logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Img) : " + srcHrefAndImgPart[0]);
+				break;
+			}
+
 			boolean isImageFileFound = false;
 
 			for (int i = 0; i < getEntryNames().size(); i++) {
@@ -1288,9 +1313,15 @@ public class Content {
 
 				int lastSlashIndex = entryName.lastIndexOf("/");
 				String fileName = entryName.substring(lastSlashIndex + 1);
-				fileName = encodeToHtml(fileName);
 
-				if (srcHrefAndImgPart[0].contains(fileName)) { // image exists.
+				try {
+					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Img): " + e.getMessage());
+				}
+
+				if (srcHrefAndImgPart[0].equals(fileName)) { // image exists.
 					ZipFile epubFile = null;
 
 					try {
@@ -1326,9 +1357,15 @@ public class Content {
 			}
 
 			if (!isImageFileFound) {
+				logger.log(Logger.Severity.warning, "Referenced image file not found!");
 				htmlBody = htmlBody.replace(srcHrefAndImgPart[1], "");
 				srcHrefAndImgPart = getImgSrcHrefAndImgPart(htmlBody);
-				logger.log(Logger.Severity.warning, "Referenced image file not found!");
+
+				if (nonExistingHrefList == null) {
+					nonExistingHrefList = new ArrayList<>();
+				}
+
+				nonExistingHrefList.add(srcHrefAndImgPart[0]);
 			}
 
 		}
@@ -1404,7 +1441,7 @@ public class Content {
 			String cssHref = linkStr.substring(indexOfHrefStart + 6, indexOfHrefEnd);
 
 			if (cssHref.endsWith(Constants.EXTENSION_CSS)) {
-				return new String[] { cssHref, linkStr };
+				return new String[] { getFileName(cssHref), linkStr };
 			}
 		}
 
@@ -1412,12 +1449,18 @@ public class Content {
 	}
 
 	private String[] getImgSrcHrefAndImgPart(String htmlBody) {
-		int indexOfImgStart = htmlBody.indexOf("<img");
+		int indexOfImgStart = htmlBody.indexOf(Constants.TAG_IMG_START);
 
 		if (indexOfImgStart != -1) {
-			int indexOfImgEnd = htmlBody.indexOf(Constants.TAG_END, indexOfImgStart);
+			int indexOfImgEnd = htmlBody.indexOf(Constants.TAG_IMG_END, indexOfImgStart);
+			int offset = Constants.TAG_IMG_END.length();
 
-			String imgPart = htmlBody.substring(indexOfImgStart, indexOfImgEnd + 2);
+			if (indexOfImgEnd == -1) {
+				indexOfImgEnd = htmlBody.indexOf(Constants.TAG_END, indexOfImgStart);
+				offset = Constants.TAG_END.length();
+			}
+
+			String imgPart = htmlBody.substring(indexOfImgStart, indexOfImgEnd + offset);
 
 			int indexOfSrcStart = imgPart.indexOf("src=\"");
 			int indexOfSrcEnd = imgPart.indexOf("\"", indexOfSrcStart + 5);
@@ -1425,7 +1468,7 @@ public class Content {
 			String srcHref = imgPart.substring(indexOfSrcStart + 5, indexOfSrcEnd);
 
 			if (!srcHref.contains("data:image")) { // Not replaced before.
-				return new String[] { srcHref, imgPart };
+				return new String[] { getFileName(srcHref), imgPart };
 			}
 		}
 
@@ -1471,10 +1514,6 @@ public class Content {
 		}
 
 		return htmlBody;
-	}
-
-	private String encodeToHtml(String fileName) {
-		return fileName.replace("&", "&amp;").replace("Œ", "&OElig;").replace("œ", "&oelig;").replace("Ÿ", "&Yuml;");
 	}
 
 	List<String> getEntryNames() {
