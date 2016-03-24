@@ -30,25 +30,11 @@ public class Reader {
 		fillContent(filePath, true);
 	}
 
-	public void setFullContent(File file) throws ReadingException {
-		content = new Content();
-		content.setZipFilePath(file.getPath());
-
-		fillContent(file.getPath(), true);
-	}
-
 	public void setInfoContent(String filePath) throws ReadingException {
 		this.content = new Content();
 		this.content.setZipFilePath(filePath);
 
 		fillContent(filePath, false);
-	}
-
-	public void setInfoContent(File file) throws ReadingException {
-		content = new Content();
-		content.setZipFilePath(file.getPath());
-
-		fillContent(file.getPath(), false);
 	}
 
 	private Content fillContent(String zipFilePath, boolean isFullContent) throws ReadingException {

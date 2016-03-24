@@ -26,7 +26,7 @@ public class EpubSingleTest {
 		reader.setCssStatus(CssStatus.INCLUDE);
 		reader.setIsIncludingTextContent(true);
 
-		reader.setFullContent("C:\\eBooks/test/Mark Bowden - Doctor Dealer.epub");
+		reader.setFullContent("C:\\eBooks/test/The Hungry Girl Diet - Lisa Lillien.epub");
 
 		// bookSection = reader.readSection(1);
 		// System.out.println("\n" + 1 + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());

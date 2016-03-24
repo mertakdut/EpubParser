@@ -2,7 +2,9 @@ package com.codefan.epubutils.test;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,6 +35,7 @@ public class EpubTest {
 		if (epubFiles != null) {
 
 			List<String> sectionContents = new ArrayList<>();
+//			Set<String> subjects = new HashSet<>();
 
 			for (CssStatus cssStatus : cssStatuses) {
 				for (int maxContent : maxContents) {
@@ -58,6 +61,14 @@ public class EpubTest {
 									+ epubFilePath + "\n---------------------");
 						}
 
+						// String[] subjectArray = reader.getInfoPackage().getMetadata().getSubjects();
+						//
+						// if (subjectArray != null) {
+						// for (int i = 0; i < subjectArray.length; i++) {
+						// subjects.add(subjectArray[i]);
+						// }
+						// }
+
 						// System.out.println("Reading book section (cssStatus: " + cssStatus + ", " + "maxContent: " + maxContent + " : " + epubFilePath);
 
 						BookSection bookSection;
@@ -74,6 +85,8 @@ public class EpubTest {
 
 								// System.out.println("content: " + sectionContent);
 								pageCount++;
+								
+								Assert.assertFalse(sectionContent.endsWith("<*.") || sectionContent.startsWith("*.>"));
 							}
 						} catch (ReadingException e) {
 							e.printStackTrace();
@@ -104,6 +117,12 @@ public class EpubTest {
 					}
 				}
 			}
+
+			// System.out.println("\n\n----------Collected Subjects----------\n");
+			//
+			// for (String subject : subjects) {
+			// System.out.println(subject);
+			// }
 
 		}
 

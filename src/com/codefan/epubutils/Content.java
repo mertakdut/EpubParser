@@ -770,6 +770,7 @@ public class Content {
 			loopCount++;
 		}
 
+		// TODO: Regex to find table tags like: <table(*.?)>[</table>|</>]
 		int tableStartIndex = htmlBody.indexOf(Constants.TAG_TABLE_START, trimStartPosition);
 
 		// If interval has table, don't break the table.
@@ -1060,93 +1061,15 @@ public class Content {
 		return null;
 	}
 
-	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent) throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
-
-		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
-
-		String[] cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
-
-		while (cssHrefAndLinkPart != null) { // There may be multiple css links.
-
-			String cssHref = cssHrefAndLinkPart[0];
-			String linkPart = cssHrefAndLinkPart[1];
-
-			if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
-				logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
-				break;
-			}
-
-			boolean isCssFileFound = false;
-
-			for (int i = 0; i < getEntryNames().size(); i++) {
-				String entryName = getEntryNames().get(i);
-
-				int lastSlashIndex = entryName.lastIndexOf("/");
-				String fileName = entryName.substring(lastSlashIndex + 1);
-
-				try {
-					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Css): " + e.getMessage());
-				}
-
-				if (cssHref.equals(fileName)) { // css exists.
-					isCssFileFound = true;
-
-					ZipEntry zipEntry = epubFile.getEntry(entryName);
-
-					InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
-
-					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
-
-					StringBuilder fileContent = new StringBuilder();
-
-					fileContent.append("<style type=\"text/css\">");
-
-					try {
-						String line;
-						while ((line = bufferedReader.readLine()) != null) {
-							fileContent.append(line);
-						}
-					} finally {
-						bufferedReader.close();
-					}
-
-					fileContent.append("</style>");
-
-					htmlContent = htmlContent.replace(linkPart, fileContent.toString());
-					cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
-
-					break;
-				}
-			}
-
-			if (!isCssFileFound) {
-				logger.log(Logger.Severity.warning, "Referenced css file not found!");
-				htmlContent = htmlContent.replace(linkPart, "");
-				cssHrefAndLinkPart = getCssHrefAndLinkPart(htmlContent);
-
-				if (nonExistingHrefList == null) {
-					nonExistingHrefList = new ArrayList<>();
-				}
-
-				nonExistingHrefList.add(cssHref);
-			}
-		}
-
-		return htmlContent;
-	}
-
 	// Distributing the css parts in the style tag to the belonging html tags.
 	private String dissolveStyleTag(String trimmedFileContent) throws ReadingException {
 
-		Pattern cssPattern = Pattern.compile("<style(.*?)</style>");
+		Pattern cssPattern = Pattern.compile("<style(.*?)>(.*?)</style>");
 
 		Matcher matcher = cssPattern.matcher(trimmedFileContent);
 
 		while (matcher.find()) { // There may be multiple style tags.
-			String styleTagStr = matcher.group(1);
+			String styleTagStr = matcher.group(2);
 
 			Map<String, String> cssMap = getCssMap(styleTagStr);
 
@@ -1295,122 +1218,221 @@ public class Content {
 		return trimmedHtmlBody;
 	}
 
-	private String replaceImgTag(String htmlBody) {
+	private String replaceCssLinkWithActualCss(ZipFile epubFile, String htmlContent) throws IOException, ParserConfigurationException, ReadingException, SAXException, TransformerException {
 
-		String[] srcHrefAndImgPart = getImgSrcHrefAndImgPart(htmlBody);
+		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
-		while (srcHrefAndImgPart != null) { // There may be multiple img tags.
+		Pattern linkTagPattern = Pattern.compile("<link.*?/>|<link.*?</link>");
+		Pattern hrefPattern = Pattern.compile("href=\"(.*?)\"");
 
-			if (nonExistingHrefList != null && nonExistingHrefList.contains(srcHrefAndImgPart[0])) {
-				logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Img) : " + srcHrefAndImgPart[0]);
-				break;
-			}
+		Matcher linkMatcher = linkTagPattern.matcher(htmlContent);
 
-			boolean isImageFileFound = false;
+		while (linkMatcher.find()) {
+			String linkTag = linkMatcher.group(0);
 
-			for (int i = 0; i < getEntryNames().size(); i++) {
-				String entryName = getEntryNames().get(i);
+			Matcher hrefMatcher = hrefPattern.matcher(linkTag);
 
-				int lastSlashIndex = entryName.lastIndexOf("/");
-				String fileName = entryName.substring(lastSlashIndex + 1);
+			if (hrefMatcher.find()) {
+				String cssHref = getFileName(hrefMatcher.group(1));
 
-				try {
-					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Img): " + e.getMessage());
-				}
+				if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
 
-				if (srcHrefAndImgPart[0].equals(fileName)) { // image exists.
-					ZipFile epubFile = null;
+					logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
+					htmlContent = htmlContent.replace(linkTag, "");
 
-					try {
-						String extension = getFileExtension(fileName);
+				} else {
 
-						epubFile = new ZipFile(this.zipFilePath);
-						ZipEntry zipEntry = epubFile.getEntry(entryName);
-						InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry); // Convert inputStream to Base64Binary.
-						byte[] imageAsBytes = convertIsToByteArray(zipEntryInputStream);
+					boolean isCssFileFound = false;
 
-						byte[] imageAsBase64 = Base64.encodeBase64(imageAsBytes);
-						String imageContent = new String(imageAsBase64);
+					for (int i = 0; i < getEntryNames().size(); i++) {
+						String entryName = getEntryNames().get(i);
 
-						String src = "data:image/" + extension + ";base64," + imageContent;
+						int lastSlashIndex = entryName.lastIndexOf("/");
+						String fileName = entryName.substring(lastSlashIndex + 1);
 
-						htmlBody = htmlBody.replace(srcHrefAndImgPart[0], src);
-						srcHrefAndImgPart = getImgSrcHrefAndImgPart(htmlBody);
-
-						isImageFileFound = true;
-						break;
-					} catch (IOException e) {
-						e.printStackTrace();
-					} finally {
-						if (epubFile != null) {
-							try {
-								epubFile.close();
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
+						try {
+							fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+						} catch (UnsupportedEncodingException e) {
+							e.printStackTrace();
+							logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Css): " + e.getMessage());
 						}
+
+						if (cssHref.equals(fileName)) { // css exists.
+							isCssFileFound = true;
+
+							ZipEntry zipEntry = epubFile.getEntry(entryName);
+
+							InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
+
+							BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
+
+							StringBuilder fileContent = new StringBuilder();
+
+							fileContent.append("<style type=\"text/css\">");
+
+							try {
+								String line;
+								while ((line = bufferedReader.readLine()) != null) {
+									fileContent.append(line);
+								}
+							} finally {
+								bufferedReader.close();
+							}
+
+							fileContent.append("</style>");
+
+							htmlContent = htmlContent.replace(linkTag, fileContent.toString());
+
+							break;
+						}
+					}
+
+					if (!isCssFileFound) {
+						logger.log(Logger.Severity.warning, "Referenced css file not found!");
+
+						if (nonExistingHrefList == null) {
+							nonExistingHrefList = new ArrayList<>();
+						}
+
+						nonExistingHrefList.add(cssHref);
+
+						htmlContent = htmlContent.replace(cssHref, "");
 					}
 				}
 			}
 
-			if (!isImageFileFound) {
-				logger.log(Logger.Severity.warning, "Referenced image file not found!");
-				htmlBody = htmlBody.replace(srcHrefAndImgPart[1], "");
-				srcHrefAndImgPart = getImgSrcHrefAndImgPart(htmlBody);
+		}
 
-				if (nonExistingHrefList == null) {
-					nonExistingHrefList = new ArrayList<>();
+		return htmlContent;
+	}
+
+	private String replaceImgTag(String htmlBody) {
+
+		Pattern imgTagPattern = Pattern.compile("<img.*?/>|<img.*?</img>");
+		Pattern srcPattern = Pattern.compile("src=\"(.*?)\"");
+
+		Matcher imgTagMatcher = imgTagPattern.matcher(htmlBody);
+
+		while (imgTagMatcher.find()) {
+			String imgPart = imgTagMatcher.group(0);
+
+			Matcher srcMatcher = srcPattern.matcher(imgPart);
+
+			if (srcMatcher.find()) {
+				String srcHref = getFileName(srcMatcher.group(1));
+
+				if (nonExistingHrefList != null && nonExistingHrefList.contains(srcMatcher)) {
+					logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Img) : " + srcMatcher);
+
+					htmlBody = htmlBody.replace(imgPart, "");
+				} else {
+
+					boolean isImageFileFound = false;
+
+					for (int i = 0; i < getEntryNames().size(); i++) {
+						String entryName = getEntryNames().get(i);
+
+						int lastSlashIndex = entryName.lastIndexOf("/");
+						String fileName = entryName.substring(lastSlashIndex + 1);
+
+						try {
+							fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+						} catch (UnsupportedEncodingException e) {
+							e.printStackTrace();
+							logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Img): " + e.getMessage());
+						}
+
+						if (srcHref.equals(fileName)) { // image exists.
+
+							isImageFileFound = true;
+
+							ZipFile epubFile = null;
+
+							try {
+								String extension = getFileExtension(fileName);
+
+								epubFile = new ZipFile(this.zipFilePath);
+								ZipEntry zipEntry = epubFile.getEntry(entryName);
+								InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry); // Convert inputStream to Base64Binary.
+								byte[] imageAsBytes = convertIsToByteArray(zipEntryInputStream);
+
+								byte[] imageAsBase64 = Base64.encodeBase64(imageAsBytes);
+								String imageContent = new String(imageAsBase64);
+
+								String src = "data:image/" + extension + ";base64," + imageContent;
+
+								htmlBody = htmlBody.replace(srcHref, src);
+								break;
+							} catch (IOException e) {
+								e.printStackTrace();
+							} finally {
+								if (epubFile != null) {
+									try {
+										epubFile.close();
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+								}
+							}
+						}
+					}
+
+					if (!isImageFileFound) {
+						logger.log(Logger.Severity.warning, "Referenced image file not found: " + srcHref);
+
+						if (nonExistingHrefList == null) {
+							nonExistingHrefList = new ArrayList<>();
+						}
+
+						nonExistingHrefList.add(srcHref);
+
+						htmlBody = htmlBody.replace(imgPart, "");
+					}
+
 				}
 
-				nonExistingHrefList.add(srcHrefAndImgPart[0]);
 			}
-
 		}
 
 		return htmlBody;
 	}
 
 	private String replaceTableTag(String htmlBodyToReplace) {
-		int tableStartIndex = htmlBodyToReplace.indexOf(Constants.TAG_TABLE_START);
 
-		while (tableStartIndex != -1) {
-			int tableEndIndex = htmlBodyToReplace.indexOf(Constants.TAG_TABLE_END, tableStartIndex);
+		Pattern tableTagPattern = Pattern.compile("<table.*?/>|<table.*?</table>");
+		Matcher tableTagMatcher = tableTagPattern.matcher(htmlBodyToReplace);
 
-			if (tableEndIndex != -1) {
-				Pattern rowPattern = Pattern.compile("<tr>(.*?)</tr>");
-				Pattern cellPattern = Pattern.compile("<td>(.*?)</td>");
+		while (tableTagMatcher.find()) {
+			String table = tableTagMatcher.group(0);
 
-				String table = htmlBodyToReplace.substring(tableStartIndex, tableEndIndex);
-				StringBuilder tableToReplace = null;
+			Pattern rowPattern = Pattern.compile("<tr>.*?</tr>");
+			Matcher rowMatcher = rowPattern.matcher(table);
 
-				Matcher rowMatcher = rowPattern.matcher(table);
+			StringBuilder tableToReplace = null;
 
-				while (rowMatcher.find()) {
-					String row = rowMatcher.group(1);
+			while (rowMatcher.find()) {
+				String row = rowMatcher.group(0);
 
-					if (tableToReplace == null) {
-						tableToReplace = new StringBuilder();
-					} else {
-						tableToReplace.append("<br>");
-						// tableToReplace.substring(0, tableToReplace.length() - 4); // Remove the last \t code.
-					}
-
-					Matcher cellMatcher = cellPattern.matcher(row);
-
-					while (cellMatcher.find()) {
-						String cell = cellMatcher.group(1);
-						String strippedCell = cell.replaceAll("<[^>]*>", "");
-
-						tableToReplace.append(strippedCell); // &#9; &nbsp;
-					}
+				if (tableToReplace == null) {
+					tableToReplace = new StringBuilder();
+				} else {
+					tableToReplace.append("<br>");
+					// tableToReplace.substring(0, tableToReplace.length() - 4); // Remove the last \t code.
 				}
 
-				htmlBodyToReplace = htmlBodyToReplace.replace(table, tableToReplace.toString());
-				tableStartIndex = htmlBodyToReplace.indexOf(Constants.TAG_TABLE_START);
+				Pattern cellPattern = Pattern.compile("<td>.*?</td>");
+				Matcher cellMatcher = cellPattern.matcher(row);
+
+				while (cellMatcher.find()) {
+					String cell = cellMatcher.group(1);
+					String strippedCell = cell.replaceAll("<[^>]*>", ""); // Removes tags and such.
+
+					tableToReplace.append(strippedCell); // &#9; &nbsp;
+				}
 			}
+
+			htmlBodyToReplace = htmlBodyToReplace.replace(table, tableToReplace.toString());
+
 		}
 
 		return htmlBodyToReplace;
@@ -1425,54 +1447,6 @@ public class Content {
 		}
 
 		return output.toByteArray();
-	}
-
-	private String[] getCssHrefAndLinkPart(String htmlContent) {
-		int indexOfLinkStart = htmlContent.indexOf("<link");
-
-		if (indexOfLinkStart != -1) {
-			int indexOfLinkEnd = htmlContent.indexOf(Constants.TAG_END, indexOfLinkStart);
-
-			String linkStr = htmlContent.substring(indexOfLinkStart, indexOfLinkEnd + 2);
-
-			int indexOfHrefStart = linkStr.indexOf("href=\"");
-			int indexOfHrefEnd = linkStr.indexOf("\"", indexOfHrefStart + 6);
-
-			String cssHref = linkStr.substring(indexOfHrefStart + 6, indexOfHrefEnd);
-
-			if (cssHref.endsWith(Constants.EXTENSION_CSS)) {
-				return new String[] { getFileName(cssHref), linkStr };
-			}
-		}
-
-		return null;
-	}
-
-	private String[] getImgSrcHrefAndImgPart(String htmlBody) {
-		int indexOfImgStart = htmlBody.indexOf(Constants.TAG_IMG_START);
-
-		if (indexOfImgStart != -1) {
-			int indexOfImgEnd = htmlBody.indexOf(Constants.TAG_IMG_END, indexOfImgStart);
-			int offset = Constants.TAG_IMG_END.length();
-
-			if (indexOfImgEnd == -1) {
-				indexOfImgEnd = htmlBody.indexOf(Constants.TAG_END, indexOfImgStart);
-				offset = Constants.TAG_END.length();
-			}
-
-			String imgPart = htmlBody.substring(indexOfImgStart, indexOfImgEnd + offset);
-
-			int indexOfSrcStart = imgPart.indexOf("src=\"");
-			int indexOfSrcEnd = imgPart.indexOf("\"", indexOfSrcStart + 5);
-
-			String srcHref = imgPart.substring(indexOfSrcStart + 5, indexOfSrcEnd);
-
-			if (!srcHref.contains("data:image")) { // Not replaced before.
-				return new String[] { getFileName(srcHref), imgPart };
-			}
-		}
-
-		return null;
 	}
 
 	// Removes all the tags from htmlBody and returns it.
