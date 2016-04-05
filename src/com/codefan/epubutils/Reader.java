@@ -1,6 +1,6 @@
 package com.codefan.epubutils;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
@@ -246,6 +246,7 @@ public class Reader {
 
 									for (String entryName : content.getEntryNames()) {
 
+										// TODO: I might have to change this contains with equals.
 										if (entryName.contains(coverImageEntryName)) {
 											ZipEntry coverImageEntry = epubFile.getEntry(entryName);
 
@@ -258,7 +259,7 @@ public class Reader {
 											}
 
 											try {
-												return ContextHelper.convertIsToByteArray(inputStream);
+												return convertIsToByteArray(inputStream);
 											} catch (IOException e) {
 												e.printStackTrace();
 												throw new ReadingException("IOException while converting inputStream to byte array: " + e.getMessage());
@@ -268,7 +269,9 @@ public class Reader {
 
 								} finally {
 									try {
-										epubFile.close();
+										if (epubFile != null) {
+											epubFile.close();
+										}
 									} catch (IOException e) {
 										e.printStackTrace();
 										throw new ReadingException("Error closing ZipFile: " + e.getMessage());
@@ -277,18 +280,11 @@ public class Reader {
 							}
 						}
 					}
-				} else {
-					throw new ReadingException("Cover image not found in ebook metadata.");
 				}
-
-			} else {
-				throw new ReadingException("Content is empty. Call setInfoContent or setFullContent methods first.");
 			}
-		} else {
-			throw new ReadingException("Content is empty. Call setInfoContent or setFullContent methods first.");
 		}
 
-		throw new ReadingException("Cover image not found.");
+		return null;
 	}
 
 	public BookSection readSection(int index) throws ReadingException, OutOfPagesException {
@@ -310,6 +306,17 @@ public class Reader {
 
 	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
 		Optionals.isIncludingTextContent = isIncludingTextContent;
+	}
+	
+	private byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
+		byte[] buffer = new byte[8192];
+		int bytesRead;
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		while ((bytesRead = inputStream.read(buffer)) != -1) {
+			output.write(buffer, 0, bytesRead);
+		}
+
+		return output.toByteArray();
 	}
 
 }
