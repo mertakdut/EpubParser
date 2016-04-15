@@ -2,9 +2,7 @@ package com.codefan.epubutils.test;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -212,10 +210,6 @@ public class EpubTest {
 		} else {
 			throw new ReadingException("Exception while getting book section : Html body tags not found.");
 		}
-	}
-
-	private static boolean getRandomBoolean() {
-		return Math.random() < 0.5;
 	}
 
 }

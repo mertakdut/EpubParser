@@ -95,8 +95,4 @@ public class EpubSingleTest {
 		}
 	}
 
-	private boolean getRandomBoolean() {
-		return Math.random() < 0.5;
-	}
-
 }
