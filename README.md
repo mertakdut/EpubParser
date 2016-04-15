@@ -10,9 +10,9 @@ Usage is fairly simple. Just instantiate a reader object, input the epub file pa
 Example usage:
 
 	Reader reader = new Reader();
-	reader.setMaxContentPerSection(1000);
-	reader.setFullContent(epubFilePath);
-	reader.setIsIncludingTextContent(true);
+	reader.setMaxContentPerSection(1000); // Max string length for the current page.
+	reader.setFullContent(epubFilePath); // Setting content once is enough.
+	reader.setIsIncludingTextContent(true); // Optional, to return the tags-excluded version.
 
 	Book bookSection = reader.readSection(pageIndex);
 	String sectionContent = bookSection.getSectionContent(); // Returns content as html.
