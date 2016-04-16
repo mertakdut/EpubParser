@@ -6,9 +6,9 @@
 	<packaging>jar</packaging>
 
 	<scm>
-		<url>https://github.com/mertakdut/EpubParser</url>
-		<connection>scm:git:ssh://git@github.com/mertakdut/EpubParser.git</connection>
-		<developerConnection>scm:git:ssh://git@github.com/mertakdut/EpubParser.git</developerConnection>
+		<connection>scm:git:git@github.com:mertakdut/EpubParser.git</connection>
+		<developerConnection>scm:git:git@github.com:mertakdut/EpubParser.git</developerConnection>
+		<url>http://github.com/mertakdut/EpubParser</url>
 	  <tag>EpubParser-1.0.0</tag>
   </scm>
 
@@ -57,6 +57,14 @@
 					<serverId>ossrh</serverId>
 					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
 					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-scm-plugin</artifactId>
+				<version>1.8.1</version>
+				<configuration>
+					<tag>${project.artifactId}-${project.version}</tag>
 				</configuration>
 			</plugin>
 		</plugins>
