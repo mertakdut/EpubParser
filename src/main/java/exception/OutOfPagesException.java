@@ -1,5 +1,4 @@
-package com.codefan.epubutils;
-
+package exception;
 public class OutOfPagesException extends Exception {
 	
 	public OutOfPagesException(String message){

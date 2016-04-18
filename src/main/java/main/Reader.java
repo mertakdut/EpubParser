@@ -1,4 +1,4 @@
-package com.codefan.epubutils;
+package main;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,8 +16,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.codefan.epubutils.BaseFindings.XmlItem;
-import com.codefan.epubutils.Package.Metadata;
+import exception.OutOfPagesException;
+import exception.ReadingException;
+import main.BaseFindings.XmlItem;
+import main.Package.Metadata;
 
 public class Reader {
 

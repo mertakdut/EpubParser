@@ -1,5 +1,4 @@
-package com.codefan.epubutils;
-
+package main;
 import java.util.List;
 
 class NavPoint {

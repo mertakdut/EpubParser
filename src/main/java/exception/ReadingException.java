@@ -1,5 +1,4 @@
-package com.codefan.epubutils;
-
+package exception;
 public class ReadingException extends Exception {
 	
 	public ReadingException(String message){

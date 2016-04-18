@@ -1,4 +1,4 @@
-package com.codefan.epubutils;
+package main;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,8 +9,10 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import exception.ReadingException;
+
 //Helper classes and methods used in Findings
-public abstract class BaseFindings {
+abstract class BaseFindings {
 	
 	Logger logger = new Logger();
 

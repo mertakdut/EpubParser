@@ -1,4 +1,4 @@
-package com.codefan.epubutils;
+package main;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
@@ -14,8 +14,10 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import exception.ReadingException;
+
 //toc.ncx
-public class Toc extends BaseFindings {
+class Toc extends BaseFindings {
 
 	private Head head;
 	private NavMap navMap;

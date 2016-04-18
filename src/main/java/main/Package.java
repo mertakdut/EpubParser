@@ -1,4 +1,4 @@
-package com.codefan.epubutils;
+package main;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -8,8 +8,10 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import exception.ReadingException;
+
 //package.opf
-public class Package extends BaseFindings {
+class Package extends BaseFindings {
 
 	private Metadata metadata;
 	private Manifest manifest;

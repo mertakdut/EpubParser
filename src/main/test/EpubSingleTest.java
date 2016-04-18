@@ -1,16 +1,14 @@
-package com.codefan.epubutils.test;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.codefan.epubutils.BookSection;
-import com.codefan.epubutils.CssStatus;
-import com.codefan.epubutils.OutOfPagesException;
-import com.codefan.epubutils.Reader;
-import com.codefan.epubutils.ReadingException;
+import exception.OutOfPagesException;
+import exception.ReadingException;
+import main.BookSection;
+import main.CssStatus;
+import main.Reader;
 
 public class EpubSingleTest {
 
@@ -26,7 +24,7 @@ public class EpubSingleTest {
 		reader.setCssStatus(CssStatus.INCLUDE);
 		reader.setIsIncludingTextContent(true);
 
-		reader.setFullContent("C:\\eBooks/test/The Hungry Girl Diet - Lisa Lillien.epub");
+		reader.setFullContent("C:\\eBooks/test/The Air-Conditioned Nightmare - Henry Miller.epub");
 
 		// bookSection = reader.readSection(1);
 		// System.out.println("\n" + 1 + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
@@ -40,7 +38,7 @@ public class EpubSingleTest {
 		int pageCount = -1;
 
 		try {
-			for (int i = 0; i < 550; i++) {
+			for (int i = 0; i < 50; i++) {
 				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 

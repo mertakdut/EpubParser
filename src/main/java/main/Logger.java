@@ -1,6 +1,6 @@
-package com.codefan.epubutils;
+package main;
 
-public class Logger {
+class Logger {
 
 	public enum Severity {
 		info, warning, error

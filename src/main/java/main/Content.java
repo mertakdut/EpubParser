@@ -1,4 +1,4 @@
-package com.codefan.epubutils;
+package main;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -10,6 +10,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,7 +27,9 @@ import javax.xml.transform.TransformerException;
 import org.apache.commons.codec.binary.Base64;
 import org.xml.sax.SAXException;
 
-import com.codefan.epubutils.BaseFindings.XmlItem;
+import exception.OutOfPagesException;
+import exception.ReadingException;
+import main.BaseFindings.XmlItem;
 
 public class Content {
 
@@ -171,9 +174,7 @@ public class Content {
 					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName: " + e.getMessage());
 				}
 
-				// TODO: This may lead to wrong file. Maybe I should only check startsWith or equals.
-				if (href.equals(fileName) || (href.startsWith(fileName) && href.replace(fileName, "").startsWith("%23"))) { // href.contains(fileName)
-
+				if (href.equals(fileName) || (href.startsWith(fileName) && href.replace(fileName, "").startsWith("%23"))) {
 					isSourceFileFound = true;
 
 					if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
@@ -200,60 +201,85 @@ public class Content {
 						currentAnchor = convertAnchorToHtml(currentAnchor);
 						nextAnchor = convertAnchorToHtml(nextAnchor);
 
-						boolean containsCurrentAnchor = fileContentStr.contains(currentAnchor);
-						boolean containsNextAnchor = fileContentStr.contains(nextAnchor);
+						int currentAnchorIndex = htmlBody.indexOf(currentAnchor);
+						int nextAnchorIndex = htmlBody.indexOf(nextAnchor);
 
-						if (containsCurrentAnchor && containsNextAnchor) {
-							int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
+						// Abnormality in toc.ncx file. Its order is probably given wrong.
+						// Warning: This may break the navPoints order if all the order is malformed.
+						if (currentAnchorIndex > nextAnchorIndex) {
+							int tmp = currentAnchorIndex;
+							currentAnchorIndex = nextAnchorIndex;
+							nextAnchorIndex = tmp;
+
+							Collections.swap(getToc().getNavMap().getNavPoints(), index, index + 1);
+						}
+
+						if (currentAnchorIndex != -1 && nextAnchorIndex != -1) {
+							int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchorIndex, nextAnchorIndex);
 
 							trimStartPosition = bodyIntervals[0];
 							trimEndPosition = bodyIntervals[1];
 						} else {
 							int tmpIndex = index;
 
-							if (!containsCurrentAnchor && !containsNextAnchor) { // Both of the anchors not found.
-								getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
-								getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the second one (next anchor)
+							if (currentAnchorIndex == -1 && nextAnchorIndex == -1) { // Both of the anchors not found.
+								getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the first one (current anchor)
+								getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the second one (next anchor)
 								currentAnchor = null;
-							} else if (containsCurrentAnchor) { // Next anchor not found.
-								getToc().getNavMap().getNavPoints().remove(++tmpIndex); // Delete the second one (next anchor)
-							} else if (containsNextAnchor) { // Current anchor not found.
-								getToc().getNavMap().getNavPoints().remove(tmpIndex++); // Delete the first one (current anchor)
+								nextAnchor = null;
+							} else if (currentAnchorIndex == -1) { // Current anchor not found.
+								getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the first one (current anchor)
 								currentAnchor = nextAnchor;
+
+							} else if (nextAnchorIndex == -1) { // Next anchor not found.
+								getToc().getNavMap().getNavPoints().get(++tmpIndex).setMarkedToDelete(true); // Delete the second one (next anchor)
+								nextAnchor = null;
 							}
 
-							int markedNavPoints = 0;
+							int markedNavPoints = tmpIndex - index;
 
 							// Next available anchor should be the next starting point.
 							while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
+								boolean markCurrentNavPoint = true;
+
 								NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
 								String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
 
 								String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
 
 								if (possiblyNextEntryName != null) {
-									if (possiblyNextEntryName.contains(fileName)) {
+									if (possiblyNextEntryName.startsWith(fileName) && possiblyNextEntryName.replace(fileName, "").startsWith("%23")) {
 										String anchor = possiblyNextEntryName.replace(fileName, "");
 										anchor = convertAnchorToHtml(anchor);
 
-										if (fileContentStr.contains(anchor)) {
+										if (htmlBody.contains(anchor)) {
 											if (currentAnchor == null) { // If current anchor is not found, first set that.
 												currentAnchor = anchor;
+												markCurrentNavPoint = false;
 											} else { // If current anchor is already defined set the next anchor and break.
 												nextAnchor = anchor;
 												break;
 											}
 										}
+									} else { // TODO: Next content is not the same file as the current one. Anchors are broken. Navigate to the next file.
+										break;
 									}
 								}
 
-								getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
-								markedNavPoints++;
+								if (markCurrentNavPoint) {
+									getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
+									markedNavPoints++;
+								}
 
 								tmpIndex++;
 							}
 
 							if (markedNavPoints != 0) {
+
+								if (markedNavPoints == getToc().getNavMap().getNavPoints().size()) {
+									throw new ReadingException("There are no items left in TOC. Toc.ncx file is probably malformed.");
+								}
+
 								for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
 									NavPoint navPointToDelete = iterator.next();
 									if (navPointToDelete.isMarkedToDelete()) {
@@ -1018,23 +1044,49 @@ public class Content {
 
 	// Starts from current anchor, reads until the next anchor starts.
 	private int[] getAnchorsInterval(String htmlBody, String currentAnchor, String nextAnchor) throws ReadingException {
-		int startOfCurrentAnchor = htmlBody.indexOf(currentAnchor);
-		int startOfNextAnchor = htmlBody.indexOf(nextAnchor);
 
-		if (startOfCurrentAnchor != -1 && startOfNextAnchor != -1) {
+		int startOfCurrentAnchor = -1;
+		int startOfNextAnchor = -1;
 
+		if (currentAnchor != null && !currentAnchor.equals("")) {
+			startOfCurrentAnchor = htmlBody.indexOf(currentAnchor);
+		}
+
+		if (nextAnchor != null && !nextAnchor.equals("")) {
+			startOfNextAnchor = htmlBody.indexOf(nextAnchor);
+		}
+
+		if (startOfCurrentAnchor != -1) {
 			while (htmlBody.charAt(startOfCurrentAnchor) != Constants.TAG_OPENING) {
 				startOfCurrentAnchor--;
 			}
+		} else {
+			startOfCurrentAnchor = 0;
+		}
 
+		if (startOfNextAnchor != -1) {
 			while (htmlBody.charAt(startOfNextAnchor) != Constants.TAG_OPENING) {
 				startOfNextAnchor--;
 			}
-
-			return new int[] { startOfCurrentAnchor, startOfNextAnchor };
 		} else {
-			throw new ReadingException("Exception while trimming anchored parts : Defined Anchors not found.");
+			startOfNextAnchor = 0;
 		}
+
+		return new int[] { startOfCurrentAnchor, startOfNextAnchor };
+		// throw new ReadingException("Exception while trimming anchored parts : Defined Anchors not found.");
+	}
+
+	private int[] getAnchorsInterval(String htmlBody, int startOfCurrentAnchor, int startOfNextAnchor) throws ReadingException {
+
+		while (htmlBody.charAt(startOfCurrentAnchor) != Constants.TAG_OPENING) {
+			startOfCurrentAnchor--;
+		}
+
+		while (htmlBody.charAt(startOfNextAnchor) != Constants.TAG_OPENING) {
+			startOfNextAnchor--;
+		}
+
+		return new int[] { startOfCurrentAnchor, startOfNextAnchor };
 	}
 
 	private String convertAnchorToHtml(String anchor) throws ReadingException { // #Page_1 to id="Page_1" converter

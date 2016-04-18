@@ -1,4 +1,4 @@
-package com.codefan.epubutils;
+package main;
 
 class Constants {
 

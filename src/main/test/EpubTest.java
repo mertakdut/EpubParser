@@ -1,5 +1,3 @@
-package com.codefan.epubutils.test;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,11 +5,11 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.codefan.epubutils.BookSection;
-import com.codefan.epubutils.CssStatus;
-import com.codefan.epubutils.OutOfPagesException;
-import com.codefan.epubutils.Reader;
-import com.codefan.epubutils.ReadingException;
+import exception.OutOfPagesException;
+import exception.ReadingException;
+import main.BookSection;
+import main.CssStatus;
+import main.Reader;
 
 public class EpubTest {
 

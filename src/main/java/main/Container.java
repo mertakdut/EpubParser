@@ -1,8 +1,10 @@
-package com.codefan.epubutils;
+package main;
 
 import org.w3c.dom.Node;
 
-public class Container extends BaseFindings {
+import exception.ReadingException;
+
+class Container extends BaseFindings {
 	private XmlItem rootFile;
 
 	public XmlItem getRootFile() {
