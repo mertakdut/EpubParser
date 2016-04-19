@@ -1,4 +1,4 @@
-package main;
+package com.github.mertakdut;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -8,10 +8,10 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import exception.ReadingException;
+import com.github.mertakdut.exception.ReadingException;
 
 //package.opf
-class Package extends BaseFindings {
+public class Package extends BaseFindings {
 
 	private Metadata metadata;
 	private Manifest manifest;
@@ -114,7 +114,7 @@ class Package extends BaseFindings {
 			this.coverImageId = coverImageId;
 		}
 
-		public void fillAttributes(NodeList nodeList) throws ReadingException {
+		void fillAttributes(NodeList nodeList) throws ReadingException {
 			Field[] fields = Package.Metadata.class.getDeclaredFields();
 
 			List<String> subjectList = null;

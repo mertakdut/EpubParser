@@ -1,4 +1,4 @@
-package main;
+package com.github.mertakdut;
 
 public class BookSection {
 	private String label;

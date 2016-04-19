@@ -18,5 +18,19 @@ Example usage:
 	String sectionContent = bookSection.getSectionContent(); // Returns content as html.
 	String sectionTextContent = bookSection.getSectionTextContent(); // Excludes html tags.
 
+# Setup
+
+Add dependency in your project build.gradle
+
+	compile 'com.github.mertakdut:EpubParser:1.0.4'
+
+Or grab it via maven
+
+	<dependency>
+    		<groupId>com.github.mertakdut</groupId>
+    		<artifactId>EpubParser</artifactId>
+    		<version>1.0.4</version>
+	</dependency>
+
 # License
 See the <a href="https://github.com/mertakdut/EpubParser/blob/master/LICENSE.txt">LICENSE</a> file for license rights and limitations (Apache License 2.0).

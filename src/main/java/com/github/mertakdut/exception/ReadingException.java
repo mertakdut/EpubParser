@@ -1,4 +1,4 @@
-package exception;
+package com.github.mertakdut.exception;
 public class ReadingException extends Exception {
 	
 	public ReadingException(String message){

@@ -1,4 +1,4 @@
-package main;
+package com.github.mertakdut;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,10 +16,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import exception.OutOfPagesException;
-import exception.ReadingException;
-import main.BaseFindings.XmlItem;
-import main.Package.Metadata;
+import com.github.mertakdut.BaseFindings.XmlItem;
+import com.github.mertakdut.Package.Metadata;
+import com.github.mertakdut.exception.OutOfPagesException;
+import com.github.mertakdut.exception.ReadingException;
 
 public class Reader {
 

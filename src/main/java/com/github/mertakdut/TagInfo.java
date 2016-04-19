@@ -1,4 +1,4 @@
-package main;
+package com.github.mertakdut;
 
 class TagInfo {
 	private String tagName;

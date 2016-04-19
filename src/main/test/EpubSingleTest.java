@@ -4,11 +4,11 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
-import exception.OutOfPagesException;
-import exception.ReadingException;
-import main.BookSection;
-import main.CssStatus;
-import main.Reader;
+import com.github.mertakdut.BookSection;
+import com.github.mertakdut.CssStatus;
+import com.github.mertakdut.Reader;
+import com.github.mertakdut.exception.OutOfPagesException;
+import com.github.mertakdut.exception.ReadingException;
 
 public class EpubSingleTest {
 

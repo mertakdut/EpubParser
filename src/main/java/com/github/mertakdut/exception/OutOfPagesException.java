@@ -1,4 +1,4 @@
-package exception;
+package com.github.mertakdut.exception;
 public class OutOfPagesException extends Exception {
 	
 	public OutOfPagesException(String message){

@@ -1,8 +1,8 @@
-package main;
+package com.github.mertakdut;
 
 import org.w3c.dom.Node;
 
-import exception.ReadingException;
+import com.github.mertakdut.exception.ReadingException;
 
 class Container extends BaseFindings {
 	private XmlItem rootFile;

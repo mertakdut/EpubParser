@@ -1,4 +1,4 @@
-package main;
+package com.github.mertakdut;
 import java.util.List;
 
 class NavPoint {

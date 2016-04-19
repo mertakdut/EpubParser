@@ -1,4 +1,4 @@
-package main;
+package com.github.mertakdut;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -27,11 +27,11 @@ import javax.xml.transform.TransformerException;
 import org.apache.commons.codec.binary.Base64;
 import org.xml.sax.SAXException;
 
-import exception.OutOfPagesException;
-import exception.ReadingException;
-import main.BaseFindings.XmlItem;
+import com.github.mertakdut.BaseFindings.XmlItem;
+import com.github.mertakdut.exception.OutOfPagesException;
+import com.github.mertakdut.exception.ReadingException;
 
-public class Content {
+class Content {
 
 	private Logger logger;
 
