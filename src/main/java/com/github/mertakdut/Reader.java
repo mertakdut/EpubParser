@@ -25,6 +25,13 @@ public class Reader {
 
 	private Content content;
 
+	public void setInfoContent(String filePath) throws ReadingException {
+		this.content = new Content();
+		this.content.setZipFilePath(filePath);
+
+		fillContent(filePath, false);
+	}
+
 	public void setFullContent(String filePath) throws ReadingException {
 		this.content = new Content();
 		this.content.setZipFilePath(filePath);
@@ -32,11 +39,26 @@ public class Reader {
 		fillContent(filePath, true);
 	}
 
-	public void setInfoContent(String filePath) throws ReadingException {
-		this.content = new Content();
-		this.content.setZipFilePath(filePath);
+	public BookSection readSection(int index) throws ReadingException, OutOfPagesException {
+		return content.getBookSection(index);
+	}
 
-		fillContent(filePath, false);
+	public BookSection readSection(int index, int maxContentPerSection) throws ReadingException, OutOfPagesException {
+		Optionals.maxContentPerSection = maxContentPerSection;
+		return content.getBookSection(index);
+	}
+
+	// Optionals
+	public void setMaxContentPerSection(int maxContentPerSection) {
+		Optionals.maxContentPerSection = maxContentPerSection;
+	}
+
+	public void setCssStatus(CssStatus cssStatus) {
+		Optionals.cssStatus = cssStatus;
+	}
+
+	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
+		Optionals.isIncludingTextContent = isIncludingTextContent;
 	}
 
 	private Content fillContent(String zipFilePath, boolean isFullContent) throws ReadingException {
@@ -64,18 +86,6 @@ public class Reader {
 			}
 
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			factory.setNamespaceAware(false);
-			factory.setValidating(false);
-			try {
-				factory.setFeature("http://xml.org/sax/features/namespaces", false);
-				factory.setFeature("http://xml.org/sax/features/validation", false);
-				factory.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
-				factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-			} catch (ParserConfigurationException e) {
-				e.printStackTrace();
-				throw new ReadingException("Error initializing DocumentBuilderFactory: " + e.getMessage());
-			}
-
 			DocumentBuilder docBuilder;
 
 			try {
@@ -223,93 +233,12 @@ public class Reader {
 	public byte[] getCoverImage() throws ReadingException {
 
 		if (content != null) {
-			Package pckage = content.getPackage();
-			Metadata metadata = pckage.getMetadata();
-
-			if (pckage != null && metadata != null) {
-				String coverImageId = metadata.getCoverImageId();
-
-				if (coverImageId != null && !coverImageId.equals("")) {
-					List<XmlItem> manifestXmlItems = pckage.getManifest().getXmlItemList();
-
-					for (XmlItem xmlItem : manifestXmlItems) {
-						if (xmlItem.getAttributes().get("id").equals(coverImageId)) {
-							String coverImageEntryName = xmlItem.getAttributes().get("href");
-
-							if (coverImageEntryName != null && !coverImageEntryName.equals("")) {
-								ZipFile epubFile = null;
-								try {
-									try {
-										epubFile = new ZipFile(content.getZipFilePath());
-									} catch (IOException e) {
-										e.printStackTrace();
-										throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
-									}
-
-									for (String entryName : content.getEntryNames()) {
-
-										// TODO: I might have to change this contains with equals.
-										if (entryName.contains(coverImageEntryName)) {
-											ZipEntry coverImageEntry = epubFile.getEntry(entryName);
-
-											InputStream inputStream;
-											try {
-												inputStream = epubFile.getInputStream(coverImageEntry);
-											} catch (IOException e) {
-												e.printStackTrace();
-												throw new ReadingException("IOException while reading " + entryName + " file: " + e.getMessage());
-											}
-
-											try {
-												return convertIsToByteArray(inputStream);
-											} catch (IOException e) {
-												e.printStackTrace();
-												throw new ReadingException("IOException while converting inputStream to byte array: " + e.getMessage());
-											}
-										}
-									}
-
-								} finally {
-									try {
-										if (epubFile != null) {
-											epubFile.close();
-										}
-									} catch (IOException e) {
-										e.printStackTrace();
-										throw new ReadingException("Error closing ZipFile: " + e.getMessage());
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+			return content.getCoverImage();
 		}
 
-		return null;
+		throw new ReadingException("Content info is not set.");
 	}
 
-	public BookSection readSection(int index) throws ReadingException, OutOfPagesException {
-		return content.getBookSection(index);
-	}
-
-	public BookSection readSection(int index, int maxContentPerSection) throws ReadingException, OutOfPagesException {
-		Optionals.maxContentPerSection = maxContentPerSection;
-		return content.getBookSection(index);
-	}
-
-	public void setMaxContentPerSection(int maxContentPerSection) {
-		Optionals.maxContentPerSection = maxContentPerSection;
-	}
-
-	public void setCssStatus(CssStatus cssStatus) {
-		Optionals.cssStatus = cssStatus;
-	}
-
-	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
-		Optionals.isIncludingTextContent = isIncludingTextContent;
-	}
-	
 	private byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
 		byte[] buffer = new byte[8192];
 		int bytesRead;

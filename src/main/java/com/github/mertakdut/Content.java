@@ -28,6 +28,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.xml.sax.SAXException;
 
 import com.github.mertakdut.BaseFindings.XmlItem;
+import com.github.mertakdut.Package.Metadata;
 import com.github.mertakdut.exception.OutOfPagesException;
 import com.github.mertakdut.exception.ReadingException;
 
@@ -1540,6 +1541,71 @@ class Content {
 		}
 
 		return htmlBody;
+	}
+
+	byte[] getCoverImage() throws ReadingException {
+		Metadata metadata = this.opfPackage.getMetadata();
+
+		if (this.opfPackage != null && metadata != null) {
+			String coverImageId = metadata.getCoverImageId();
+
+			if (coverImageId != null && !coverImageId.equals("")) {
+				List<XmlItem> manifestXmlItems = this.opfPackage.getManifest().getXmlItemList();
+
+				for (XmlItem xmlItem : manifestXmlItems) {
+					if (xmlItem.getAttributes().get("id").equals(coverImageId)) {
+						String coverImageEntryName = xmlItem.getAttributes().get("href");
+
+						if (coverImageEntryName != null && !coverImageEntryName.equals("")) {
+							ZipFile epubFile = null;
+							try {
+								try {
+									epubFile = new ZipFile(this.getZipFilePath());
+								} catch (IOException e) {
+									e.printStackTrace();
+									throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+								}
+
+								for (String entryName : this.getEntryNames()) {
+
+									// TODO: I might have to change this contains with equals.
+									if (entryName.contains(coverImageEntryName)) {
+										ZipEntry coverImageEntry = epubFile.getEntry(entryName);
+
+										InputStream inputStream;
+										try {
+											inputStream = epubFile.getInputStream(coverImageEntry);
+										} catch (IOException e) {
+											e.printStackTrace();
+											throw new ReadingException("IOException while reading " + entryName + " file: " + e.getMessage());
+										}
+
+										try {
+											return convertIsToByteArray(inputStream);
+										} catch (IOException e) {
+											e.printStackTrace();
+											throw new ReadingException("IOException while converting inputStream to byte array: " + e.getMessage());
+										}
+									}
+								}
+
+							} finally {
+								try {
+									if (epubFile != null) {
+										epubFile.close();
+									}
+								} catch (IOException e) {
+									e.printStackTrace();
+									throw new ReadingException("Error closing ZipFile: " + e.getMessage());
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return null;
 	}
 
 	List<String> getEntryNames() {
