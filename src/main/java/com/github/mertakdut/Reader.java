@@ -1,10 +1,8 @@
 package com.github.mertakdut;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -16,8 +14,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.github.mertakdut.BaseFindings.XmlItem;
-import com.github.mertakdut.Package.Metadata;
 import com.github.mertakdut.exception.OutOfPagesException;
 import com.github.mertakdut.exception.ReadingException;
 
@@ -229,7 +225,6 @@ public class Reader {
 		return content.getPackage();
 	}
 
-	// TODO: More aggressive searching.
 	public byte[] getCoverImage() throws ReadingException {
 
 		if (content != null) {
@@ -237,17 +232,6 @@ public class Reader {
 		}
 
 		throw new ReadingException("Content info is not set.");
-	}
-
-	private byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
-		byte[] buffer = new byte[8192];
-		int bytesRead;
-		ByteArrayOutputStream output = new ByteArrayOutputStream();
-		while ((bytesRead = inputStream.read(buffer)) != -1) {
-			output.write(buffer, 0, bytesRead);
-		}
-
-		return output.toByteArray();
 	}
 
 }

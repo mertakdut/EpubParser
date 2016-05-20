@@ -21,10 +21,10 @@ public class EpubSingleTest {
 		Reader reader = new Reader();
 
 		reader.setMaxContentPerSection(1250);
-		reader.setCssStatus(CssStatus.INCLUDE);
+		reader.setCssStatus(CssStatus.OMIT);
 		reader.setIsIncludingTextContent(true);
 
-		reader.setFullContent("C:\\eBooks/test/The Air-Conditioned Nightmare - Henry Miller.epub");
+		reader.setFullContent("C:\\eBooks/test/shute-lonely-road.epub");
 
 		// bookSection = reader.readSection(1);
 		// System.out.println("\n" + 1 + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());

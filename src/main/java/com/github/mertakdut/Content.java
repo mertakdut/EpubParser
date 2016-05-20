@@ -1458,13 +1458,13 @@ class Content {
 		while (tableTagMatcher.find()) {
 			String table = tableTagMatcher.group(0);
 
-			Pattern rowPattern = Pattern.compile("<tr>.*?</tr>");
+			Pattern rowPattern = Pattern.compile("<tr>(.*?)</tr>");
 			Matcher rowMatcher = rowPattern.matcher(table);
 
 			StringBuilder tableToReplace = null;
 
 			while (rowMatcher.find()) {
-				String row = rowMatcher.group(0);
+				String row = rowMatcher.group(1);
 
 				if (tableToReplace == null) {
 					tableToReplace = new StringBuilder();
@@ -1473,14 +1473,14 @@ class Content {
 					// tableToReplace.substring(0, tableToReplace.length() - 4); // Remove the last \t code.
 				}
 
-				Pattern cellPattern = Pattern.compile("<td>.*?</td>");
+				Pattern cellPattern = Pattern.compile("<td>(.*?)</td>");
 				Matcher cellMatcher = cellPattern.matcher(row);
 
 				while (cellMatcher.find()) {
 					String cell = cellMatcher.group(1);
 					String strippedCell = cell.replaceAll("<[^>]*>", ""); // Removes tags and such.
 
-					tableToReplace.append(strippedCell); // &#9; &nbsp;
+					tableToReplace.append(strippedCell.trim()).append(" "); // &#9; &nbsp;
 				}
 			}
 
