@@ -82,6 +82,18 @@ public class Reader {
 			}
 
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			factory.setNamespaceAware(false);
+			factory.setValidating(false);
+			try {
+				factory.setFeature("http://xml.org/sax/features/namespaces", false);
+				factory.setFeature("http://xml.org/sax/features/validation", false);
+				factory.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
+				factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+			} catch (ParserConfigurationException e) {
+				e.printStackTrace();
+//				throw new ReadingException("Error initializing DocumentBuilderFactory: " + e.getMessage());
+			}
+			
 			DocumentBuilder docBuilder;
 
 			try {
@@ -144,7 +156,7 @@ public class Reader {
 			}
 
 			// Debug
-			// content.print();
+			content.print();
 
 			return content;
 

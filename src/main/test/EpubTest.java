@@ -122,14 +122,13 @@ public class EpubTest {
 							}
 						} catch (Exception e) {
 						}
-
 					}
-					
-					System.out.println("BooksRead: " + booksRead);
-					System.out.println("MaxReadTime: " + (double)TimeUnit.MILLISECONDS.convert(maxReadDuration, TimeUnit.NANOSECONDS) / 1000 + " seconds");
-					System.out.println("AverageReadTime: " + (double)TimeUnit.MILLISECONDS.convert(averageReadDuration, TimeUnit.NANOSECONDS) / 1000 + " seconds");
 				}
 			}
+
+			System.out.println("BooksRead: " + booksRead);
+			System.out.println("MaxReadTime: " + (double) TimeUnit.MILLISECONDS.convert(maxReadDuration, TimeUnit.NANOSECONDS) / 1000 + " seconds");
+			System.out.print("AverageReadTime: " + (double) TimeUnit.MILLISECONDS.convert(averageReadDuration, TimeUnit.NANOSECONDS) / 1000 + " seconds");
 		}
 
 	}

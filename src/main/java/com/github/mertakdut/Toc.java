@@ -107,7 +107,7 @@ class Toc extends BaseFindings {
 			return navPoints;
 		}
 
-		public void fillNavPoints(NodeList possiblyNavPoints) {
+		public void fillNavPoints(NodeList possiblyNavPoints) throws ReadingException {
 
 			for (int i = 0; i < possiblyNavPoints.getLength(); i++) {
 
@@ -158,15 +158,9 @@ class Toc extends BaseFindings {
 										contentSrc = contentSrc.substring(slashIndex + 1);
 									}
 
-									try {
-										contentSrc = URLDecoder.decode(contentSrc, "UTF-8");
-										contentSrc = URLEncoder.encode(contentSrc, "UTF-8").replace("+", "%20");
-									} catch (UnsupportedEncodingException e) {
-										e.printStackTrace();
-										logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding/decoding contentSrc: " + e.getMessage());
-									}
+									String encodedContentSrc = ContextHelper.encodeToUtf8(contentSrc);
 
-									navPoint.setContentSrc(contentSrc);
+									navPoint.setContentSrc(encodedContentSrc);
 								}
 							}
 
@@ -211,7 +205,7 @@ class Toc extends BaseFindings {
 	public void fillContent(Node node) throws ReadingException {
 		if (node.getNodeName().equals("head")) {
 			getHead().fillAttributes(node.getChildNodes());
-		} else if (node.getNodeName().equals("navMap") || node.getNodeName().equals("pageList")) {
+		} else if (node.getNodeName().equals("navMap") || node.getNodeName().equals("pageList")) { // if pageList exists then it's epub3 if only navMap exists then it's epub2.
 			getNavMap().fillNavPoints(node.getChildNodes());
 		}
 	}

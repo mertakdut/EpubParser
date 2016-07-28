@@ -664,7 +664,14 @@ class Content {
 			if (possiblyNextEntryName != null) {
 				String fileName = getFileName(entryName);
 
-				if (possiblyNextEntryName.contains(fileName)) {
+				try {
+					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(getNextAvailableAnchorIndex): " + e.getMessage());
+				}
+
+				if (possiblyNextEntryName.contains(fileName)) { // TODO: Dosya ayný deðilse silmesi mi gerekiyor?
 					String anchor = possiblyNextEntryName.replace(fileName, "");
 					String anchorHtml = convertAnchorToHtml(anchor);
 					anchorIndex = htmlBody.indexOf(anchorHtml);
@@ -911,7 +918,7 @@ class Content {
 		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) {
 			NavPoint nextNavPoint = getNavPoint(index + 1);
 
-			if (nextNavPoint.getTypeCode() != 2) { // Real navPoint. Only real navPoints are anchored.
+			if (nextNavPoint.getTypeCode() != 2) { // Real navPoint. Only real navPoints are anchored. TODO: Change these with constants.
 				String[] nextEntryLabel = findEntryNameAndLabel(nextNavPoint);
 
 				String nextHref = nextEntryLabel[0];
@@ -965,7 +972,7 @@ class Content {
 		return null;
 	}
 
-	// This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
+	// TODO: This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
 	// If map doesn't contain that entryName -> then this method can be used.
 	private String readFileContent(String entryName) throws ReadingException {
 
@@ -1290,7 +1297,7 @@ class Content {
 
 				if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
 
-					logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
+					// logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
 					htmlContent = htmlContent.replace(linkTag, "");
 
 				} else {
@@ -1359,7 +1366,7 @@ class Content {
 		return htmlContent;
 	}
 
-	private String replaceImgTag(String htmlBody) {
+	private String replaceImgTag(String htmlBody) throws ReadingException {
 
 		Pattern imgTagPattern = Pattern.compile("<img.*?/>|<img.*?</img>");
 		Pattern srcPattern = Pattern.compile("src=\"(.*?)\"");
@@ -1373,10 +1380,10 @@ class Content {
 
 			if (srcMatcher.find()) {
 				String srcHref = getFileName(srcMatcher.group(1));
+				String encodedSrcHref = ContextHelper.encodeToUtf8(srcHref);
 
-				if (nonExistingHrefList != null && nonExistingHrefList.contains(srcMatcher)) {
-					logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Img) : " + srcMatcher);
-
+				if (nonExistingHrefList != null && nonExistingHrefList.contains(srcHref)) {
+					// logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Img) : " + srcMatcher);
 					htmlBody = htmlBody.replace(imgPart, "");
 				} else {
 
@@ -1392,10 +1399,10 @@ class Content {
 							fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
 						} catch (UnsupportedEncodingException e) {
 							e.printStackTrace();
-							logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Img): " + e.getMessage());
+							throw new ReadingException("UnsupportedEncoding while encoding fileName(Img): " + e.getMessage());
 						}
 
-						if (srcHref.equals(fileName)) { // image exists.
+						if (encodedSrcHref.equals(fileName)) { // image exists.
 
 							isImageFileFound = true;
 
@@ -1458,7 +1465,7 @@ class Content {
 		while (tableTagMatcher.find()) {
 			String table = tableTagMatcher.group(0);
 
-			Pattern rowPattern = Pattern.compile("<tr>(.*?)</tr>");
+			Pattern rowPattern = Pattern.compile("<tr.*?>(.*?)(</tr>)", Pattern.DOTALL); // />
 			Matcher rowMatcher = rowPattern.matcher(table);
 
 			StringBuilder tableToReplace = null;
@@ -1473,7 +1480,7 @@ class Content {
 					// tableToReplace.substring(0, tableToReplace.length() - 4); // Remove the last \t code.
 				}
 
-				Pattern cellPattern = Pattern.compile("<td>(.*?)</td>");
+				Pattern cellPattern = Pattern.compile("<td.*?>(.*?)</td>", Pattern.DOTALL); // />
 				Matcher cellMatcher = cellPattern.matcher(row);
 
 				while (cellMatcher.find()) {
@@ -1484,7 +1491,7 @@ class Content {
 				}
 			}
 
-			htmlBodyToReplace = htmlBodyToReplace.replace(table, tableToReplace.toString());
+			htmlBodyToReplace = htmlBodyToReplace.replace(table, tableToReplace != null ? tableToReplace.toString() : "");
 
 		}
 

@@ -24,7 +24,7 @@ public class EpubSingleTest {
 		reader.setCssStatus(CssStatus.OMIT);
 		reader.setIsIncludingTextContent(true);
 
-		reader.setFullContent("C:\\eBooks/test/shute-lonely-road.epub");
+		reader.setFullContent("C:/eBooks/test/pg28885-images.epub");
 
 		// bookSection = reader.readSection(1);
 		// System.out.println("\n" + 1 + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
@@ -52,7 +52,7 @@ public class EpubSingleTest {
 			e.printStackTrace();
 			throw e;
 		} catch (OutOfPagesException e) {
-			// e.printStackTrace();
+			 e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;
