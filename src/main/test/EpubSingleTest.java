@@ -52,7 +52,7 @@ public class EpubSingleTest {
 			e.printStackTrace();
 			throw e;
 		} catch (OutOfPagesException e) {
-			 e.printStackTrace();
+			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;

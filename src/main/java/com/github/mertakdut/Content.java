@@ -5,9 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -139,6 +136,7 @@ class Content {
 	}
 
 	private BookSection prepareBookSection(NavPoint navPoint, int index) throws ReadingException, OutOfPagesException {
+
 		BookSection bookSection = new BookSection();
 
 		int entryStartPosition = navPoint.getBodyTrimStartPosition();
@@ -166,22 +164,10 @@ class Content {
 			for (int i = 0; i < getEntryNames().size(); i++) {
 
 				String entryName = getEntryNames().get(i);
-				String fileName = getFileName(entryName);
-
-				try {
-					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName: " + e.getMessage());
-				}
+				String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
 
 				if (href.equals(fileName) || (href.startsWith(fileName) && href.replace(fileName, "").startsWith("%23"))) {
 					isSourceFileFound = true;
-
-					if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
-						currentAnchor = href.replace(fileName, "");
-						nextAnchor = getNextAnchor(index, entryName);
-					}
 
 					fileContentStr = readFileContent(entryName);
 					htmlBody = getHtmlBody(fileContentStr);
@@ -198,106 +184,126 @@ class Content {
 						}
 					}
 
-					if (nextAnchor != null) { // Splitting the file by anchors.
+					if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
+						boolean isFileReadFirstTime = isFileReadFirstTime(index, entryName);
+
+						if (isFileReadFirstTime) { // No previous anchor; so it should start from the beginning to the current anchor.
+
+							NavPoint currentEntryNavPoint = new NavPoint();
+
+							currentEntryNavPoint.setTypeCode(0);
+							currentEntryNavPoint.setContentSrc(ContextHelper.encodeToUtf8(getFileName(entryName)));
+
+							getToc().getNavMap().getNavPoints().add(index, currentEntryNavPoint);
+
+							nextAnchor = href.replace(fileName, "");
+						} else {
+							currentAnchor = href.replace(fileName, "");
+							nextAnchor = getNextAnchor(index, entryName);
+						}
+					}
+
+					if (currentAnchor != null || nextAnchor != null) { // Splitting the file by anchors.
+
 						currentAnchor = convertAnchorToHtml(currentAnchor);
 						nextAnchor = convertAnchorToHtml(nextAnchor);
 
-						int currentAnchorIndex = htmlBody.indexOf(currentAnchor);
-						int nextAnchorIndex = htmlBody.indexOf(nextAnchor);
+						if (currentAnchor != null && nextAnchor != null) {
 
-						// Abnormality in toc.ncx file. Its order is probably given wrong.
-						// Warning: This may break the navPoints order if all the order is malformed.
-						if (currentAnchorIndex > nextAnchorIndex) {
-							int tmp = currentAnchorIndex;
-							currentAnchorIndex = nextAnchorIndex;
-							nextAnchorIndex = tmp;
+							int currentAnchorIndex = htmlBody.indexOf(currentAnchor);
+							int nextAnchorIndex = htmlBody.indexOf(nextAnchor);
 
-							Collections.swap(getToc().getNavMap().getNavPoints(), index, index + 1);
-						}
+							// Abnormality in toc.ncx file. Its order is probably given wrong.
+							// Warning: This may break the navPoints order if all the order is malformed.
+							if (currentAnchorIndex > nextAnchorIndex) {
+								int tmp = currentAnchorIndex;
+								currentAnchorIndex = nextAnchorIndex;
+								nextAnchorIndex = tmp;
 
-						if (currentAnchorIndex != -1 && nextAnchorIndex != -1) {
-							int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchorIndex, nextAnchorIndex);
-
-							trimStartPosition = bodyIntervals[0];
-							trimEndPosition = bodyIntervals[1];
-						} else {
-							int tmpIndex = index;
-
-							if (currentAnchorIndex == -1 && nextAnchorIndex == -1) { // Both of the anchors not found.
-								getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the first one (current anchor)
-								getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the second one (next anchor)
-								currentAnchor = null;
-								nextAnchor = null;
-							} else if (currentAnchorIndex == -1) { // Current anchor not found.
-								getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the first one (current anchor)
-								currentAnchor = nextAnchor;
-
-							} else if (nextAnchorIndex == -1) { // Next anchor not found.
-								getToc().getNavMap().getNavPoints().get(++tmpIndex).setMarkedToDelete(true); // Delete the second one (next anchor)
-								nextAnchor = null;
+								Collections.swap(getToc().getNavMap().getNavPoints(), index, index + 1);
 							}
 
-							int markedNavPoints = tmpIndex - index;
+							if (currentAnchorIndex == -1 || nextAnchorIndex == -1) {
 
-							// Next available anchor should be the next starting point.
-							while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
-								boolean markCurrentNavPoint = true;
+								int tmpIndex = index;
 
-								NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
-								String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
+								if (currentAnchorIndex == -1 && nextAnchorIndex == -1) { // Both of the anchors not found.
+									getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the first one (current anchor)
+									getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the second one (next anchor)
+									currentAnchor = null;
+									nextAnchor = null;
+								} else if (currentAnchorIndex == -1) { // Current anchor not found.
+									getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the first one (current anchor)
+									currentAnchor = nextAnchor;
 
-								String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
+								} else if (nextAnchorIndex == -1) { // Next anchor not found.
+									getToc().getNavMap().getNavPoints().get(++tmpIndex).setMarkedToDelete(true); // Delete the second one (next anchor)
+									nextAnchor = null;
+								}
 
-								if (possiblyNextEntryName != null) {
-									if (possiblyNextEntryName.startsWith(fileName) && possiblyNextEntryName.replace(fileName, "").startsWith("%23")) {
-										String anchor = possiblyNextEntryName.replace(fileName, "");
-										anchor = convertAnchorToHtml(anchor);
+								int markedNavPoints = tmpIndex - index;
 
-										if (htmlBody.contains(anchor)) {
-											if (currentAnchor == null) { // If current anchor is not found, first set that.
-												currentAnchor = anchor;
-												markCurrentNavPoint = false;
-											} else { // If current anchor is already defined set the next anchor and break.
-												nextAnchor = anchor;
-												break;
+								// Next available anchor should be the next starting point.
+								while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
+									boolean isCurrentNavPointMarked = true;
+
+									NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
+									String[] possiblyNextEntryNameLabel = findEntryNameAndLabel(possiblyNextNavPoint);
+
+									String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
+
+									if (possiblyNextEntryName != null) {
+										if (possiblyNextEntryName.startsWith(fileName) && possiblyNextEntryName.replace(fileName, "").startsWith("%23")) {
+											String anchor = possiblyNextEntryName.replace(fileName, "");
+											anchor = convertAnchorToHtml(anchor);
+
+											if (htmlBody.contains(anchor)) {
+												if (currentAnchor == null) { // If current anchor is not found, first set that.
+													currentAnchor = anchor;
+													isCurrentNavPointMarked = false;
+												} else { // If current anchor is already defined set the next anchor and break.
+													nextAnchor = anchor;
+													break;
+												}
 											}
-										}
-									} else { // TODO: Next content is not the same file as the current one. Anchors are broken. Navigate to the next file.
-										break;
-									}
-								}
-
-								if (markCurrentNavPoint) {
-									getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
-									markedNavPoints++;
-								}
-
-								tmpIndex++;
-							}
-
-							if (markedNavPoints != 0) {
-
-								if (markedNavPoints == getToc().getNavMap().getNavPoints().size()) {
-									throw new ReadingException("There are no items left in TOC. Toc.ncx file is probably malformed.");
-								}
-
-								for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
-									NavPoint navPointToDelete = iterator.next();
-									if (navPointToDelete.isMarkedToDelete()) {
-										iterator.remove();
-
-										if (--markedNavPoints == 0) {
+										} else { // TODO: Next content is not the same file as the current one. Anchors are broken. Navigate to the next file.
 											break;
 										}
 									}
+
+									if (isCurrentNavPointMarked) {
+										getToc().getNavMap().getNavPoints().get(tmpIndex).setMarkedToDelete(true);
+										markedNavPoints++;
+									}
+
+									tmpIndex++;
 								}
+
+								if (markedNavPoints != 0) {
+
+									if (markedNavPoints == getToc().getNavMap().getNavPoints().size()) {
+										throw new ReadingException("There are no items left in TOC. Toc.ncx file is probably malformed.");
+									}
+
+									for (Iterator<NavPoint> iterator = getToc().getNavMap().getNavPoints().iterator(); iterator.hasNext();) {
+										NavPoint navPointToDelete = iterator.next();
+										if (navPointToDelete.isMarkedToDelete()) {
+											iterator.remove();
+
+											if (--markedNavPoints == 0) {
+												break;
+											}
+										}
+									}
+								}
+
 							}
-
-							int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
-
-							trimStartPosition = bodyIntervals[0];
-							trimEndPosition = bodyIntervals[1];
 						}
+
+						int[] bodyIntervals = getAnchorsInterval(htmlBody, currentAnchor, nextAnchor);
+
+						trimStartPosition = bodyIntervals[0];
+						trimEndPosition = bodyIntervals[1];
 					}
 
 					String extension = getFileExtension(fileName);
@@ -400,6 +406,7 @@ class Content {
 	}
 
 	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException, OutOfPagesException {
+
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
@@ -505,6 +512,7 @@ class Content {
 	}
 
 	private String getNonTrimmedHtmlBody(int index, String htmlBody, int trimStartPosition, int trimEndPosition, String entryName) {
+
 		String htmlBodyToReplace = null;
 
 		if (trimEndPosition == 0) {
@@ -528,6 +536,7 @@ class Content {
 	 * If the open-close tag indices are not in the same trimmed part; tag will be closed at the end of the current trimmed part, and opened in the next trimmed part.
 	 */
 	private void calculateEntryTagPositions(String entryName, String htmlBody) {
+
 		List<TagInfo> openedTags = null;
 		ListIterator<TagInfo> listIterator = null;
 
@@ -604,6 +613,7 @@ class Content {
 	}
 
 	private void addEntryTagPosition(String entryName, String fullTagName, int openingPosition, int closingPosition) {
+
 		TagInfo tagInfo = new TagInfo();
 		tagInfo.setOpeningTagStartPosition(openingPosition);
 		tagInfo.setClosingTagStartPosition(closingPosition);
@@ -620,6 +630,7 @@ class Content {
 	}
 
 	private String getFullTagName(String tag, boolean isOpeningTag) {
+
 		int closingBracletIndex = tag.indexOf(Constants.TAG_CLOSING);
 		if (isOpeningTag) {
 			return tag.substring(1, closingBracletIndex);
@@ -646,6 +657,7 @@ class Content {
 
 	// TODO: Similar functionality happens in the prepareBookSection method. Merge them into this.
 	private int getNextAvailableAnchorIndex(int index, String entryName, int bodyTrimStartPosition, String htmlBody) throws ReadingException, OutOfPagesException {
+
 		getToc().getNavMap().getNavPoints().remove(++index); // Removing the nextAnchor from navPoints; 'cause it's already not found.
 
 		int markedNavPoints = 0;
@@ -662,14 +674,7 @@ class Content {
 			String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
 
 			if (possiblyNextEntryName != null) {
-				String fileName = getFileName(entryName);
-
-				try {
-					fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-					logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(getNextAvailableAnchorIndex): " + e.getMessage());
-				}
+				String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
 
 				if (possiblyNextEntryName.contains(fileName)) { // TODO: Dosya ayný deðilse silmesi mi gerekiyor?
 					String anchor = possiblyNextEntryName.replace(fileName, "");
@@ -718,6 +723,7 @@ class Content {
 	}
 
 	private String prepareClosingTags(List<String> openedTags) {
+
 		StringBuilder closingTagsBuilder = new StringBuilder();
 
 		for (int i = 0; i < openedTags.size(); i++) {
@@ -728,6 +734,7 @@ class Content {
 	}
 
 	private String prepareOpenedTags(List<String> openedTags) {
+
 		StringBuilder openingTags = new StringBuilder();
 
 		for (int i = 0; i < openedTags.size(); i++) {
@@ -738,6 +745,7 @@ class Content {
 	}
 
 	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
+
 		int trimEndPosition = (trimEndPos != 0 && (trimEndPos - trimStartPosition) < Optionals.maxContentPerSection) ? trimEndPos : trimStartPosition + Optionals.maxContentPerSection;
 
 		int htmlBodyLength = htmlBody.length();
@@ -823,9 +831,9 @@ class Content {
 		return trimEndPosition;
 	}
 
+	// Checks if we are in an html tag. If so, move forward or backward until the tag is over. Else, move backwards until we hit the blank.
 	private int findEligibleEndPosition(List<TagInfo> tagStartEndPositions, String htmlBody, int trimEndPosition) {
-		// Check here if we are in an html tag. If so, move forward or backward until the tag is over.
-		// Else, move backwards until we hit the blank.
+
 		boolean isMovedToEndOfTag = false;
 
 		for (TagInfo tagInfo : tagStartEndPositions) {
@@ -894,6 +902,7 @@ class Content {
 
 	// Retrieves 'opened and not closed' tags within the trimmed part.
 	private List<String> getOpenedTags(String entryName, int trimStartIndex, int trimEndIndex) {
+
 		List<String> openedTags = null;
 
 		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
@@ -915,6 +924,7 @@ class Content {
 	}
 
 	private String getNextAnchor(int index, String entryName) throws ReadingException, OutOfPagesException {
+
 		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) {
 			NavPoint nextNavPoint = getNavPoint(index + 1);
 
@@ -924,14 +934,7 @@ class Content {
 				String nextHref = nextEntryLabel[0];
 
 				if (nextHref != null) {
-					String fileName = getFileName(entryName);
-
-					try {
-						fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
-					} catch (UnsupportedEncodingException e) {
-						e.printStackTrace();
-						logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(anchor): " + e.getMessage());
-					}
+					String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
 
 					if (nextHref.startsWith(fileName) && nextHref.replace(fileName, "").startsWith("%23")) { // Both anchors are in the same file.
 						return nextHref.replace(fileName, "");
@@ -943,7 +946,33 @@ class Content {
 		return null;
 	}
 
+	private boolean isFileReadFirstTime(int index, String entryName) throws ReadingException, OutOfPagesException {
+
+		if ((index - 1) >= 0) {
+
+			NavPoint prevNavPoint = getNavPoint(index - 1);
+
+			if (prevNavPoint.getTypeCode() == 2) {
+				return false;
+			}
+
+			String prevHref = findEntryNameAndLabel(prevNavPoint)[0];
+
+			if (prevHref != null) {
+				String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
+
+				if (prevHref.startsWith(fileName)) { // Same content as previous, not reading for the first time. (&& prevHref.replace(fileName, "").startsWith("%23"))
+					return false;
+				}
+			}
+
+		}
+
+		return true;
+	}
+
 	private String[] findEntryNameAndLabel(NavPoint navPoint) throws ReadingException {
+
 		if (navPoint.getContentSrc() != null) {
 			return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
 		} else { // Find from id
@@ -964,6 +993,7 @@ class Content {
 	}
 
 	private String getFileExtension(String fileName) {
+
 		int lastDotIndex = fileName.lastIndexOf(Constants.DOT);
 		if (lastDotIndex != -1) {
 			return fileName.substring(lastDotIndex + 1); // +1 to exclude dot from extension.
@@ -1034,6 +1064,7 @@ class Content {
 	}
 
 	private String getHtmlBody(String htmlContent) throws ReadingException {
+
 		int startOfBody = htmlContent.lastIndexOf(Constants.TAG_BODY_START);
 		int endOfBody = htmlContent.lastIndexOf(Constants.TAG_BODY_END);
 
@@ -1084,20 +1115,12 @@ class Content {
 		// throw new ReadingException("Exception while trimming anchored parts : Defined Anchors not found.");
 	}
 
-	private int[] getAnchorsInterval(String htmlBody, int startOfCurrentAnchor, int startOfNextAnchor) throws ReadingException {
-
-		while (htmlBody.charAt(startOfCurrentAnchor) != Constants.TAG_OPENING) {
-			startOfCurrentAnchor--;
-		}
-
-		while (htmlBody.charAt(startOfNextAnchor) != Constants.TAG_OPENING) {
-			startOfNextAnchor--;
-		}
-
-		return new int[] { startOfCurrentAnchor, startOfNextAnchor };
-	}
-
 	private String convertAnchorToHtml(String anchor) throws ReadingException { // #Page_1 to id="Page_1" converter
+
+		if (anchor == null) {
+			return null;
+		}
+
 		if (anchor.startsWith("#")) { // Anchors should start with #
 			return "id=\"" + anchor.substring(1) + "\"";
 		} else if (anchor.startsWith("%23")) { // Or UTF-8 equivalent of #
@@ -1108,6 +1131,7 @@ class Content {
 	}
 
 	private String getMediaType(String fileName) {
+
 		List<XmlItem> manifestItems = getPackage().getManifest().getXmlItemList();
 
 		for (int i = 0; i < manifestItems.size(); i++) {
@@ -1308,14 +1332,7 @@ class Content {
 						String entryName = getEntryNames().get(i);
 
 						int lastSlashIndex = entryName.lastIndexOf("/");
-						String fileName = entryName.substring(lastSlashIndex + 1);
-
-						try {
-							fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
-						} catch (UnsupportedEncodingException e) {
-							e.printStackTrace();
-							logger.log(Logger.Severity.warning, "UnsupportedEncoding while encoding fileName(Css): " + e.getMessage());
-						}
+						String fileName = ContextHelper.encodeToUtf8(entryName.substring(lastSlashIndex + 1));
 
 						if (cssHref.equals(fileName)) { // css exists.
 							isCssFileFound = true;
@@ -1393,14 +1410,7 @@ class Content {
 						String entryName = getEntryNames().get(i);
 
 						int lastSlashIndex = entryName.lastIndexOf("/");
-						String fileName = entryName.substring(lastSlashIndex + 1);
-
-						try {
-							fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
-						} catch (UnsupportedEncodingException e) {
-							e.printStackTrace();
-							throw new ReadingException("UnsupportedEncoding while encoding fileName(Img): " + e.getMessage());
-						}
+						String fileName = ContextHelper.encodeToUtf8(entryName.substring(lastSlashIndex + 1));
 
 						if (encodedSrcHref.equals(fileName)) { // image exists.
 
@@ -1457,6 +1467,7 @@ class Content {
 		return htmlBody;
 	}
 
+	// Warning: May devour anchors.
 	private String replaceTableTag(String htmlBodyToReplace) {
 
 		Pattern tableTagPattern = Pattern.compile("<table.*?/>|<table.*?</table>");

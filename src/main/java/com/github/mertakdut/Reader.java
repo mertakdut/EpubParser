@@ -91,9 +91,9 @@ public class Reader {
 				factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
 			} catch (ParserConfigurationException e) {
 				e.printStackTrace();
-//				throw new ReadingException("Error initializing DocumentBuilderFactory: " + e.getMessage());
+				// throw new ReadingException("Error initializing DocumentBuilderFactory: " + e.getMessage());
 			}
-			
+
 			DocumentBuilder docBuilder;
 
 			try {
@@ -156,7 +156,7 @@ public class Reader {
 			}
 
 			// Debug
-			content.print();
+			// content.print();
 
 			return content;
 
