@@ -24,5 +24,7 @@ class Constants {
 	static final String EXTENSION_CSS = ".css";
 
 	static final String HTML_TAG_PATTERN = "<(\"[^\"]*\"|'[^']*'|[^'\">])*>";
+	
+	static final String STRING_MARKER = "|";
 
 }

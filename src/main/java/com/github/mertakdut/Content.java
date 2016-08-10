@@ -1,7 +1,6 @@
 package com.github.mertakdut;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -235,7 +234,6 @@ class Content {
 								} else if (currentAnchorIndex == -1) { // Current anchor not found.
 									getToc().getNavMap().getNavPoints().get(tmpIndex++).setMarkedToDelete(true); // Delete the first one (current anchor)
 									currentAnchor = nextAnchor;
-
 								} else if (nextAnchorIndex == -1) { // Next anchor not found.
 									getToc().getNavMap().getNavPoints().get(++tmpIndex).setMarkedToDelete(true); // Delete the second one (next anchor)
 									nextAnchor = null;
@@ -245,6 +243,7 @@ class Content {
 
 								// Next available anchor should be the next starting point.
 								while (tmpIndex < getToc().getNavMap().getNavPoints().size()) { // Looping until next anchor is found.
+
 									boolean isCurrentNavPointMarked = true;
 
 									NavPoint possiblyNextNavPoint = getNavPoint(tmpIndex);
@@ -254,6 +253,7 @@ class Content {
 
 									if (possiblyNextEntryName != null) {
 										if (possiblyNextEntryName.startsWith(fileName) && possiblyNextEntryName.replace(fileName, "").startsWith("%23")) {
+
 											String anchor = possiblyNextEntryName.replace(fileName, "");
 											anchor = convertAnchorToHtml(anchor);
 
@@ -365,6 +365,10 @@ class Content {
 						bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition));
 					}
 
+					if (Optionals.cssStatus == CssStatus.OMIT) {
+						htmlBodyToReplace = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, trimStartPosition, trimEndPosition);
+					}
+
 					break;
 				}
 			}
@@ -388,10 +392,10 @@ class Content {
 			if (Optionals.isIncludingTextContent) {
 				bookSection.setSectionTextContent(getOnlyTextContent(entryEntryName, htmlBody, entryStartPosition, entryEndPosition));
 			}
-		}
 
-		if (Optionals.cssStatus == CssStatus.OMIT) {
-			htmlBodyToReplace = replaceTableTag(htmlBodyToReplace);
+			if (Optionals.cssStatus == CssStatus.OMIT) {
+				htmlBodyToReplace = replaceTableTag(entryEntryName, htmlBody, htmlBodyToReplace, entryStartPosition, entryEndPosition);
+			}
 		}
 
 		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
@@ -484,7 +488,7 @@ class Content {
 		}
 
 		if (Optionals.cssStatus == CssStatus.OMIT) {
-			htmlBodyToReplace = replaceTableTag(htmlBodyToReplace);
+			htmlBodyToReplace = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, bodyTrimStartPosition, bodyTrimEndPosition);
 		}
 
 		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
@@ -1424,7 +1428,7 @@ class Content {
 								epubFile = new ZipFile(this.zipFilePath);
 								ZipEntry zipEntry = epubFile.getEntry(entryName);
 								InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry); // Convert inputStream to Base64Binary.
-								byte[] imageAsBytes = convertIsToByteArray(zipEntryInputStream);
+								byte[] imageAsBytes = ContextHelper.convertIsToByteArray(zipEntryInputStream);
 
 								byte[] imageAsBase64 = Base64.encodeBase64(imageAsBytes);
 								String imageContent = new String(imageAsBase64);
@@ -1468,60 +1472,130 @@ class Content {
 	}
 
 	// Warning: May devour anchors.
-	private String replaceTableTag(String htmlBodyToReplace) {
+	private String replaceTableTag(String entryName, String htmlBody, String htmlBodyToReplace, int trimStartPosition, int trimEndPosition) {
 
-		Pattern tableTagPattern = Pattern.compile("<table.*?/>|<table.*?</table>");
+		Pattern tableTagPattern = Pattern.compile("<table.*?>", Pattern.DOTALL);
 		Matcher tableTagMatcher = tableTagPattern.matcher(htmlBodyToReplace);
 
-		while (tableTagMatcher.find()) {
-			String table = tableTagMatcher.group(0);
+		if (tableTagMatcher.find()) {
 
-			Pattern rowPattern = Pattern.compile("<tr.*?>(.*?)(</tr>)", Pattern.DOTALL); // />
-			Matcher rowMatcher = rowPattern.matcher(table);
-
-			StringBuilder tableToReplace = null;
-
-			while (rowMatcher.find()) {
-				String row = rowMatcher.group(1);
-
-				if (tableToReplace == null) {
-					tableToReplace = new StringBuilder();
-				} else {
-					tableToReplace.append("<br>");
-					// tableToReplace.substring(0, tableToReplace.length() - 4); // Remove the last \t code.
+			if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
+				if (entryTagPositions == null) {
+					entryTagPositions = new HashMap<>();
 				}
 
-				Pattern cellPattern = Pattern.compile("<td.*?>(.*?)</td>", Pattern.DOTALL); // />
-				Matcher cellMatcher = cellPattern.matcher(row);
+				calculateEntryTagPositions(entryName, htmlBody);
+			}
 
-				while (cellMatcher.find()) {
-					String cell = cellMatcher.group(1);
-					String strippedCell = cell.replaceAll("<[^>]*>", ""); // Removes tags and such.
+			List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
-					tableToReplace.append(strippedCell.trim()).append(" "); // &#9; &nbsp;
+			List<TagInfo> tableTagInfoList = new ArrayList<>();
+
+			for (TagInfo tagInfo : tagStartEndPositions) {
+				if (tagInfo.getTagName().equals("table")) {
+					tableTagInfoList.add(tagInfo);
 				}
 			}
 
-			htmlBodyToReplace = htmlBodyToReplace.replace(table, tableToReplace != null ? tableToReplace.toString() : "");
+			// Remove nested tables.
+			List<TagInfo> smallerTableTagList = new ArrayList<>();
 
+			for (int i = 0; i < tableTagInfoList.size(); i++) {
+
+				int tag1StartPosition = tableTagInfoList.get(i).getOpeningTagStartPosition();
+				int tag1EndPosition = tableTagInfoList.get(i).getClosingTagStartPosition();
+
+				for (int j = i + 1; j < tableTagInfoList.size(); j++) {
+
+					int tag2StartPosition = tableTagInfoList.get(j).getOpeningTagStartPosition();
+					int tag2EndPosition = tableTagInfoList.get(j).getClosingTagStartPosition();
+
+					if (tag1StartPosition > tag2StartPosition && tag1EndPosition < tag2EndPosition) {
+						smallerTableTagList.add(tableTagInfoList.get(i));
+					} else if (tag2StartPosition > tag1StartPosition && tag2EndPosition < tag1EndPosition) {
+						smallerTableTagList.add(tableTagInfoList.get(j));
+					}
+				}
+			}
+
+			tableTagInfoList.removeAll(smallerTableTagList);
+
+			htmlBodyToReplace = getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition, tableTagInfoList);
 		}
 
 		return htmlBodyToReplace;
 	}
 
-	private byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
-		byte[] buffer = new byte[8192];
-		int bytesRead;
-		ByteArrayOutputStream output = new ByteArrayOutputStream();
-		while ((bytesRead = inputStream.read(buffer)) != -1) {
-			output.write(buffer, 0, bytesRead);
+	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition, List<TagInfo> tableTagPositions) {
+
+		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
+
+		List<String> stringsToRemove = new ArrayList<>();
+
+		for (int i = 0; i < tableTagPositions.size(); i++) {
+
+			int tableStartPosition = tableTagPositions.get(i).getOpeningTagStartPosition();
+			int tableEndPosition = tableTagPositions.get(i).getClosingTagStartPosition();
+
+			for (TagInfo tagInfo : tagStartEndPositions) {
+
+				// This may not work correctly.
+				if (tagInfo.getOpeningTagStartPosition() > tableEndPosition) {
+					break;
+				}
+
+				// TODO: Exclude img tags!
+
+				if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty Tag
+					if (tagInfo.getOpeningTagStartPosition() > tableStartPosition && tagInfo.getOpeningTagStartPosition() < tableEndPosition) {
+
+						htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+								+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+										tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length())
+								+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2, htmlBody.length());
+
+						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+								tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+					}
+				} else {
+					if (tagInfo.getOpeningTagStartPosition() > tableStartPosition && tagInfo.getOpeningTagStartPosition() < tableEndPosition) { // Opening tag.
+
+						htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+								+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+										tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length())
+								+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1, htmlBody.length());
+
+						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+								tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+					}
+
+					if (tagInfo.getClosingTagStartPosition() > tableStartPosition && tagInfo.getClosingTagStartPosition() < tableEndPosition) { // Closing tag.
+
+						htmlBody = htmlBody.substring(0, tagInfo.getClosingTagStartPosition() - 1) + Constants.STRING_MARKER
+								+ htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+										tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length())
+								+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2, htmlBody.length());
+
+						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+								tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+					}
+				}
+			}
 		}
 
-		return output.toByteArray();
+		htmlBody = htmlBody.substring(trimStartPosition, trimEndPosition);
+
+		// TODO: If stringToRemove contains tr tag, then replace it with br.
+		for (String stringToRemove : stringsToRemove) {
+			htmlBody = htmlBody.replace(stringToRemove, "");
+		}
+
+		return htmlBody;
 	}
 
 	// Removes all the tags from htmlBody and returns it.
 	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition) {
+
 		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
 		List<String> stringsToRemove = new ArrayList<>();
@@ -1537,17 +1611,38 @@ class Content {
 				break;
 			}
 
-			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) {
-				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
-					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getTagName().length() + 2));
+			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty Tag
+				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) {
+
+					htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+							+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+									tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length())
+							+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2, htmlBody.length());
+
+					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+							tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
 				}
 			} else {
 				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
-					stringsToRemove.add(htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1, tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1));
+
+					htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+							+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+									tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length())
+							+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1, htmlBody.length());
+
+					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+							tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
 				}
 
 				if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
-					stringsToRemove.add(htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1, tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2));
+
+					htmlBody = htmlBody.substring(0, tagInfo.getClosingTagStartPosition() - 1) + Constants.STRING_MARKER
+							+ htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+									tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length())
+							+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2, htmlBody.length());
+
+					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+							tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
 				}
 			}
 		}
@@ -1599,7 +1694,7 @@ class Content {
 										}
 
 										try {
-											return convertIsToByteArray(inputStream);
+											return ContextHelper.convertIsToByteArray(inputStream);
 										} catch (IOException e) {
 											e.printStackTrace();
 											throw new ReadingException("IOException while converting inputStream to byte array: " + e.getMessage());

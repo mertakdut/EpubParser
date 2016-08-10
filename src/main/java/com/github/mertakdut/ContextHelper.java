@@ -1,5 +1,8 @@
 package com.github.mertakdut;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -13,9 +16,9 @@ import com.github.mertakdut.exception.ReadingException;
  * 
  *         Includes commonly needed general methods.
  */
-public class ContextHelper {
+class ContextHelper {
 
-	public static String encodeToUtf8(String stringToEncode) throws ReadingException {
+	static String encodeToUtf8(String stringToEncode) throws ReadingException {
 
 		String encodedString = null;
 
@@ -28,6 +31,18 @@ public class ContextHelper {
 		}
 
 		return encodedString;
+	}
+	
+	static byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
+		
+		byte[] buffer = new byte[8192];
+		int bytesRead;
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		while ((bytesRead = inputStream.read(buffer)) != -1) {
+			output.write(buffer, 0, bytesRead);
+		}
+
+		return output.toByteArray();
 	}
 
 }
