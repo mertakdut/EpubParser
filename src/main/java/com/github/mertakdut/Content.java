@@ -317,31 +317,21 @@ class Content {
 						if (calculatedTrimEndPosition != -1) {
 							trimEndPosition = calculatedTrimEndPosition;
 
-							List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition);
-
 							htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition);
-
-							String closingTags = null;
-							if (openedTags != null) {
-								closingTags = prepareClosingTags(openedTags);
-								htmlBodyToReplace += closingTags;
-							}
 
 							NavPoint nextEntryNavPoint = new NavPoint();
 
 							nextEntryNavPoint.setTypeCode(2);
 							nextEntryNavPoint.setEntryName(entryName);
 							nextEntryNavPoint.setBodyTrimStartPosition(trimEndPosition);
-							nextEntryNavPoint.setOpenTags(openedTags);
 
 							getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 
 							// Inserting calculated info to avoid calculating this navPoint again. In the future these data could be written to Term of Contents file.
-							getToc().getNavMap().getNavPoints().get(index).setTypeCode(2); // To indicate that, this is a trimmed part.
+							getToc().getNavMap().getNavPoints().get(index).setTypeCode(2); // To indicate that, this is a trimmed part. TODO: Change these with constants.
 							getToc().getNavMap().getNavPoints().get(index).setEntryName(entryName);
 							getToc().getNavMap().getNavPoints().get(index).setBodyTrimStartPosition(trimStartPosition);
 							getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(trimEndPosition);
-							getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 
 							if (lastBookSectionInfo == null) {
 								lastBookSectionInfo = new BookSection();
@@ -368,6 +358,8 @@ class Content {
 					if (Optionals.cssStatus == CssStatus.OMIT) {
 						htmlBodyToReplace = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, trimStartPosition, trimEndPosition);
 					}
+					
+					htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition);
 
 					break;
 				}
@@ -396,6 +388,8 @@ class Content {
 			if (Optionals.cssStatus == CssStatus.OMIT) {
 				htmlBodyToReplace = replaceTableTag(entryEntryName, htmlBody, htmlBodyToReplace, entryStartPosition, entryEndPosition);
 			}
+			
+			htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition);
 		}
 
 		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
@@ -407,6 +401,29 @@ class Content {
 
 		bookSection.setSectionContent(fileContentStr);
 		return bookSection;
+	}
+	
+	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) {
+		List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition);
+		
+		String closingTags = null;
+		if (openedTags != null) {
+			closingTags = prepareClosingTags(openedTags);
+			htmlBodyToReplace += closingTags;
+		}
+		
+		// TODO: Append these where current page's tags are ended.
+		List<String> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
+		
+		if(prevOpenedTags != null) {
+			String openingTags = prepareOpenedTags(prevOpenedTags);
+			htmlBodyToReplace = openingTags + htmlBodyToReplace;
+		}
+		
+		getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
+		getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags);
+		
+		return htmlBodyToReplace;
 	}
 
 	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException, OutOfPagesException {
