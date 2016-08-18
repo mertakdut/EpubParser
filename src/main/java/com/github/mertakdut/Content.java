@@ -402,36 +402,14 @@ class Content {
 		bookSection.setSectionContent(fileContentStr);
 		return bookSection;
 	}
-	
-	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) {
-		List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition);
-		
-		String closingTags = null;
-		if (openedTags != null) {
-			closingTags = prepareClosingTags(openedTags);
-			htmlBodyToReplace += closingTags;
-		}
-		
-		// TODO: Append these where current page's tags are ended.
-		List<String> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
-		
-		if(prevOpenedTags != null) {
-			String openingTags = prepareOpenedTags(prevOpenedTags);
-			htmlBodyToReplace = openingTags + htmlBodyToReplace;
-		}
-		
-		getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
-		getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags);
-		
-		return htmlBodyToReplace;
-	}
 
 	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException, OutOfPagesException {
+		
+		BookSection bookSection = new BookSection();
 
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
-		String entryClosingTags = entryNavPoint.getClosingTags(); // Will be calculated on the first attempt.
 		List<String> entryOpenedTags = entryNavPoint.getOpenTags();
 
 		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
@@ -467,41 +445,21 @@ class Content {
 
 				htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
 
-				List<String> openedTags = getOpenedTags(entryName, bodyTrimStartPosition, bodyTrimEndPosition);
-
-				String closingTags = null;
-				if (openedTags != null) {
-					closingTags = prepareClosingTags(openedTags);
-					htmlBodyToReplace += closingTags;
-				}
-
 				NavPoint nextEntryNavPoint = new NavPoint();
 
 				nextEntryNavPoint.setTypeCode(2);
 				nextEntryNavPoint.setEntryName(entryName);
 				nextEntryNavPoint.setBodyTrimStartPosition(bodyTrimEndPosition);
-				nextEntryNavPoint.setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
 
 				getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 
 				getToc().getNavMap().getNavPoints().get(index).setBodyTrimEndPosition(bodyTrimEndPosition); // Sets endPosition to avoid calculating again.
-				getToc().getNavMap().getNavPoints().get(index).setClosingTags(closingTags);
 			} else {
 				htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, entryName);
 			}
+			
 		} else { // Calculated before.
 			htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
-
-			if (entryClosingTags != null) {
-				htmlBodyToReplace += entryClosingTags;
-			}
-		}
-
-		if (entryOpenedTags != null) {
-			htmlBodyToReplace = prepareOpenedTags(entryOpenedTags) + htmlBodyToReplace;
-
-			String closingTags = prepareClosingTags(entryOpenedTags);
-			htmlBodyToReplace += closingTags;
 		}
 
 		if (Optionals.cssStatus == CssStatus.OMIT) {
@@ -509,19 +467,20 @@ class Content {
 		}
 
 		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		
+		if (Optionals.isIncludingTextContent) {
+			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
+		}
+		
+		htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition);
+		
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
 
 		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
 			fileContent = dissolveStyleTag(fileContent);
 		}
 
-		BookSection bookSection = new BookSection();
-
 		bookSection.setSectionContent(fileContent);
-
-		if (Optionals.isIncludingTextContent) {
-			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
-		}
 
 		if (this.lastBookSectionInfo != null) {
 			bookSection.setExtension(this.lastBookSectionInfo.getExtension());
@@ -1671,6 +1630,28 @@ class Content {
 		}
 
 		return htmlBody;
+	}
+	
+	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) {
+		List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition);
+		
+		String closingTags = null;
+		if (openedTags != null) {
+			closingTags = prepareClosingTags(openedTags);
+			htmlBodyToReplace += closingTags;
+		}
+		
+		// TODO: Append these where current page's tags are ended.
+		List<String> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
+		
+		if(prevOpenedTags != null) {
+			String openingTags = prepareOpenedTags(prevOpenedTags);
+			htmlBodyToReplace = openingTags + htmlBodyToReplace;
+		}
+		
+		getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
+		
+		return htmlBodyToReplace;
 	}
 
 	byte[] getCoverImage() throws ReadingException {
