@@ -281,7 +281,7 @@ class Content {
 
 								if (markedNavPoints != 0) {
 
-									if (markedNavPoints == getToc().getNavMap().getNavPoints().size()) {
+									if (markedNavPoints == getToc().getNavMap().getNavPoints().size() && markedNavPoints > 1) {
 										throw new ReadingException("There are no items left in TOC. Toc.ncx file is probably malformed.");
 									}
 
@@ -793,6 +793,7 @@ class Content {
 		}
 
 		// TODO: Regex to find table tags like: <table(*.?)>[</table>|</>]
+		// TODO: This may break the maxContentPerSection rule. Check if the table content will exceed the limit.
 		int tableStartIndex = htmlBody.indexOf(Constants.TAG_TABLE_START, trimStartPosition);
 
 		// If interval has table, don't break the table.
@@ -1148,6 +1149,7 @@ class Content {
 	}
 
 	private Map<String, String> getCssMap(String cssfileContent) {
+		
 		Map<String, String> cssMap = new HashMap<>();
 
 		Pattern cssPattern = Pattern.compile("\\{(.*?)\\}");
@@ -1468,6 +1470,11 @@ class Content {
 			List<TagInfo> tableTagInfoList = new ArrayList<>();
 
 			for (TagInfo tagInfo : tagStartEndPositions) {
+				
+				if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
+					break;
+				}
+				
 				if (tagInfo.getTagName().equals("table")) {
 					tableTagInfoList.add(tagInfo);
 				}
@@ -1520,7 +1527,10 @@ class Content {
 					break;
 				}
 
-				// TODO: Exclude img tags!
+				// Exclude img tags to save images in table tag.
+//				if(tagInfo.getTagName().equals("img")) {
+//					continue;
+//				}
 
 				if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty Tag
 					if (tagInfo.getOpeningTagStartPosition() > tableStartPosition && tagInfo.getOpeningTagStartPosition() < tableEndPosition) {
@@ -1633,6 +1643,7 @@ class Content {
 	}
 	
 	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) {
+		
 		List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition);
 		
 		String closingTags = null;
@@ -1641,12 +1652,34 @@ class Content {
 			htmlBodyToReplace += closingTags;
 		}
 		
-		// TODO: Append these where current page's tags are ended.
 		List<String> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
 		
 		if(prevOpenedTags != null) {
 			String openingTags = prepareOpenedTags(prevOpenedTags);
-			htmlBodyToReplace = openingTags + htmlBodyToReplace;
+			
+			int cursor = 0;
+			boolean isInsideTag = false;
+			
+			while(htmlBodyToReplace.charAt(cursor) == ' ' || htmlBodyToReplace.charAt(cursor) == '<' || isInsideTag) {
+				
+				if(htmlBodyToReplace.charAt(cursor) == '<') {
+					isInsideTag = true;
+				} else if(htmlBodyToReplace.charAt(cursor) == '>') {
+					isInsideTag = false;
+				}
+				
+				cursor++;
+				
+				if(cursor >= htmlBodyToReplace.length()) {
+					break;
+				}
+			}
+			
+			if(cursor >= htmlBodyToReplace.length()) {
+				htmlBodyToReplace += openingTags;
+			} else {
+				htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor) + openingTags + htmlBodyToReplace.substring(cursor, htmlBodyToReplace.length());	
+			}
 		}
 		
 		getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
