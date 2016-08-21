@@ -43,7 +43,7 @@ public class EpubSingleTest {
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 				String sectionContent = getHtmlBody(bookSection.getSectionContent());
-//				String sectionContent = bookSection.getSectionContent();
+				// String sectionContent = bookSection.getSectionContent();
 				sectionContents.add(sectionContent);
 
 				System.out.println("content: " + sectionContent);
@@ -67,7 +67,7 @@ public class EpubSingleTest {
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
 				String sectionContent = getHtmlBody(bookSection.getSectionContent());
-//				String sectionContent = bookSection.getSectionContent();
+				// String sectionContent = bookSection.getSectionContent();
 				System.out.println("content: " + sectionContent);
 
 				Assert.assertEquals(sectionContents.get(i), sectionContent);

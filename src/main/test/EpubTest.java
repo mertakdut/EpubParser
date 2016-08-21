@@ -28,8 +28,8 @@ public class EpubTest {
 		File epubDirectory = new File("C:\\eBooks/test");
 		File[] epubFiles = epubDirectory.listFiles();
 
-		CssStatus[] cssStatuses = new CssStatus[] { CssStatus.INCLUDE, CssStatus.OMIT }; // CssStatus.OMIT, CssStatus.DISTRIBUTE
-		int[] maxContents = new int[] { 1000, 1250, 1500 };
+		CssStatus[] cssStatuses = new CssStatus[] { CssStatus.OMIT, CssStatus.INCLUDE }; // CssStatus.OMIT, CssStatus.DISTRIBUTE
+		int[] maxContents = new int[] { 1250, 1000, 1500 };
 
 		Reader reader = new Reader();
 

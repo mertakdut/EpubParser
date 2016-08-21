@@ -2,7 +2,10 @@ package com.github.mertakdut;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -14,6 +17,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.github.mertakdut.BaseFindings.XmlItem;
 import com.github.mertakdut.exception.OutOfPagesException;
 import com.github.mertakdut.exception.ReadingException;
 
@@ -155,6 +159,8 @@ public class Reader {
 				throw new ReadingException("toc.ncx not found.");
 			}
 
+			mergeTocElements();
+
 			// Debug
 			// content.print();
 
@@ -231,6 +237,66 @@ public class Reader {
 				}
 			}
 		}
+	}
+
+	private void mergeTocElements() throws ReadingException {
+
+		List<NavPoint> currentNavPoints = new ArrayList<>(content.getToc().getNavMap().getNavPoints());
+
+		int navPointIndex = 0; // Holds the last duplicate content position, when the new content found insertion is done from that position.
+		int insertedNavPointCount = 0;
+
+		for (XmlItem spine : content.getPackage().getSpine().getXmlItemList()) {
+
+			Map<String, String> spineAttributes = spine.getAttributes();
+
+			String idRef = spineAttributes.get("idref");
+
+			for (XmlItem manifest : content.getPackage().getManifest().getXmlItemList()) {
+
+				Map<String, String> manifestAttributes = manifest.getAttributes();
+
+				String manifestElementId = manifestAttributes.get("id");
+
+				if (idRef.equals(manifestElementId)) {
+
+					NavPoint navPoint = new NavPoint();
+					// navPoint.setPlayOrder(currentNavPoints.size() + spineNavPoints.size() + 1); // Is playOrder needed? I think not because we've already sorted the navPoints with playOrder before
+					// merging.
+					navPoint.setContentSrc(ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(manifestAttributes.get("href"), Constants.SLASH)));
+
+					boolean duplicateContentSrc = false;
+					boolean isAnchoredFound = false;
+
+					for (int j = 0; j < currentNavPoints.size(); j++) {
+
+						NavPoint navPointItem = currentNavPoints.get(j);
+
+						if (navPoint.getContentSrc().equals(navPointItem.getContentSrc())) {
+							duplicateContentSrc = true;
+							navPointIndex = j;
+							break;
+						} else if (!isAnchoredFound && navPoint.getContentSrc().startsWith(navPointItem.getContentSrc())
+								&& navPoint.getContentSrc().replace(navPointItem.getContentSrc(), "").startsWith("%23")) {
+							isAnchoredFound = true;
+							navPointIndex = j;
+						} else if (!isAnchoredFound && navPointItem.getContentSrc().startsWith(navPoint.getContentSrc())
+								&& navPointItem.getContentSrc().replace(navPoint.getContentSrc(), "").startsWith("%23")) {
+							isAnchoredFound = true;
+							navPointIndex = j;
+						}
+
+					}
+
+					if (!duplicateContentSrc) {
+						content.getToc().getNavMap().getNavPoints().add(navPointIndex + insertedNavPointCount++, navPoint);
+					}
+
+				}
+
+			}
+		}
+
 	}
 
 	public Package getInfoPackage() {

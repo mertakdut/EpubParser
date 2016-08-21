@@ -126,6 +126,8 @@ class Toc extends BaseFindings {
 
 					}
 
+					boolean hasNestedNavPoints = false;
+
 					NodeList navPointChildNodes = possiblyNavPoints.item(i).getChildNodes();
 
 					for (int k = 0; k < navPointChildNodes.getLength(); k++) {
@@ -150,17 +152,13 @@ class Toc extends BaseFindings {
 								if (contentAttribute.getNodeName().equals("src")) {
 									String contentSrc = contentAttribute.getNodeValue();
 
-									int slashIndex = contentSrc.lastIndexOf('/');
-									if (slashIndex != -1) {
-										contentSrc = contentSrc.substring(slashIndex + 1);
-									}
-
-									String encodedContentSrc = ContextHelper.encodeToUtf8(contentSrc);
+									String encodedContentSrc = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(contentSrc, Constants.SLASH));
 
 									navPoint.setContentSrc(encodedContentSrc);
 								}
 							}
-
+						} else if (!hasNestedNavPoints && navPointChild.getNodeName().equals("navPoint")) {
+							hasNestedNavPoints = true;
 						}
 					}
 
@@ -176,14 +174,23 @@ class Toc extends BaseFindings {
 					if (!duplicateContentSrc) {
 						this.navPoints.add(navPoint);
 					}
+
+					// Sometimes navPoint nodes may have another navPoint nodes inside them. Even though this means malformed toc.ncx file, it shouldn't hurt to try to read them as well.
+					if (hasNestedNavPoints)
+						fillNavPoints(navPointChildNodes);
 				}
 			}
+		}
 
+		public void sortNavMaps() {
+
+			// If playOrders are not given, then use the order in file.
 			Collections.sort(this.navPoints, new Comparator<NavPoint>() {
 				public int compare(NavPoint o1, NavPoint o2) {
-					return o1.getPlayOrder() <= o2.getPlayOrder() ? -1 : 1; // if equals, first occurence should be sorted as first
+					return o1.getPlayOrder() < o2.getPlayOrder() ? -1 : 1; // if equals, first occurence should be sorted as first.
 				}
 			});
+
 		}
 
 		public void print() {
@@ -204,6 +211,7 @@ class Toc extends BaseFindings {
 			getHead().fillAttributes(node.getChildNodes());
 		} else if (node.getNodeName().equals("navMap") || node.getNodeName().equals("pageList")) { // if pageList exists then it's epub3 if only navMap exists then it's epub2.
 			getNavMap().fillNavPoints(node.getChildNodes());
+			getNavMap().sortNavMaps();
 		}
 	}
 

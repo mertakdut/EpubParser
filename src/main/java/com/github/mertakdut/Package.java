@@ -11,7 +11,7 @@ import org.w3c.dom.NodeList;
 import com.github.mertakdut.exception.ReadingException;
 
 //package.opf
-public class Package extends BaseFindings {
+class Package extends BaseFindings {
 
 	private Metadata metadata;
 	private Manifest manifest;

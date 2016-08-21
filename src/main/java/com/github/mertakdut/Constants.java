@@ -20,6 +20,7 @@ class Constants {
 	static final String TAG_END = "/>";
 	static final String TAG_START = "</";
 	static final char DOT = '.';
+	static final char SLASH = '/';
 
 	static final String EXTENSION_CSS = ".css";
 

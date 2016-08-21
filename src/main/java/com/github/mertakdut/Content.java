@@ -146,6 +146,7 @@ class Content {
 		String htmlBody = null;
 		String htmlBodyToReplace = null;
 
+		// Warning: This is not always working as the content is calculated before. Calculated content may have its entryStartPosition and entryEndPosition 0(Zero). e.g. when no trim needed on htmlBody.
 		if (entryStartPosition == 0 && entryEndPosition == 0) { // Not calculated before.
 			String[] entryNameAndLabel = findEntryNameAndLabel(navPoint);
 
@@ -163,7 +164,7 @@ class Content {
 			for (int i = 0; i < getEntryNames().size(); i++) {
 
 				String entryName = getEntryNames().get(i);
-				String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
+				String fileName = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(entryName, Constants.SLASH));
 
 				if (href.equals(fileName) || (href.startsWith(fileName) && href.replace(fileName, "").startsWith("%23"))) {
 					isSourceFileFound = true;
@@ -191,7 +192,7 @@ class Content {
 							NavPoint currentEntryNavPoint = new NavPoint();
 
 							currentEntryNavPoint.setTypeCode(0);
-							currentEntryNavPoint.setContentSrc(ContextHelper.encodeToUtf8(getFileName(entryName)));
+							currentEntryNavPoint.setContentSrc(fileName); // href or fileName?
 
 							getToc().getNavMap().getNavPoints().add(index, currentEntryNavPoint);
 
@@ -306,7 +307,7 @@ class Content {
 						trimEndPosition = bodyIntervals[1];
 					}
 
-					String extension = getFileExtension(fileName);
+					String extension = ContextHelper.getTextAfterCharacter(fileName, Constants.DOT);
 					String mediaType = getMediaType(fileName);
 
 					// If fileContentStr is too long; crop it by the maxContentPerSection.
@@ -358,7 +359,7 @@ class Content {
 					if (Optionals.cssStatus == CssStatus.OMIT) {
 						htmlBodyToReplace = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, trimStartPosition, trimEndPosition);
 					}
-					
+
 					htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition);
 
 					break;
@@ -388,7 +389,7 @@ class Content {
 			if (Optionals.cssStatus == CssStatus.OMIT) {
 				htmlBodyToReplace = replaceTableTag(entryEntryName, htmlBody, htmlBodyToReplace, entryStartPosition, entryEndPosition);
 			}
-			
+
 			htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition);
 		}
 
@@ -404,13 +405,12 @@ class Content {
 	}
 
 	private BookSection prepareTrimmedBookSection(NavPoint entryNavPoint, int index) throws ReadingException, OutOfPagesException {
-		
+
 		BookSection bookSection = new BookSection();
 
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
-		List<String> entryOpenedTags = entryNavPoint.getOpenTags();
 
 		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
 		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
@@ -457,9 +457,9 @@ class Content {
 			} else {
 				htmlBodyToReplace = getNonTrimmedHtmlBody(index, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition, entryName);
 			}
-			
+
 		} else { // Calculated before.
-			htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition);
+			htmlBodyToReplace = htmlBody.substring(bodyTrimStartPosition, bodyTrimEndPosition); // bodyTrimEndPosition may be zero?
 		}
 
 		if (Optionals.cssStatus == CssStatus.OMIT) {
@@ -467,13 +467,13 @@ class Content {
 		}
 
 		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
-		
+
 		if (Optionals.isIncludingTextContent) {
 			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
 		}
-		
+
 		htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition);
-		
+
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
 
 		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
@@ -601,7 +601,16 @@ class Content {
 		tagInfo.setTagName(getTagName(fullTagName));
 
 		if (this.entryTagPositions.containsKey(entryName)) {
-			this.entryTagPositions.get(entryName).add(tagInfo);
+
+			List<TagInfo> tagInfoList = this.entryTagPositions.get(entryName);
+
+			int index = tagInfoList.size();
+			while (index > 0 && tagInfoList.get(index - 1).getOpeningTagStartPosition() > openingPosition) {
+				index--;
+			}
+
+			this.entryTagPositions.get(entryName).add(index, tagInfo);
+
 		} else {
 			List<TagInfo> tagInfoList = new ArrayList<>();
 			tagInfoList.add(tagInfo);
@@ -654,9 +663,9 @@ class Content {
 			String possiblyNextEntryName = possiblyNextEntryNameLabel[0];
 
 			if (possiblyNextEntryName != null) {
-				String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
+				String fileName = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(entryName, Constants.SLASH));
 
-				if (possiblyNextEntryName.contains(fileName)) { // TODO: Dosya ayný deðilse silmesi mi gerekiyor?
+				if (possiblyNextEntryName.startsWith(fileName) && possiblyNextEntryName.replace(fileName, "").startsWith("%23")) {
 					String anchor = possiblyNextEntryName.replace(fileName, "");
 					String anchorHtml = convertAnchorToHtml(anchor);
 					anchorIndex = htmlBody.indexOf(anchorHtml);
@@ -673,6 +682,8 @@ class Content {
 							break;
 						}
 					}
+				} else { // TODO: Next content is not the same file as the current one. Anchors are broken. Navigate to the next file.
+					break;
 				}
 			}
 
@@ -819,7 +830,6 @@ class Content {
 
 		for (TagInfo tagInfo : tagStartEndPositions) {
 
-			// This may not work correctly. Opening and closing tags may differ from one another. We should only check for whichever is inserted first? So; opening only?
 			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
 			}
@@ -915,7 +925,7 @@ class Content {
 				String nextHref = nextEntryLabel[0];
 
 				if (nextHref != null) {
-					String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
+					String fileName = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(entryName, Constants.SLASH));
 
 					if (nextHref.startsWith(fileName) && nextHref.replace(fileName, "").startsWith("%23")) { // Both anchors are in the same file.
 						return nextHref.replace(fileName, "");
@@ -940,7 +950,7 @@ class Content {
 			String prevHref = findEntryNameAndLabel(prevNavPoint)[0];
 
 			if (prevHref != null) {
-				String fileName = ContextHelper.encodeToUtf8(getFileName(entryName));
+				String fileName = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(entryName, Constants.SLASH));
 
 				if (prevHref.startsWith(fileName)) { // Same content as previous, not reading for the first time. (&& prevHref.replace(fileName, "").startsWith("%23"))
 					return false;
@@ -956,31 +966,9 @@ class Content {
 
 		if (navPoint.getContentSrc() != null) {
 			return new String[] { navPoint.getContentSrc(), navPoint.getNavLabel() };
-		} else { // Find from id
-			List<XmlItem> xmlItemList = getPackage().getManifest().getXmlItemList();
-
-			for (XmlItem xmlItem : xmlItemList) {
-				Map<String, String> attributeMap = xmlItem.getAttributes();
-
-				String id = attributeMap.get("id");
-
-				if (id.equals(navPoint.getId())) {
-					return new String[] { attributeMap.get("href"), navPoint.getNavLabel() };
-				}
-			}
 		}
 
 		throw new ReadingException("NavPoint content is not found in epub content.");
-	}
-
-	private String getFileExtension(String fileName) {
-
-		int lastDotIndex = fileName.lastIndexOf(Constants.DOT);
-		if (lastDotIndex != -1) {
-			return fileName.substring(lastDotIndex + 1); // +1 to exclude dot from extension.
-		}
-
-		return null;
 	}
 
 	// TODO: This operation is getting expensive and expensive. fileContent could be held in cache; if the entry is same. Maybe a map with one element -> <entryName, fileContent>
@@ -1037,11 +1025,6 @@ class Content {
 				throw new ReadingException("Error closing ZipFile: " + e.getMessage());
 			}
 		}
-	}
-
-	private String getFileName(String entryName) {
-		int lastSlashIndex = entryName.lastIndexOf("/");
-		return entryName.substring(lastSlashIndex + 1);
 	}
 
 	private String getHtmlBody(String htmlContent) throws ReadingException {
@@ -1149,7 +1132,7 @@ class Content {
 	}
 
 	private Map<String, String> getCssMap(String cssfileContent) {
-		
+
 		Map<String, String> cssMap = new HashMap<>();
 
 		Pattern cssPattern = Pattern.compile("\\{(.*?)\\}");
@@ -1299,65 +1282,70 @@ class Content {
 			Matcher hrefMatcher = hrefPattern.matcher(linkTag);
 
 			if (hrefMatcher.find()) {
-				String cssHref = getFileName(hrefMatcher.group(1));
+				String cssHref = ContextHelper.getTextAfterCharacter(hrefMatcher.group(1), Constants.SLASH);
+				
+				if(cssHref.endsWith(".css")) { // Should we check for its type as well? text/css
+					
+					if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
 
-				if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
+						// logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
+						htmlContent = htmlContent.replace(linkTag, "");
 
-					// logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
-					htmlContent = htmlContent.replace(linkTag, "");
+					} else {
 
-				} else {
+						boolean isCssFileFound = false;
 
-					boolean isCssFileFound = false;
+						for (int i = 0; i < getEntryNames().size(); i++) {
+							String entryName = getEntryNames().get(i);
 
-					for (int i = 0; i < getEntryNames().size(); i++) {
-						String entryName = getEntryNames().get(i);
+							String fileName = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(entryName, Constants.SLASH));
 
-						int lastSlashIndex = entryName.lastIndexOf("/");
-						String fileName = ContextHelper.encodeToUtf8(entryName.substring(lastSlashIndex + 1));
+							if (cssHref.equals(fileName)) { // css exists.
+								isCssFileFound = true;
 
-						if (cssHref.equals(fileName)) { // css exists.
-							isCssFileFound = true;
+								ZipEntry zipEntry = epubFile.getEntry(entryName);
 
-							ZipEntry zipEntry = epubFile.getEntry(entryName);
+								InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
 
-							InputStream zipEntryInputStream = epubFile.getInputStream(zipEntry);
+								BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
 
-							BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(zipEntryInputStream));
+								StringBuilder fileContent = new StringBuilder();
 
-							StringBuilder fileContent = new StringBuilder();
+								fileContent.append("<style type=\"text/css\">");
 
-							fileContent.append("<style type=\"text/css\">");
-
-							try {
-								String line;
-								while ((line = bufferedReader.readLine()) != null) {
-									fileContent.append(line);
+								try {
+									String line;
+									while ((line = bufferedReader.readLine()) != null) {
+										fileContent.append(line);
+									}
+								} finally {
+									bufferedReader.close();
 								}
-							} finally {
-								bufferedReader.close();
+
+								fileContent.append("</style>");
+
+								htmlContent = htmlContent.replace(linkTag, fileContent.toString());
+
+								break;
+							}
+						}
+
+						if (!isCssFileFound) {
+							logger.log(Logger.Severity.warning, "Referenced css file not found!");
+
+							if (nonExistingHrefList == null) {
+								nonExistingHrefList = new ArrayList<>();
 							}
 
-							fileContent.append("</style>");
+							nonExistingHrefList.add(cssHref);
 
-							htmlContent = htmlContent.replace(linkTag, fileContent.toString());
-
-							break;
+							htmlContent = htmlContent.replace(cssHref, "");
 						}
 					}
-
-					if (!isCssFileFound) {
-						logger.log(Logger.Severity.warning, "Referenced css file not found!");
-
-						if (nonExistingHrefList == null) {
-							nonExistingHrefList = new ArrayList<>();
-						}
-
-						nonExistingHrefList.add(cssHref);
-
-						htmlContent = htmlContent.replace(cssHref, "");
-					}
+					
 				}
+
+				
 			}
 
 		}
@@ -1378,7 +1366,7 @@ class Content {
 			Matcher srcMatcher = srcPattern.matcher(imgPart);
 
 			if (srcMatcher.find()) {
-				String srcHref = getFileName(srcMatcher.group(1));
+				String srcHref = ContextHelper.getTextAfterCharacter(srcMatcher.group(1), Constants.SLASH);
 				String encodedSrcHref = ContextHelper.encodeToUtf8(srcHref);
 
 				if (nonExistingHrefList != null && nonExistingHrefList.contains(srcHref)) {
@@ -1391,8 +1379,7 @@ class Content {
 					for (int i = 0; i < getEntryNames().size(); i++) {
 						String entryName = getEntryNames().get(i);
 
-						int lastSlashIndex = entryName.lastIndexOf("/");
-						String fileName = ContextHelper.encodeToUtf8(entryName.substring(lastSlashIndex + 1));
+						String fileName = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(entryName, Constants.SLASH));
 
 						if (encodedSrcHref.equals(fileName)) { // image exists.
 
@@ -1401,7 +1388,7 @@ class Content {
 							ZipFile epubFile = null;
 
 							try {
-								String extension = getFileExtension(fileName);
+								String extension = ContextHelper.getTextAfterCharacter(fileName, Constants.DOT);
 
 								epubFile = new ZipFile(this.zipFilePath);
 								ZipEntry zipEntry = epubFile.getEntry(entryName);
@@ -1470,11 +1457,11 @@ class Content {
 			List<TagInfo> tableTagInfoList = new ArrayList<>();
 
 			for (TagInfo tagInfo : tagStartEndPositions) {
-				
+
 				if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
 					break;
 				}
-				
+
 				if (tagInfo.getTagName().equals("table")) {
 					tableTagInfoList.add(tagInfo);
 				}
@@ -1522,15 +1509,14 @@ class Content {
 
 			for (TagInfo tagInfo : tagStartEndPositions) {
 
-				// This may not work correctly.
 				if (tagInfo.getOpeningTagStartPosition() > tableEndPosition) {
 					break;
 				}
 
 				// Exclude img tags to save images in table tag.
-//				if(tagInfo.getTagName().equals("img")) {
-//					continue;
-//				}
+				// if(tagInfo.getTagName().equals("img")) {
+				// continue;
+				// }
 
 				if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty Tag
 					if (tagInfo.getOpeningTagStartPosition() > tableStartPosition && tagInfo.getOpeningTagStartPosition() < tableEndPosition) {
@@ -1641,49 +1627,55 @@ class Content {
 
 		return htmlBody;
 	}
-	
-	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) {
-		
-		List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition);
-		
+
+	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) throws ReadingException {
+
+		List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition); // Opened and not yet closed tags.
+
 		String closingTags = null;
 		if (openedTags != null) {
 			closingTags = prepareClosingTags(openedTags);
 			htmlBodyToReplace += closingTags;
 		}
-		
+
 		List<String> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
-		
-		if(prevOpenedTags != null) {
+
+		if (prevOpenedTags != null) {
 			String openingTags = prepareOpenedTags(prevOpenedTags);
-			
+
 			int cursor = 0;
 			boolean isInsideTag = false;
-			
-			while(htmlBodyToReplace.charAt(cursor) == ' ' || htmlBodyToReplace.charAt(cursor) == '<' || isInsideTag) {
-				
-				if(htmlBodyToReplace.charAt(cursor) == '<') {
+
+			while (htmlBodyToReplace.charAt(cursor) == ' ' || htmlBodyToReplace.charAt(cursor) == '<' || isInsideTag) {
+
+				if (htmlBodyToReplace.charAt(cursor) == '<') {
 					isInsideTag = true;
-				} else if(htmlBodyToReplace.charAt(cursor) == '>') {
+				} else if (htmlBodyToReplace.charAt(cursor) == '>') {
 					isInsideTag = false;
 				}
-				
+
 				cursor++;
-				
-				if(cursor >= htmlBodyToReplace.length()) {
+
+				if (cursor == htmlBodyToReplace.length()) {
 					break;
 				}
 			}
-			
-			if(cursor >= htmlBodyToReplace.length()) {
+
+			if (cursor == htmlBodyToReplace.length()) {
 				htmlBodyToReplace += openingTags;
 			} else {
-				htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor) + openingTags + htmlBodyToReplace.substring(cursor, htmlBodyToReplace.length());	
+				htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor) + openingTags + htmlBodyToReplace.substring(cursor, htmlBodyToReplace.length());
 			}
 		}
-		
-		getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
-		
+
+		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) { // If this is not the last page.
+			getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
+		} else {
+			if (openedTags != null) { // openedTags should already be null if this is the last page.
+				throw new ReadingException("Last Page has opened and not yet closed tags.");
+			}
+		}
+
 		return htmlBodyToReplace;
 	}
 

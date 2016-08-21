@@ -32,9 +32,9 @@ class ContextHelper {
 
 		return encodedString;
 	}
-	
+
 	static byte[] convertIsToByteArray(InputStream inputStream) throws IOException {
-		
+
 		byte[] buffer = new byte[8192];
 		int bytesRead;
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -43,6 +43,13 @@ class ContextHelper {
 		}
 
 		return output.toByteArray();
+	}
+
+	static String getTextAfterCharacter(String text, char character) {
+
+		int lastCharIndex = text.lastIndexOf(character);
+		return text.substring(lastCharIndex + 1);
+
 	}
 
 }
