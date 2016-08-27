@@ -393,7 +393,7 @@ class Content {
 			htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition);
 		}
 
-		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+//		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
@@ -466,7 +466,7 @@ class Content {
 			htmlBodyToReplace = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, bodyTrimStartPosition, bodyTrimEndPosition);
 		}
 
-		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+//		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 
 		if (Optionals.isIncludingTextContent) {
 			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
@@ -1641,10 +1641,10 @@ class Content {
 		List<String> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
 
 		if (prevOpenedTags != null) {
-			String openingTags = prepareOpenedTags(prevOpenedTags);
-
 			int cursor = 0;
 			boolean isInsideTag = false;
+			
+			StringBuilder tagNameBuilder = new StringBuilder();
 
 			while (htmlBodyToReplace.charAt(cursor) == ' ' || htmlBodyToReplace.charAt(cursor) == '<' || isInsideTag) {
 
@@ -1652,6 +1652,26 @@ class Content {
 					isInsideTag = true;
 				} else if (htmlBodyToReplace.charAt(cursor) == '>') {
 					isInsideTag = false;
+					
+					String tagName = tagNameBuilder.toString();
+					
+					boolean isElementFound = prevOpenedTags.remove(tagName);
+					
+					if(isElementFound) {
+						htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor - tagName.length() - 1) + tagName.toString() + htmlBodyToReplace.substring(cursor - tagName.length() - 1, htmlBodyToReplace.length());
+					}
+					
+					tagNameBuilder.setLength(0);
+					
+					if(prevOpenedTags.isEmpty())
+						break;
+					
+				} else if(isInsideTag) {
+					
+					if(!(htmlBodyToReplace.charAt(cursor) == '/' && htmlBodyToReplace.charAt(cursor - 1) == '<')) {
+						tagNameBuilder.append(htmlBodyToReplace.charAt(cursor));
+					}
+					
 				}
 
 				cursor++;
@@ -1660,12 +1680,18 @@ class Content {
 					break;
 				}
 			}
+			
+			if(!prevOpenedTags.isEmpty()) {
+				
+				String openingTags = prepareOpenedTags(prevOpenedTags);
 
-			if (cursor == htmlBodyToReplace.length()) {
-				htmlBodyToReplace += openingTags;
-			} else {
-				htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor) + openingTags + htmlBodyToReplace.substring(cursor, htmlBodyToReplace.length());
+				if (cursor == htmlBodyToReplace.length()) {
+					htmlBodyToReplace += openingTags;
+				} else {
+					htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor) + openingTags + htmlBodyToReplace.substring(cursor, htmlBodyToReplace.length());
+				}
 			}
+			
 		}
 
 		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) { // If this is not the last page.

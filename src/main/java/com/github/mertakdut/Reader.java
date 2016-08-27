@@ -162,7 +162,7 @@ public class Reader {
 			mergeTocElements();
 
 			// Debug
-			// content.print();
+			 content.print();
 
 			return content;
 
