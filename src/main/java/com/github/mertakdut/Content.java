@@ -713,26 +713,30 @@ class Content {
 		}
 	}
 
-	private String prepareClosingTags(List<String> openedTags) {
+	private String prepareClosingTags(List<TagInfo> openedTags) {
 
 		StringBuilder closingTagsBuilder = new StringBuilder();
 
 		for (int i = 0; i < openedTags.size(); i++) {
-			closingTagsBuilder.append(Constants.TAG_START + getTagName(openedTags.get(i)) + Constants.TAG_CLOSING);
+			closingTagsBuilder.append(Constants.TAG_START + openedTags.get(i).getTagName() + Constants.TAG_CLOSING);
 		}
 
 		return closingTagsBuilder.toString();
 	}
 
-	private String prepareOpenedTags(List<String> openedTags) {
+	private String prepareOpenedTags(List<TagInfo> openedTags) {
 
 		StringBuilder openingTags = new StringBuilder();
 
 		for (int i = 0; i < openedTags.size(); i++) {
-			openingTags.append(Constants.TAG_OPENING).append(openedTags.get(i)).append(Constants.TAG_CLOSING);
+			openingTags.append(Constants.TAG_OPENING).append(openedTags.get(i).getFullTagName()).append(Constants.TAG_CLOSING);
 		}
 
 		return openingTags.toString();
+	}
+	
+	private String prepareOpenedTag(String openedTag) {
+		return Constants.TAG_OPENING +  openedTag + Constants.TAG_CLOSING;
 	}
 
 	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
@@ -892,14 +896,16 @@ class Content {
 	}
 
 	// Retrieves 'opened and not closed' tags within the trimmed part.
-	private List<String> getOpenedTags(String entryName, int trimStartIndex, int trimEndIndex) {
+	private List<TagInfo> getOpenedTags(String entryName, int trimStartIndex, int trimEndIndex) {
 
-		List<String> openedTags = null;
+		List<TagInfo> openedTags = null;
 
 		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
 		for (int i = 0; i < tagStartEndPositions.size(); i++) {
 			TagInfo tagInfo = tagStartEndPositions.get(i);
+			
+			// TODO: Break this when it's out of possibility.
 
 			// Opened in the trimmed part, closed after the trimmed part.
 			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex && tagInfo.getClosingTagStartPosition() > trimEndIndex) {
@@ -907,7 +913,7 @@ class Content {
 					openedTags = new ArrayList<>();
 				}
 
-				openedTags.add(tagInfo.getFullTagName());
+				openedTags.add(tagInfo);
 			}
 		}
 
@@ -1630,15 +1636,15 @@ class Content {
 
 	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) throws ReadingException {
 
-		List<String> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition); // Opened and not yet closed tags.
+		List<TagInfo> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition); // Opened and not yet closed tags for the current part.
 
 		String closingTags = null;
 		if (openedTags != null) {
 			closingTags = prepareClosingTags(openedTags);
-			htmlBodyToReplace += closingTags;
+//			htmlBodyToReplace += closingTags; // 'No matter where the tag opened putting one closing tag at the end' will work? 
 		}
 
-		List<String> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
+		List<TagInfo> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags(); // What if prevOpenedTags are not closed in the current part? Put them on the next part as well.
 
 		if (prevOpenedTags != null) {
 			int cursor = 0;
@@ -1658,7 +1664,7 @@ class Content {
 					boolean isElementFound = prevOpenedTags.remove(tagName);
 					
 					if(isElementFound) {
-						htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor - tagName.length() - 1) + tagName.toString() + htmlBodyToReplace.substring(cursor - tagName.length() - 1, htmlBodyToReplace.length());
+						htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor - tagName.length() - 2) + prepareOpenedTag(tagName.toString())  + htmlBodyToReplace.substring(cursor - tagName.length() - 2, htmlBodyToReplace.length());
 					}
 					
 					tagNameBuilder.setLength(0);
@@ -1698,7 +1704,7 @@ class Content {
 			getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
 		} else {
 			if (openedTags != null) { // openedTags should already be null if this is the last page.
-				throw new ReadingException("Last Page has opened and not yet closed tags.");
+				throw new ReadingException("Last Page has opened and not yet closed tags."); // For debugging purposes.
 			}
 		}
 

@@ -18,7 +18,7 @@ class NavPoint {
 	private String entryName;
 	private int bodyTrimStartPosition;
 	private int bodyTrimEndPosition;
-	private List<String> openTags; // Holding list might be expensive.
+	private List<TagInfo> openTags; // Holding list might be expensive.
 
 	public String getId() {
 		return id;
@@ -92,11 +92,11 @@ class NavPoint {
 		this.bodyTrimEndPosition = bodyTrimEndPosition;
 	}
 
-	public List<String> getOpenTags() {
+	public List<TagInfo> getOpenTags() {
 		return openTags;
 	}
 
-	public void setOpenTags(List<String> openTags) {
+	public void setOpenTags(List<TagInfo> openTags) {
 		this.openTags = openTags;
 	}
 
