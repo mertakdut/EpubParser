@@ -40,7 +40,7 @@ class Content {
 
 	private List<String> entryNames;
 
-	private Map<String, List<TagInfo>> entryTagPositions;
+	private Map<String, List<Tag>> entryTagPositions;
 	private List<String> nonExistingHrefList;
 
 	private int playOrder;
@@ -357,10 +357,17 @@ class Content {
 					}
 
 					if (Optionals.cssStatus == CssStatus.OMIT) {
-						htmlBodyToReplace = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, trimStartPosition, trimEndPosition);
-					}
+						Pair<String, List<String>> htmlBodyMarkingsPair = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, trimStartPosition, trimEndPosition);
 
-					htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition);
+						if (htmlBodyMarkingsPair != null) {
+							htmlBodyToReplace = appendIncompleteTags(htmlBodyMarkingsPair.getFirst(), htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition, htmlBodyMarkingsPair.getSecond());
+						} else {
+							htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition, null);
+						}
+
+					} else {
+						htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition, null);
+					}
 
 					break;
 				}
@@ -387,13 +394,20 @@ class Content {
 			}
 
 			if (Optionals.cssStatus == CssStatus.OMIT) {
-				htmlBodyToReplace = replaceTableTag(entryEntryName, htmlBody, htmlBodyToReplace, entryStartPosition, entryEndPosition);
-			}
+				Pair<String, List<String>> htmlBodyMarkingsMap = replaceTableTag(entryEntryName, htmlBody, htmlBodyToReplace, entryStartPosition, entryEndPosition);
 
-			htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition);
+				if (htmlBodyMarkingsMap != null) {
+					htmlBodyToReplace = appendIncompleteTags(htmlBodyMarkingsMap.getFirst(), htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition, htmlBodyMarkingsMap.getSecond());
+				} else {
+					htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition, null);
+				}
+
+			} else {
+				htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition, null);
+			}
 		}
 
-//		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		 htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
@@ -463,16 +477,23 @@ class Content {
 		}
 
 		if (Optionals.cssStatus == CssStatus.OMIT) {
-			htmlBodyToReplace = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, bodyTrimStartPosition, bodyTrimEndPosition);
+			Pair<String, List<String>> htmlBodyMarkingsMap = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, bodyTrimStartPosition, bodyTrimEndPosition);
+
+			if (htmlBodyMarkingsMap != null) {
+				htmlBodyToReplace = appendIncompleteTags(htmlBodyMarkingsMap.getFirst(), htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition, htmlBodyMarkingsMap.getSecond());
+			} else {
+				htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition, null);
+			}
+
+		} else {
+			htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition, null);
 		}
 
-//		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 
 		if (Optionals.isIncludingTextContent) {
 			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
 		}
-
-		htmlBodyToReplace = appendIncompleteTags(htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition);
 
 		fileContent = fileContent.replace(htmlBody, htmlBodyToReplace);
 
@@ -517,8 +538,8 @@ class Content {
 	 */
 	private void calculateEntryTagPositions(String entryName, String htmlBody) {
 
-		List<TagInfo> openedTags = null;
-		ListIterator<TagInfo> listIterator = null;
+		List<Tag> openedTags = null;
+		ListIterator<Tag> listIterator = null;
 
 		boolean isPossiblyTagOpened = false;
 		StringBuilder possiblyTag = new StringBuilder();
@@ -545,7 +566,7 @@ class Content {
 							listIterator = openedTags.listIterator(openedTags.size());
 
 							while (listIterator.hasPrevious()) {
-								TagInfo openedTag = listIterator.previous();
+								Tag openedTag = listIterator.previous();
 
 								if (openedTag.getTagName().equals(tagName)) { // Found the last open tag with the same name.
 									addEntryTagPosition(entryName, openedTag.getFullTagName(), openedTag.getOpeningTagStartPosition(), i - tagName.length() - 1);
@@ -561,7 +582,7 @@ class Content {
 							String fullTagName = getFullTagName(tagStr, true);
 							String tagName = getTagName(fullTagName);
 
-							TagInfo tag = new TagInfo();
+							Tag tag = new Tag();
 							tag.setTagName(tagName);
 							tag.setFullTagName(fullTagName);
 							tag.setOpeningTagStartPosition(i - fullTagName.length());
@@ -594,27 +615,27 @@ class Content {
 
 	private void addEntryTagPosition(String entryName, String fullTagName, int openingPosition, int closingPosition) {
 
-		TagInfo tagInfo = new TagInfo();
-		tagInfo.setOpeningTagStartPosition(openingPosition);
-		tagInfo.setClosingTagStartPosition(closingPosition);
-		tagInfo.setFullTagName(fullTagName);
-		tagInfo.setTagName(getTagName(fullTagName));
+		Tag tag = new Tag();
+		tag.setOpeningTagStartPosition(openingPosition);
+		tag.setClosingTagStartPosition(closingPosition);
+		tag.setFullTagName(fullTagName);
+		tag.setTagName(getTagName(fullTagName));
 
 		if (this.entryTagPositions.containsKey(entryName)) {
 
-			List<TagInfo> tagInfoList = this.entryTagPositions.get(entryName);
+			List<Tag> tagList = this.entryTagPositions.get(entryName);
 
-			int index = tagInfoList.size();
-			while (index > 0 && tagInfoList.get(index - 1).getOpeningTagStartPosition() > openingPosition) {
+			int index = tagList.size();
+			while (index > 0 && tagList.get(index - 1).getOpeningTagStartPosition() > openingPosition) {
 				index--;
 			}
 
-			this.entryTagPositions.get(entryName).add(index, tagInfo);
+			this.entryTagPositions.get(entryName).add(index, tag);
 
 		} else {
-			List<TagInfo> tagInfoList = new ArrayList<>();
-			tagInfoList.add(tagInfo);
-			this.entryTagPositions.put(entryName, tagInfoList);
+			List<Tag> tagList = new ArrayList<>();
+			tagList.add(tag);
+			this.entryTagPositions.put(entryName, tagList);
 		}
 	}
 
@@ -713,7 +734,7 @@ class Content {
 		}
 	}
 
-	private String prepareClosingTags(List<TagInfo> openedTags) {
+	private String prepareClosingTags(List<Tag> openedTags) {
 
 		StringBuilder closingTagsBuilder = new StringBuilder();
 
@@ -724,7 +745,7 @@ class Content {
 		return closingTagsBuilder.toString();
 	}
 
-	private String prepareOpenedTags(List<TagInfo> openedTags) {
+	private String prepareOpenedTags(List<Tag> openedTags) {
 
 		StringBuilder openingTags = new StringBuilder();
 
@@ -734,9 +755,9 @@ class Content {
 
 		return openingTags.toString();
 	}
-	
+
 	private String prepareOpenedTag(String openedTag) {
-		return Constants.TAG_OPENING +  openedTag + Constants.TAG_CLOSING;
+		return Constants.TAG_OPENING + openedTag + Constants.TAG_CLOSING;
 	}
 
 	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
@@ -750,7 +771,7 @@ class Content {
 			return -1;
 		}
 
-		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
+		List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
 		int loopCount = 0;
 		int lastTagsLength = 0;
@@ -758,24 +779,23 @@ class Content {
 		while (true) {
 			int tagsLength = 0;
 
-			for (TagInfo tagInfo : tagStartEndPositions) {
+			for (Tag tag : tagStartEndPositions) {
 
-				// This may not work correctly.
-				if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
+				if (tag.getOpeningTagStartPosition() > trimEndPosition) {
 					break;
 				}
 
-				if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) {
-					if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
-						tagsLength += tagInfo.getFullTagName().length() + 3; // < />
+				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) {
+					if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
+						tagsLength += tag.getFullTagName().length() + 3; // < />
 					}
 				} else {
-					if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
-						tagsLength += tagInfo.getFullTagName().length() + 2; // < >
+					if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
+						tagsLength += tag.getFullTagName().length() + 2; // < >
 					}
 
-					if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
-						tagsLength += tagInfo.getTagName().length() + 3; // < />
+					if (tag.getClosingTagStartPosition() > trimStartPosition && tag.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
+						tagsLength += tag.getTagName().length() + 3; // < />
 					}
 				}
 			}
@@ -828,19 +848,19 @@ class Content {
 	}
 
 	// Checks if we are in an html tag. If so, move forward or backward until the tag is over. Else, move backwards until we hit the blank.
-	private int findEligibleEndPosition(List<TagInfo> tagStartEndPositions, String htmlBody, int trimEndPosition) {
+	private int findEligibleEndPosition(List<Tag> tagStartEndPositions, String htmlBody, int trimEndPosition) {
 
 		boolean isMovedToEndOfTag = false;
 
-		for (TagInfo tagInfo : tagStartEndPositions) {
+		for (Tag tag : tagStartEndPositions) {
 
-			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
+			if (tag.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
 			}
 
-			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty tag.
+			if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty tag.
 				// Inside an empty tag.
-				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2) > trimEndPosition) {
+				if (tag.getOpeningTagStartPosition() < trimEndPosition && (tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
@@ -852,7 +872,7 @@ class Content {
 				}
 			} else {
 				// Inside an opening tag.
-				if (tagInfo.getOpeningTagStartPosition() < trimEndPosition && (tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1) > trimEndPosition) {
+				if (tag.getOpeningTagStartPosition() < trimEndPosition && (tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_OPENING) {
 						trimEndPosition--;
@@ -864,7 +884,7 @@ class Content {
 				}
 
 				// Inside a closing tag.
-				if (tagInfo.getClosingTagStartPosition() < trimEndPosition && (tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2) > trimEndPosition) {
+				if (tag.getClosingTagStartPosition() < trimEndPosition && (tag.getClosingTagStartPosition() + tag.getTagName().length() + 2) > trimEndPosition) {
 
 					while (htmlBody.charAt(trimEndPosition) != Constants.TAG_CLOSING) {
 						trimEndPosition++;
@@ -877,7 +897,7 @@ class Content {
 			}
 		}
 
-		if (!isMovedToEndOfTag) {
+		if (!isMovedToEndOfTag) { // To avoid dividing the words in half.
 
 			while (htmlBody.charAt(trimEndPosition) != ' ') {
 				trimEndPosition--;
@@ -893,31 +913,6 @@ class Content {
 		}
 
 		return trimEndPosition;
-	}
-
-	// Retrieves 'opened and not closed' tags within the trimmed part.
-	private List<TagInfo> getOpenedTags(String entryName, int trimStartIndex, int trimEndIndex) {
-
-		List<TagInfo> openedTags = null;
-
-		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
-
-		for (int i = 0; i < tagStartEndPositions.size(); i++) {
-			TagInfo tagInfo = tagStartEndPositions.get(i);
-			
-			// TODO: Break this when it's out of possibility.
-
-			// Opened in the trimmed part, closed after the trimmed part.
-			if (tagInfo.getOpeningTagStartPosition() > trimStartIndex && tagInfo.getOpeningTagStartPosition() < trimEndIndex && tagInfo.getClosingTagStartPosition() > trimEndIndex) {
-				if (openedTags == null) {
-					openedTags = new ArrayList<>();
-				}
-
-				openedTags.add(tagInfo);
-			}
-		}
-
-		return openedTags;
 	}
 
 	private String getNextAnchor(int index, String entryName) throws ReadingException, OutOfPagesException {
@@ -1289,9 +1284,9 @@ class Content {
 
 			if (hrefMatcher.find()) {
 				String cssHref = ContextHelper.getTextAfterCharacter(hrefMatcher.group(1), Constants.SLASH);
-				
-				if(cssHref.endsWith(".css")) { // Should we check for its type as well? text/css
-					
+
+				if (cssHref.endsWith(".css")) { // Should we check for its type as well? text/css
+
 					if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
 
 						// logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
@@ -1348,10 +1343,9 @@ class Content {
 							htmlContent = htmlContent.replace(cssHref, "");
 						}
 					}
-					
+
 				}
 
-				
 			}
 
 		}
@@ -1443,7 +1437,7 @@ class Content {
 	}
 
 	// Warning: May devour anchors.
-	private String replaceTableTag(String entryName, String htmlBody, String htmlBodyToReplace, int trimStartPosition, int trimEndPosition) {
+	private Pair<String, List<String>> replaceTableTag(String entryName, String htmlBody, String htmlBodyToReplace, int trimStartPosition, int trimEndPosition) {
 
 		Pattern tableTagPattern = Pattern.compile("<table.*?>", Pattern.DOTALL);
 		Matcher tableTagMatcher = tableTagPattern.matcher(htmlBodyToReplace);
@@ -1458,53 +1452,68 @@ class Content {
 				calculateEntryTagPositions(entryName, htmlBody);
 			}
 
-			List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
+			List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
-			List<TagInfo> tableTagInfoList = new ArrayList<>();
+			List<Tag> tableTagList = new ArrayList<>();
 
-			for (TagInfo tagInfo : tagStartEndPositions) {
+			for (Tag tag : tagStartEndPositions) {
 
-				if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
+				if (tag.getOpeningTagStartPosition() > trimEndPosition) {
 					break;
 				}
 
-				if (tagInfo.getTagName().equals("table")) {
-					tableTagInfoList.add(tagInfo);
+				if (tag.getTagName().equals("table")) {
+
+					if (tag.getOpeningTagStartPosition() != tag.getClosingTagStartPosition()) { // Not an empty table tag.
+
+						if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag is within scope.
+
+							tableTagList.add(tag);
+
+							// if (tag.getClosingTagStartPosition() > trimStartPosition && tag.getClosingTagStartPosition() < trimEndPosition) { // Closing tag is also withing scope.
+							//
+							// }
+
+						}
+
+					}
+
 				}
+
 			}
 
 			// Remove nested tables.
-			List<TagInfo> smallerTableTagList = new ArrayList<>();
+			List<Tag> smallerTableTagList = new ArrayList<>();
 
-			for (int i = 0; i < tableTagInfoList.size(); i++) {
+			for (int i = 0; i < tableTagList.size(); i++) {
 
-				int tag1StartPosition = tableTagInfoList.get(i).getOpeningTagStartPosition();
-				int tag1EndPosition = tableTagInfoList.get(i).getClosingTagStartPosition();
+				int tag1StartPosition = tableTagList.get(i).getOpeningTagStartPosition();
+				int tag1EndPosition = tableTagList.get(i).getClosingTagStartPosition();
 
-				for (int j = i + 1; j < tableTagInfoList.size(); j++) {
+				for (int j = i + 1; j < tableTagList.size(); j++) {
 
-					int tag2StartPosition = tableTagInfoList.get(j).getOpeningTagStartPosition();
-					int tag2EndPosition = tableTagInfoList.get(j).getClosingTagStartPosition();
+					int tag2StartPosition = tableTagList.get(j).getOpeningTagStartPosition();
+					int tag2EndPosition = tableTagList.get(j).getClosingTagStartPosition();
 
 					if (tag1StartPosition > tag2StartPosition && tag1EndPosition < tag2EndPosition) {
-						smallerTableTagList.add(tableTagInfoList.get(i));
+						smallerTableTagList.add(tableTagList.get(i));
 					} else if (tag2StartPosition > tag1StartPosition && tag2EndPosition < tag1EndPosition) {
-						smallerTableTagList.add(tableTagInfoList.get(j));
+						smallerTableTagList.add(tableTagList.get(j));
 					}
 				}
 			}
 
-			tableTagInfoList.removeAll(smallerTableTagList);
+			tableTagList.removeAll(smallerTableTagList);
 
-			htmlBodyToReplace = getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition, tableTagInfoList);
+			return getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition, tableTagList);
 		}
 
-		return htmlBodyToReplace;
+		return null;
 	}
 
-	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition, List<TagInfo> tableTagPositions) {
+	private Pair<String, List<String>> getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition, List<Tag> tableTagPositions) {
 
-		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
+		List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
 		List<String> stringsToRemove = new ArrayList<>();
 
@@ -1513,9 +1522,9 @@ class Content {
 			int tableStartPosition = tableTagPositions.get(i).getOpeningTagStartPosition();
 			int tableEndPosition = tableTagPositions.get(i).getClosingTagStartPosition();
 
-			for (TagInfo tagInfo : tagStartEndPositions) {
+			for (Tag tag : tagStartEndPositions) {
 
-				if (tagInfo.getOpeningTagStartPosition() > tableEndPosition) {
+				if (tag.getOpeningTagStartPosition() > tableEndPosition) {
 					break;
 				}
 
@@ -1524,57 +1533,63 @@ class Content {
 				// continue;
 				// }
 
-				if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty Tag
-					if (tagInfo.getOpeningTagStartPosition() > tableStartPosition && tagInfo.getOpeningTagStartPosition() < tableEndPosition) {
+				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
+					if (tag.getOpeningTagStartPosition() > tableStartPosition && tag.getOpeningTagStartPosition() < tableEndPosition) {
 
-						htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
-								+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-										tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length())
-								+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2, htmlBody.length());
+						htmlBody = htmlBody.substring(0, tag.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+								+ htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+										tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2 - Constants.STRING_MARKER.length())
+								+ Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2, htmlBody.length());
 
-						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-								tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+								tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+
+						tag.setOmitted(true);
 					}
 				} else {
-					if (tagInfo.getOpeningTagStartPosition() > tableStartPosition && tagInfo.getOpeningTagStartPosition() < tableEndPosition) { // Opening tag.
+					if (tag.getOpeningTagStartPosition() > tableStartPosition && tag.getOpeningTagStartPosition() < tableEndPosition) { // Opening tag.
 
-						htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
-								+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-										tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length())
-								+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1, htmlBody.length());
+						htmlBody = htmlBody.substring(0, tag.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+								+ htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+										tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1 - Constants.STRING_MARKER.length())
+								+ Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1, htmlBody.length());
 
-						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-								tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+								tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+
+						tag.setOmitted(true);
 					}
 
-					if (tagInfo.getClosingTagStartPosition() > tableStartPosition && tagInfo.getClosingTagStartPosition() < tableEndPosition) { // Closing tag.
+					if (tag.getClosingTagStartPosition() > tableStartPosition && tag.getClosingTagStartPosition() < tableEndPosition) { // Closing tag.
 
-						htmlBody = htmlBody.substring(0, tagInfo.getClosingTagStartPosition() - 1) + Constants.STRING_MARKER
-								+ htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-										tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length())
-								+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2, htmlBody.length());
+						htmlBody = htmlBody.substring(0, tag.getClosingTagStartPosition() - 1) + Constants.STRING_MARKER
+								+ htmlBody.substring(tag.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+										tag.getClosingTagStartPosition() + tag.getTagName().length() + 2 - Constants.STRING_MARKER.length())
+								+ Constants.STRING_MARKER + htmlBody.substring(tag.getClosingTagStartPosition() + tag.getTagName().length() + 2, htmlBody.length());
 
-						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-								tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+								tag.getClosingTagStartPosition() + tag.getTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+
+						tag.setOmitted(true);
 					}
 				}
 			}
 		}
 
-		htmlBody = htmlBody.substring(trimStartPosition, trimEndPosition);
+		// htmlBody = htmlBody.substring(trimStartPosition, trimEndPosition);
 
 		// TODO: If stringToRemove contains tr tag, then replace it with br.
-		for (String stringToRemove : stringsToRemove) {
-			htmlBody = htmlBody.replace(stringToRemove, "");
-		}
+		// for (String stringToRemove : stringsToRemove) {
+		// htmlBody = htmlBody.replace(stringToRemove, "");
+		// }
 
-		return htmlBody;
+		return new Pair<String, List<String>>(htmlBody, stringsToRemove);
 	}
 
 	// Removes all the tags from htmlBody and returns it.
 	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition) {
 
-		List<TagInfo> tagStartEndPositions = this.entryTagPositions.get(entryName);
+		List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
 
 		List<String> stringsToRemove = new ArrayList<>();
 
@@ -1582,45 +1597,45 @@ class Content {
 			trimEndPosition = htmlBody.length();
 		}
 
-		for (TagInfo tagInfo : tagStartEndPositions) {
+		for (Tag tag : tagStartEndPositions) {
 
 			// This may not work correctly.
-			if (tagInfo.getOpeningTagStartPosition() > trimEndPosition) {
+			if (tag.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
 			}
 
-			if (tagInfo.getOpeningTagStartPosition() == tagInfo.getClosingTagStartPosition()) { // Empty Tag
-				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) {
+			if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
+				if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) {
 
-					htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
-							+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-									tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length())
-							+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2, htmlBody.length());
+					htmlBody = htmlBody.substring(0, tag.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+							+ htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+									tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2 - Constants.STRING_MARKER.length())
+							+ Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2, htmlBody.length());
 
-					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-							tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+							tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
 				}
 			} else {
-				if (tagInfo.getOpeningTagStartPosition() > trimStartPosition && tagInfo.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
+				if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
 
-					htmlBody = htmlBody.substring(0, tagInfo.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
-							+ htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-									tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length())
-							+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1, htmlBody.length());
+					htmlBody = htmlBody.substring(0, tag.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
+							+ htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+									tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1 - Constants.STRING_MARKER.length())
+							+ Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1, htmlBody.length());
 
-					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-							tagInfo.getOpeningTagStartPosition() + tagInfo.getFullTagName().length() + 1 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+							tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
 				}
 
-				if (tagInfo.getClosingTagStartPosition() > trimStartPosition && tagInfo.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
+				if (tag.getClosingTagStartPosition() > trimStartPosition && tag.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
 
-					htmlBody = htmlBody.substring(0, tagInfo.getClosingTagStartPosition() - 1) + Constants.STRING_MARKER
-							+ htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-									tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length())
-							+ Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2, htmlBody.length());
+					htmlBody = htmlBody.substring(0, tag.getClosingTagStartPosition() - 1) + Constants.STRING_MARKER
+							+ htmlBody.substring(tag.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+									tag.getClosingTagStartPosition() + tag.getTagName().length() + 2 - Constants.STRING_MARKER.length())
+							+ Constants.STRING_MARKER + htmlBody.substring(tag.getClosingTagStartPosition() + tag.getTagName().length() + 2, htmlBody.length());
 
-					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tagInfo.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-							tagInfo.getClosingTagStartPosition() + tagInfo.getTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+					stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
+							tag.getClosingTagStartPosition() + tag.getTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
 				}
 			}
 		}
@@ -1634,76 +1649,168 @@ class Content {
 		return htmlBody;
 	}
 
-	private String appendIncompleteTags(String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) throws ReadingException {
+	private String appendIncompleteTags(String htmlBody, String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition, List<String> stringsToRemove) throws ReadingException {
 
-		List<TagInfo> openedTags = getOpenedTags(entryName, trimStartPosition, trimEndPosition); // Opened and not yet closed tags for the current part.
+		List<Tag> openedNotClosedTags = new ArrayList<>(); // Opened and not yet closed tags in scope.
+		List<Tag> openedClosedTags = new ArrayList<>(); // Opened but closed in scope tags.
 
-		String closingTags = null;
-		if (openedTags != null) {
-			closingTags = prepareClosingTags(openedTags);
-//			htmlBodyToReplace += closingTags; // 'No matter where the tag opened putting one closing tag at the end' will work? 
+		List<Tag> currentEntryTags = this.entryTagPositions.get(entryName);
+
+		trimEndPosition = trimEndPosition == 0 ? htmlBody.length() : trimEndPosition;
+
+		for (int i = 0; i < currentEntryTags.size(); i++) {
+			Tag tag = currentEntryTags.get(i);
+
+			// TODO: Break this when it's out of possibility.
+
+			// Opened in the trimmed part, closed after the trimmed part.
+			if (!tag.isOmitted() && tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition && tag.getClosingTagStartPosition() > trimEndPosition) {
+				openedNotClosedTags.add(tag);
+			}
 		}
 
-		List<TagInfo> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags(); // What if prevOpenedTags are not closed in the current part? Put them on the next part as well.
+		List<Tag> prevOpenedTags = getToc().getNavMap().getNavPoints().get(index).getOpenTags();
+
+		int trimOffset = 0;
 
 		if (prevOpenedTags != null) {
-			int cursor = 0;
-			boolean isInsideTag = false;
-			
-			StringBuilder tagNameBuilder = new StringBuilder();
 
-			while (htmlBodyToReplace.charAt(cursor) == ' ' || htmlBodyToReplace.charAt(cursor) == '<' || isInsideTag) {
+			for (Tag prevOpenedTag : prevOpenedTags) {
 
-				if (htmlBodyToReplace.charAt(cursor) == '<') {
-					isInsideTag = true;
-				} else if (htmlBodyToReplace.charAt(cursor) == '>') {
-					isInsideTag = false;
-					
-					String tagName = tagNameBuilder.toString();
-					
-					boolean isElementFound = prevOpenedTags.remove(tagName);
-					
-					if(isElementFound) {
-						htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor - tagName.length() - 2) + prepareOpenedTag(tagName.toString())  + htmlBodyToReplace.substring(cursor - tagName.length() - 2, htmlBodyToReplace.length());
-					}
-					
-					tagNameBuilder.setLength(0);
-					
-					if(prevOpenedTags.isEmpty())
+				// If the tag ends before text starts, tag should open and then close, else the tag is placed at the end of starting tags (before text).
+
+				int cursor = trimStartPosition, lastAddedCursor = 0;
+				boolean isClosedInScope, isReachedText = false, isTagInserted = false;
+
+				if (prevOpenedTag.getClosingTagStartPosition() > trimEndPosition) { // Previously opened and not yet closed in scope tags.
+					openedNotClosedTags.add(prevOpenedTag);
+					isClosedInScope = false;
+				} else { // Previously opened but closed in scope tags.
+					openedClosedTags.add(prevOpenedTag);
+					isClosedInScope = true;
+				}
+
+				for (Tag tag : currentEntryTags) {
+
+					if (tag.getOpeningTagStartPosition() > trimEndPosition) {
 						break;
-					
-				} else if(isInsideTag) {
-					
-					if(!(htmlBodyToReplace.charAt(cursor) == '/' && htmlBodyToReplace.charAt(cursor - 1) == '<')) {
-						tagNameBuilder.append(htmlBodyToReplace.charAt(cursor));
 					}
-					
+
+					if (!isTagInserted) {
+						if ((isReachedText || !(htmlBody.charAt(cursor + trimOffset) == ' ' || htmlBody.charAt(cursor + trimOffset) == '<'))
+								|| (isClosedInScope && cursor + 1 >= prevOpenedTag.getClosingTagStartPosition())) {
+
+							if (isReachedText) {
+								cursor -= lastAddedCursor;
+							}
+
+							String tagToInsert = prepareOpenedTag(prevOpenedTag.getFullTagName());
+							htmlBody = htmlBody.substring(0, cursor + trimOffset) + tagToInsert + htmlBody.substring(cursor + trimOffset, htmlBody.length());
+
+							trimOffset += tagToInsert.length();
+							isTagInserted = true;
+						}
+					}
+
+					int fromIndex = -1;
+					int toIndex = -1;
+
+					if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
+						if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // TODO: Should we add trimOffset to the tag open/start positions?
+
+							lastAddedCursor = tag.getFullTagName().length() + 3;
+							cursor += lastAddedCursor;
+
+							fromIndex = tag.getOpeningTagStartPosition() - 1 + trimOffset;
+							toIndex = tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2 + trimOffset;
+						}
+					} else {
+						if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // Opening tag.
+
+							lastAddedCursor = tag.getFullTagName().length() + 2;
+							cursor += lastAddedCursor;
+
+							fromIndex = tag.getOpeningTagStartPosition() - 1 + trimOffset;
+							toIndex = tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1 + trimOffset;
+
+						}
+
+						if (tag.getClosingTagStartPosition() > trimStartPosition && tag.getClosingTagStartPosition() < trimEndPosition) { // Closing tag.
+
+							if (!isTagInserted) {
+								String tagText = htmlBody.substring(tag.getOpeningTagStartPosition() - 1, tag.getClosingTagStartPosition() - 1 + tag.getTagName().length() + 3).trim().replaceAll("\\s+", " ");
+
+								if (tagText.length() <= tag.getFullTagName().length() + 2 + tag.getTagName().length() + 3) {
+									lastAddedCursor = tag.getTagName().length() + 3;
+									cursor += lastAddedCursor;
+								} else {
+									isReachedText = true;
+								}
+							}
+
+							fromIndex = tag.getClosingTagStartPosition() - 1 + trimOffset;
+							toIndex = tag.getClosingTagStartPosition() + tag.getTagName().length() + 2 + trimOffset;
+
+						}
+					}
+
+					if (tag.isOmitted() && fromIndex != -1 && toIndex != -1) {
+
+						htmlBody = htmlBody.substring(0, fromIndex) + Constants.STRING_MARKER + htmlBody.substring(fromIndex + Constants.STRING_MARKER.length(), toIndex - Constants.STRING_MARKER.length())
+								+ Constants.STRING_MARKER + htmlBody.substring(toIndex, htmlBody.length());
+
+						if (stringsToRemove == null) {
+							stringsToRemove = new ArrayList<>();
+						}
+
+						stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(fromIndex + Constants.STRING_MARKER.length(), toIndex - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
+
+					}
+
+					if (!isTagInserted) {
+						if ((isReachedText || !(htmlBody.charAt(cursor + trimOffset) == ' ' || htmlBody.charAt(cursor + trimOffset) == '<'))
+								|| (isClosedInScope && cursor + 1 >= prevOpenedTag.getClosingTagStartPosition())) {
+
+							if (isReachedText) {
+								cursor -= lastAddedCursor;
+							}
+
+							String tagToInsert = prepareOpenedTag(prevOpenedTag.getFullTagName());
+							htmlBody = htmlBody.substring(0, cursor + trimOffset) + tagToInsert + htmlBody.substring(cursor + trimOffset, htmlBody.length());
+
+							trimOffset += tagToInsert.length();
+							isTagInserted = true;
+						}
+					}
 				}
 
-				cursor++;
-
-				if (cursor == htmlBodyToReplace.length()) {
-					break;
-				}
 			}
-			
-			if(!prevOpenedTags.isEmpty()) {
-				
-				String openingTags = prepareOpenedTags(prevOpenedTags);
 
-				if (cursor == htmlBodyToReplace.length()) {
-					htmlBodyToReplace += openingTags;
-				} else {
-					htmlBodyToReplace = htmlBodyToReplace.substring(0, cursor) + openingTags + htmlBodyToReplace.substring(cursor, htmlBodyToReplace.length());
-				}
-			}
-			
 		}
 
-		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) { // If this is not the last page.
-			getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedTags); // Next navPoint should start with these open tags because they are not closed in this navPoint yet.
+		// TODO: We shouldn't substring htmlBody before this method.
+		if (trimEndPosition == htmlBody.length()) {
+			htmlBodyToReplace = htmlBody.substring(trimStartPosition);
 		} else {
-			if (openedTags != null) { // openedTags should already be null if this is the last page.
+			htmlBodyToReplace = htmlBody.substring(trimStartPosition, trimEndPosition + trimOffset);
+		}
+
+		if (stringsToRemove != null) {
+			for (String stringToRemove : stringsToRemove) {
+				htmlBodyToReplace = htmlBodyToReplace.replace(stringToRemove, "");
+			}
+		}
+
+		String closingTags = "";
+		if (!openedNotClosedTags.isEmpty()) {
+			closingTags += prepareClosingTags(openedNotClosedTags);
+			htmlBodyToReplace += closingTags;
+		}
+
+		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) { // If this is not the last page, next navPoint should start with these open tags because they are not closed in this navPoint yet.
+			getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(!openedNotClosedTags.isEmpty() ? openedNotClosedTags : null);
+		} else {
+			if (!openedNotClosedTags.isEmpty()) { // openedTags should already be null if this is the last page.
 				throw new ReadingException("Last Page has opened and not yet closed tags."); // For debugging purposes.
 			}
 		}

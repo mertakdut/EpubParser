@@ -1,10 +1,11 @@
 package com.github.mertakdut;
 
-class TagInfo {
+class Tag {
 	private String tagName;
 	private String fullTagName;
 	private int openingTagStartPosition;
 	private int closingTagStartPosition;
+	private boolean isOmitted;
 
 	public String getTagName() {
 		return tagName;
@@ -36,6 +37,14 @@ class TagInfo {
 
 	public void setClosingTagStartPosition(int closingTagStartPosition) {
 		this.closingTagStartPosition = closingTagStartPosition;
+	}
+
+	public boolean isOmitted() {
+		return isOmitted;
+	}
+
+	public void setOmitted(boolean isOmitted) {
+		this.isOmitted = isOmitted;
 	}
 
 }
