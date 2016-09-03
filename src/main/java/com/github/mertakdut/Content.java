@@ -357,11 +357,10 @@ class Content {
 					}
 
 					if (Optionals.cssStatus == CssStatus.OMIT) {
-						String modifiedHtmlBody = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, trimStartPosition, trimEndPosition);
-						htmlBodyToReplace = appendIncompleteTags(modifiedHtmlBody, htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition);
-					} else {
-						htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition);
+						markTableTags(entryName, htmlBody, htmlBodyToReplace, trimStartPosition, trimEndPosition);
 					}
+
+					htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, trimStartPosition, trimEndPosition);
 
 					break;
 				}
@@ -388,15 +387,14 @@ class Content {
 			}
 
 			if (Optionals.cssStatus == CssStatus.OMIT) {
-				String modifiedHtmlBody = replaceTableTag(entryEntryName, htmlBody, htmlBodyToReplace, entryStartPosition, entryEndPosition);
-				htmlBodyToReplace = appendIncompleteTags(modifiedHtmlBody, htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition);
-			} else {
-				htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition);
+				markTableTags(entryEntryName, htmlBody, htmlBodyToReplace, entryStartPosition, entryEndPosition);
 			}
+
+			htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryEntryName, index, entryStartPosition, entryEndPosition);
 
 		}
 
-		// htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
@@ -466,13 +464,12 @@ class Content {
 		}
 
 		if (Optionals.cssStatus == CssStatus.OMIT) {
-			String modifiedHtmlBody = replaceTableTag(entryName, htmlBody, htmlBodyToReplace, bodyTrimStartPosition, bodyTrimEndPosition);
-			htmlBodyToReplace = appendIncompleteTags(modifiedHtmlBody, htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition);
-		} else {
-			htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition);
+			markTableTags(entryName, htmlBody, htmlBodyToReplace, bodyTrimStartPosition, bodyTrimEndPosition);
 		}
 
-		// htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		htmlBodyToReplace = appendIncompleteTags(htmlBody, htmlBodyToReplace, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition);
+
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 
 		if (Optionals.isIncludingTextContent) {
 			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
@@ -733,14 +730,10 @@ class Content {
 		StringBuilder closingTagsBuilder = new StringBuilder();
 
 		for (ListIterator<Tag> iterator = openedTags.listIterator(openedTags.size()); iterator.hasPrevious();) {
-			closingTagsBuilder.append(Constants.TAG_START + iterator.previous().getTagName() + Constants.TAG_CLOSING);
+			closingTagsBuilder.append(Constants.TAG_START).append(iterator.previous().getTagName()).append(Constants.TAG_CLOSING);
 		}
 
 		return closingTagsBuilder.toString();
-	}
-
-	private String prepareOpeningTag(Tag openedTag) {
-		return Constants.TAG_OPENING + openedTag.getFullTagName() + Constants.TAG_CLOSING;
 	}
 
 	private int calculateTrimEndPosition(String entryName, String htmlBody, int trimStartPosition, int trimEndPos) {
@@ -1420,7 +1413,7 @@ class Content {
 	}
 
 	// Warning: May devour anchors.
-	private String replaceTableTag(String entryName, String htmlBody, String htmlBodyToReplace, int trimStartPosition, int trimEndPosition) {
+	private void markTableTags(String entryName, String htmlBody, String htmlBodyToReplace, int trimStartPosition, int trimEndPosition) {
 
 		Pattern tableTagPattern = Pattern.compile("<table.*?>", Pattern.DOTALL);
 		Matcher tableTagMatcher = tableTagPattern.matcher(htmlBodyToReplace);
@@ -1488,17 +1481,13 @@ class Content {
 
 			tableTagList.removeAll(smallerTableTagList);
 
-			return getOnlyTextContent(entryName, htmlBody, trimStartPosition, trimEndPosition, tableTagList);
+			markTableTags(entryName, htmlBody, trimStartPosition, trimEndPosition, tableTagList);
 		}
-
-		return htmlBody;
 	}
 
-	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition, List<Tag> tableTagPositions) {
+	private void markTableTags(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition, List<Tag> tableTagPositions) {
 
 		List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
-
-		// List<String> stringsToRemove = new ArrayList<>();
 
 		for (int i = 0; i < tableTagPositions.size(); i++) {
 
@@ -1519,54 +1508,21 @@ class Content {
 				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
 					if (tag.getOpeningTagStartPosition() > tableStartPosition && tag.getOpeningTagStartPosition() < tableEndPosition) {
 
-						htmlBody = htmlBody.substring(0, tag.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
-								+ htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-										tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2 - Constants.STRING_MARKER.length())
-								+ Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2, htmlBody.length());
-
-						// stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-						// tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
-
 						tag.setOmitted(true);
 					}
 				} else {
 					if (tag.getOpeningTagStartPosition() > tableStartPosition && tag.getOpeningTagStartPosition() < tableEndPosition) { // Opening tag.
-
-						htmlBody = htmlBody.substring(0, tag.getOpeningTagStartPosition() - 1) + Constants.STRING_MARKER
-								+ htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-										tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1 - Constants.STRING_MARKER.length())
-								+ Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1, htmlBody.length());
-
-						// stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getOpeningTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-						// tag.getOpeningTagStartPosition() + tag.getFullTagName().length() + 1 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
 
 						tag.setOmitted(true);
 					}
 
 					if (tag.getClosingTagStartPosition() > tableStartPosition && tag.getClosingTagStartPosition() < tableEndPosition) { // Closing tag.
 
-						htmlBody = htmlBody.substring(0, tag.getClosingTagStartPosition() - 1) + Constants.STRING_MARKER
-								+ htmlBody.substring(tag.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-										tag.getClosingTagStartPosition() + tag.getTagName().length() + 2 - Constants.STRING_MARKER.length())
-								+ Constants.STRING_MARKER + htmlBody.substring(tag.getClosingTagStartPosition() + tag.getTagName().length() + 2, htmlBody.length());
-
-						// stringsToRemove.add(Constants.STRING_MARKER + htmlBody.substring(tag.getClosingTagStartPosition() - 1 + Constants.STRING_MARKER.length(),
-						// tag.getClosingTagStartPosition() + tag.getTagName().length() + 2 - Constants.STRING_MARKER.length()) + Constants.STRING_MARKER);
-
 						tag.setOmitted(true);
 					}
 				}
 			}
 		}
-
-		// htmlBody = htmlBody.substring(trimStartPosition, trimEndPosition);
-
-		// TODO: If stringToRemove contains tr tag, then replace it with br.
-		// for (String stringToRemove : stringsToRemove) {
-		// htmlBody = htmlBody.replace(stringToRemove, "");
-		// }
-
-		return htmlBody;
 	}
 
 	// Removes all the tags from htmlBody and returns it.
@@ -1805,17 +1761,6 @@ class Content {
 		}
 
 		return isHtmlBodyModified ? new Pair<>(htmlBody, stringsToRemove) : null;
-	}
-
-	private void addTagToInsert(List<Pair<Tag, Integer>> tagPositionPairList, Tag tag, int cursor) {
-
-		int insertPosition = tagPositionPairList.size();
-		while (insertPosition > 0 && tagPositionPairList.get(insertPosition - 1).getSecond() >= cursor) { // Insert tags in descending order to insert them from last to first.
-			insertPosition--;
-		}
-
-		tagPositionPairList.add(insertPosition, new Pair<>(tag, cursor));
-
 	}
 
 	byte[] getCoverImage() throws ReadingException {
