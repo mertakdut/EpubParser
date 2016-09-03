@@ -2,10 +2,10 @@ package com.github.mertakdut;
 
 class Constants {
 
-	// Core file names
+	// Core files
 	static final String FILE_NAME_CONTAINER_XML = "container.xml";
-	static final String FILE_NAME_TOC_NCX = ".ncx";
-	static final String FILE_NAME_PACKAGE_OPF = ".opf";
+	static final String EXTENSION_NCX = ".ncx";
+	static final String EXTENSION_OPF = ".opf";
 
 	// Keywords
 	static final String TAG_BODY_START = "<body";

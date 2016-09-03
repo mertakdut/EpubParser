@@ -20,7 +20,7 @@ class Container extends BaseFindings {
 				&& getRootFile().getAttributes().get("full-path") != null && !getRootFile().getAttributes().get("full-path").equals("")) {
 			return getRootFile().getAttributes().get("full-path");
 		} else {
-			throw new ReadingException(Constants.FILE_NAME_PACKAGE_OPF + " file not found.");
+			throw new ReadingException(Constants.EXTENSION_OPF + " file not found.");
 		}
 	}
 

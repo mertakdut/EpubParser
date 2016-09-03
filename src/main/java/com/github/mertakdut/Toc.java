@@ -55,7 +55,7 @@ class Toc extends BaseFindings {
 												fields[j].set(this, attributes.item(l).getNodeValue());
 											} catch (IllegalArgumentException | IllegalAccessException | DOMException e) {
 												e.printStackTrace();
-												throw new ReadingException("Exception while parsing " + Constants.FILE_NAME_TOC_NCX + " content: " + e.getMessage());
+												throw new ReadingException("Exception while parsing " + Constants.EXTENSION_NCX + " content: " + e.getMessage());
 											}
 											break;
 										}

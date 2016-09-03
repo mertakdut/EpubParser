@@ -162,7 +162,7 @@ class Package extends BaseFindings {
 								break;
 							} catch (IllegalArgumentException | IllegalAccessException e) {
 								e.printStackTrace();
-								throw new ReadingException("Exception while parsing " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
+								throw new ReadingException("Exception while parsing " + Constants.EXTENSION_OPF + " content: " + e.getMessage());
 							}
 						}
 					}
@@ -177,7 +177,7 @@ class Package extends BaseFindings {
 					field.set(this, subjectList.toArray(new String[subjectList.size()]));
 				} catch (IllegalArgumentException | IllegalAccessException | NegativeArraySizeException | NoSuchFieldException | SecurityException e) {
 					e.printStackTrace();
-					throw new ReadingException("Exception while parsing subjects " + Constants.FILE_NAME_PACKAGE_OPF + " content: " + e.getMessage());
+					throw new ReadingException("Exception while parsing subjects " + Constants.EXTENSION_OPF + " content: " + e.getMessage());
 				}
 			}
 		}

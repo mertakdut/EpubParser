@@ -143,10 +143,10 @@ public class Reader {
 						inputStream = epubFile.getInputStream(toc);
 					} catch (IOException e) {
 						e.printStackTrace();
-						throw new ReadingException("IOException while reading " + Constants.FILE_NAME_TOC_NCX + " file: " + e.getMessage());
+						throw new ReadingException("IOException while reading " + Constants.EXTENSION_NCX + " file: " + e.getMessage());
 					}
 
-					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_TOC_NCX);
+					Document document = getDocument(docBuilder, inputStream, Constants.EXTENSION_NCX);
 					parseTocFile(document, content.getToc());
 				}
 			}
@@ -191,10 +191,10 @@ public class Reader {
 			opfFileInputStream = epubFile.getInputStream(opfFileEntry);
 		} catch (IOException e) {
 			e.printStackTrace();
-			throw new ReadingException("IO error while reading " + Constants.FILE_NAME_PACKAGE_OPF + " inputstream: " + e.getMessage());
+			throw new ReadingException("IO error while reading " + Constants.EXTENSION_OPF + " inputstream: " + e.getMessage());
 		}
 
-		Document packageDocument = getDocument(docBuilder, opfFileInputStream, Constants.FILE_NAME_PACKAGE_OPF);
+		Document packageDocument = getDocument(docBuilder, opfFileInputStream, Constants.EXTENSION_OPF);
 		parseOpfFile(packageDocument, content.getPackage());
 	}
 

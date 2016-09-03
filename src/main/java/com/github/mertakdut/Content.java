@@ -407,7 +407,7 @@ class Content {
 			}
 		}
 
-		 htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
@@ -745,17 +745,6 @@ class Content {
 		return closingTagsBuilder.toString();
 	}
 
-	private String prepareOpenedTags(List<Tag> openedTags) {
-
-		StringBuilder openingTags = new StringBuilder();
-
-		for (int i = 0; i < openedTags.size(); i++) {
-			openingTags.append(Constants.TAG_OPENING).append(openedTags.get(i).getFullTagName()).append(Constants.TAG_CLOSING);
-		}
-
-		return openingTags.toString();
-	}
-
 	private String prepareOpenedTag(String openedTag) {
 		return Constants.TAG_OPENING + openedTag + Constants.TAG_CLOSING;
 	}
@@ -786,7 +775,7 @@ class Content {
 				}
 
 				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) {
-					if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag
+					if (tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition) { // Empty Tag.
 						tagsLength += tag.getFullTagName().length() + 3; // < />
 					}
 				} else {
