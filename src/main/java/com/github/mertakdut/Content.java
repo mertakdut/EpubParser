@@ -1503,7 +1503,7 @@ class Content {
 
 				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
 
-					// Exclude img tags to save images in table tag.
+					// Exclude img tags to save images in table tag. Or Should I just omit the img tags in table tags as well? Because it looks corrupt.
 					if (tag.getTagName().equals("img")) {
 						continue;
 					}
