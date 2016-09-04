@@ -22,14 +22,14 @@ Example usage:
 
 Add dependency in your project build.gradle
 
-	compile 'com.github.mertakdut:EpubParser:1.0.7'
+	compile 'com.github.mertakdut:EpubParser:1.0.8'
 
 Or grab it via maven
 
 	<dependency>
     		<groupId>com.github.mertakdut</groupId>
     		<artifactId>EpubParser</artifactId>
-    		<version>1.0.7</version>
+    		<version>1.0.8</version>
 	</dependency>
 
 # License
