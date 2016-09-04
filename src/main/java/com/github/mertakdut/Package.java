@@ -11,7 +11,7 @@ import org.w3c.dom.NodeList;
 import com.github.mertakdut.exception.ReadingException;
 
 //package.opf
-class Package extends BaseFindings {
+public class Package extends BaseFindings {
 
 	private Metadata metadata;
 	private Manifest manifest;
@@ -213,7 +213,7 @@ class Package extends BaseFindings {
 			this.xmlItemList = new ArrayList<>();
 		}
 
-		public void fillXmlItemList(NodeList nodeList) {
+		void fillXmlItemList(NodeList nodeList) {
 			this.xmlItemList = nodeListToXmlItemList(nodeList);
 		}
 
@@ -240,7 +240,7 @@ class Package extends BaseFindings {
 			this.xmlItemList = new ArrayList<>();
 		}
 
-		public void fillXmlItemList(NodeList nodeList) {
+		void fillXmlItemList(NodeList nodeList) {
 			this.xmlItemList = nodeListToXmlItemList(nodeList);
 		}
 
@@ -266,13 +266,13 @@ class Package extends BaseFindings {
 			this.xmlItemList = new ArrayList<>();
 		}
 
-		public void fillXmlItemList(NodeList nodeList) {
+		void fillXmlItemList(NodeList nodeList) {
 			this.xmlItemList = nodeListToXmlItemList(nodeList);
 		}
 
-		// public List<XmlItem> getXmlItemList() {
-		// return this.xmlItemList;
-		// }
+		public List<XmlItem> getXmlItemList() {
+			return this.xmlItemList;
+		}
 
 		void print() {
 			System.out.println("\n\nPrinting Guide...\n");
@@ -286,7 +286,7 @@ class Package extends BaseFindings {
 	}
 
 	@Override
-	public void fillContent(Node node) throws ReadingException {
+	void fillContent(Node node) throws ReadingException {
 		if (node.getNodeName().equals("metadata")) {
 			getMetadata().fillAttributes(node.getChildNodes());
 		} else if (node.getNodeName().equals("manifest")) {
@@ -302,19 +302,19 @@ class Package extends BaseFindings {
 		return metadata;
 	}
 
-	public Manifest getManifest() {
+	Manifest getManifest() {
 		return manifest;
 	}
 
-	public Spine getSpine() {
+	Spine getSpine() {
 		return spine;
 	}
 
-	public Guide getGuide() {
+	Guide getGuide() {
 		return guide;
 	}
 
-	public void print() {
+	void print() {
 		getMetadata().print();
 		getManifest().print();
 		getSpine().print();

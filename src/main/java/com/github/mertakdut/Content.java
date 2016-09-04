@@ -534,6 +534,7 @@ class Content {
 			} else if (htmlBody.charAt(i) == Constants.TAG_CLOSING) { // Tag might have been closed.
 				possiblyTag.append(Constants.TAG_CLOSING);
 
+				// Warning: There may be looks to be opening tags but empty tags like <br>. Find a workaround for them. Or are they already skipped? Since the closing tag would never be found.
 				if (htmlBody.charAt(i - 1) != '/') { // Not an empty tag.
 					String tagStr = possiblyTag.toString();
 
@@ -1500,12 +1501,13 @@ class Content {
 					break;
 				}
 
-				// Exclude img tags to save images in table tag.
-				// if(tagInfo.getTagName().equals("img")) {
-				// continue;
-				// }
-
 				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
+
+					// Exclude img tags to save images in table tag.
+					if (tag.getTagName().equals("img")) {
+						continue;
+					}
+
 					if (tag.getOpeningTagStartPosition() > tableStartPosition && tag.getOpeningTagStartPosition() < tableEndPosition) {
 
 						tag.setOmitted(true);
@@ -1591,8 +1593,8 @@ class Content {
 	// TODO: Save these in navPoints as well avoid calculating again.
 	private String appendIncompleteTags(String htmlBody, String htmlBodyToReplace, String entryName, int index, int trimStartPosition, int trimEndPosition) throws ReadingException {
 
-		List<Tag> prevOpenedNotClosedYetTags = new ArrayList<>(); // Previously opened in this scope and not yet closed tags in scope. Appending opening and closing tags.
-		List<Tag> openedNotClosedYetTags = new ArrayList<>(); // Opened in this scope and not yet closed tags in scope. Appending only closing tags.
+		List<Tag> prevOpenedNotClosedYetTags = new ArrayList<>(); // Previously opened in this scope and not yet closed tags. Appending opening and closing tags.
+		List<Tag> openedNotClosedYetTags = new ArrayList<>(); // Opened in this scope and not yet closed tags. Appending only closing tags.
 		List<Tag> prevOpenedClosedTags = new ArrayList<>(); // Previously opened and closed in this scope. Appending only opening tags.
 
 		List<Tag> currentEntryTags = this.entryTagPositions.get(entryName);
@@ -1603,6 +1605,10 @@ class Content {
 			Tag tag = currentEntryTags.get(i);
 
 			// TODO: break this when it's out of possibility.
+
+			if (tag.getOpeningTagStartPosition() > trimEndPosition) {
+				break;
+			}
 
 			// Opened in the trimmed part, closed after the trimmed part.
 			if (!tag.isOmitted() && tag.getOpeningTagStartPosition() > trimStartPosition && tag.getOpeningTagStartPosition() < trimEndPosition && tag.getClosingTagStartPosition() > trimEndPosition) {
@@ -1615,9 +1621,6 @@ class Content {
 		if (prevOpenedTags != null) {
 
 			for (Tag prevOpenedTag : prevOpenedTags) {
-
-				// If the tag ends before text starts, tag should open and then close,
-				// If tag does not end before text starts, tag should be placed in the beginning.
 
 				if (prevOpenedTag.getClosingTagStartPosition() > trimEndPosition) { // Previously opened and not yet closed in scope tags. Should have a place in the beginning.
 					prevOpenedNotClosedYetTags.add(prevOpenedTag);
@@ -1651,7 +1654,13 @@ class Content {
 
 			if (stringsToRemove != null) {
 				for (String stringToRemove : stringsToRemove) {
-					htmlBodyToReplace = htmlBodyToReplace.replace(stringToRemove, "");
+
+					if (stringToRemove.contains("|tr")) {
+						htmlBodyToReplace = htmlBodyToReplace.replace(stringToRemove, "<br/>");
+					} else {
+						htmlBodyToReplace = htmlBodyToReplace.replace(stringToRemove, "");
+					}
+
 				}
 			}
 

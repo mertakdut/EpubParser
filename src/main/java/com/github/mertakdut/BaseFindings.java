@@ -16,7 +16,7 @@ abstract class BaseFindings {
 	
 	Logger logger = new Logger();
 
-	public abstract void fillContent(Node node) throws ReadingException;
+	abstract void fillContent(Node node) throws ReadingException;
 
 	protected class XmlItem {
 		private String value;

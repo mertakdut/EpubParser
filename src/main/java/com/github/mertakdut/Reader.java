@@ -162,7 +162,7 @@ public class Reader {
 			mergeTocElements();
 
 			// Debug
-			 content.print();
+			// content.print();
 
 			return content;
 
@@ -276,12 +276,10 @@ public class Reader {
 							duplicateContentSrc = true;
 							navPointIndex = j;
 							break;
-						} else if (!isAnchoredFound && navPoint.getContentSrc().startsWith(navPointItem.getContentSrc())
-								&& navPoint.getContentSrc().replace(navPointItem.getContentSrc(), "").startsWith("%23")) {
+						} else if (!isAnchoredFound && navPoint.getContentSrc().startsWith(navPointItem.getContentSrc()) && navPoint.getContentSrc().replace(navPointItem.getContentSrc(), "").startsWith("%23")) {
 							isAnchoredFound = true;
 							navPointIndex = j;
-						} else if (!isAnchoredFound && navPointItem.getContentSrc().startsWith(navPoint.getContentSrc())
-								&& navPointItem.getContentSrc().replace(navPoint.getContentSrc(), "").startsWith("%23")) {
+						} else if (!isAnchoredFound && navPointItem.getContentSrc().startsWith(navPoint.getContentSrc()) && navPointItem.getContentSrc().replace(navPoint.getContentSrc(), "").startsWith("%23")) {
 							isAnchoredFound = true;
 							navPointIndex = j;
 						}
