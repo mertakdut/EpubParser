@@ -978,6 +978,8 @@ class Content {
 
 			if (Optionals.cssStatus != CssStatus.OMIT) {
 				fileContentStr = replaceCssLinkWithActualCss(epubFile, fileContentStr);
+			} else {
+				fileContentStr = removeStyleTags(fileContentStr);
 			}
 
 			return fileContentStr;
@@ -1330,6 +1332,20 @@ class Content {
 		return htmlContent;
 	}
 
+	private String removeStyleTags(String fileContent) {
+
+		Pattern styleTagPattern = Pattern.compile("(<style.*?</style>)");
+
+		Matcher styleTagMatcher = styleTagPattern.matcher(fileContent);
+
+		while (styleTagMatcher.find()) {
+			String styleTag = styleTagMatcher.group(0);
+			fileContent = fileContent.replace(styleTag, "");
+		}
+
+		return fileContent;
+	}
+
 	private String replaceImgTag(String htmlBody) throws ReadingException {
 
 		Pattern imgTagPattern = Pattern.compile("<img.*?/>|<img.*?</img>");
@@ -1503,10 +1519,10 @@ class Content {
 
 				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
 
-					// Exclude img tags to save images in table tag. Or Should I just omit the img tags in table tags as well? Because it looks corrupt.
-					if (tag.getTagName().equals("img")) {
-						continue;
-					}
+					// Images inside table tags look corrupt.
+					// if (tag.getTagName().equals("img")) {
+					// continue;
+					// }
 
 					if (tag.getOpeningTagStartPosition() > tableStartPosition && tag.getOpeningTagStartPosition() < tableEndPosition) {
 
