@@ -18,6 +18,8 @@ Example usage:
 	String sectionContent = bookSection.getSectionContent(); // Returns content as html.
 	String sectionTextContent = bookSection.getSectionTextContent(); // Excludes html tags.
 
+Check out <a href="https://github.com/mertakdut/EpubParser-Sample-Android-Application">EpubParser-Sample-Android-Application</a> for more info.
+
 # Setup
 
 Add dependency in your project build.gradle
