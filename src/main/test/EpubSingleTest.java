@@ -20,11 +20,11 @@ public class EpubSingleTest {
 	public void singleFileTest() throws ReadingException, OutOfPagesException {
 		Reader reader = new Reader();
 
-		reader.setMaxContentPerSection(1250);
+		// reader.setMaxContentPerSection(1250);
 		reader.setCssStatus(CssStatus.OMIT);
 		reader.setIsIncludingTextContent(true);
 
-		reader.setFullContent("C:/eBooks/test/pg28885-images.epub");
+		reader.setFullContent("C:/eBooks/test/pg28885-images_new.epub"); // pg28885-images.epub pg28885-images_new.epub
 
 		// bookSection = reader.readSection(1);
 		// System.out.println("\n" + 1 + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
@@ -42,8 +42,8 @@ public class EpubSingleTest {
 				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-				String sectionContent = getHtmlBody(bookSection.getSectionContent());
-				// String sectionContent = bookSection.getSectionContent();
+				// String sectionContent = getHtmlBody(bookSection.getSectionContent());
+				String sectionContent = bookSection.getSectionContent();
 				sectionContents.add(sectionContent);
 
 				System.out.println("content: " + sectionContent);
@@ -66,8 +66,8 @@ public class EpubSingleTest {
 				bookSection = reader.readSection(i);
 				System.out.println("\n" + i + "st Book Section: \nlabel: " + bookSection.getLabel() + "; media-type: " + bookSection.getMediaType());
 
-				String sectionContent = getHtmlBody(bookSection.getSectionContent());
-				// String sectionContent = bookSection.getSectionContent();
+				// String sectionContent = getHtmlBody(bookSection.getSectionContent());
+				String sectionContent = bookSection.getSectionContent();
 				System.out.println("content: " + sectionContent);
 
 				Assert.assertEquals(sectionContents.get(i), sectionContent);

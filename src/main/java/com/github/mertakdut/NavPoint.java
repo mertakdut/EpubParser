@@ -19,6 +19,7 @@ class NavPoint {
 	private int bodyTrimStartPosition;
 	private int bodyTrimEndPosition;
 	private List<Tag> openTags;
+	private boolean isCalculated;
 
 	public String getId() {
 		return id;
@@ -114,5 +115,13 @@ class NavPoint {
 
 	public void setEntryName(String entryName) {
 		this.entryName = entryName;
+	}
+
+	public boolean isCalculated() {
+		return isCalculated;
+	}
+
+	public void setCalculated(boolean isCalculated) {
+		this.isCalculated = isCalculated;
 	}
 }

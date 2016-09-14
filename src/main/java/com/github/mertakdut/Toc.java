@@ -104,6 +104,7 @@ class Toc extends BaseFindings {
 			return navPoints;
 		}
 
+		// TODO: navMap (epub2) and pageList (epub3) should be merged as well. Just as we merged spine and toc.ncx. Or just sorting them by their playOrder is enough?
 		public void fillNavPoints(NodeList possiblyNavPoints) throws ReadingException {
 
 			for (int i = 0; i < possiblyNavPoints.getLength(); i++) {
@@ -152,9 +153,10 @@ class Toc extends BaseFindings {
 								if (contentAttribute.getNodeName().equals("src")) {
 									String contentSrc = contentAttribute.getNodeValue();
 
-									String encodedContentSrc = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(contentSrc, Constants.SLASH));
-
-									navPoint.setContentSrc(encodedContentSrc);
+									if (contentSrc != null && !contentSrc.equals("")) {
+										String encodedContentSrc = ContextHelper.encodeToUtf8(ContextHelper.getTextAfterCharacter(contentSrc, Constants.SLASH));
+										navPoint.setContentSrc(encodedContentSrc);
+									}
 								}
 							}
 						} else if (!hasNestedNavPoints && navPointChild.getNodeName().equals("navPoint")) {
@@ -199,8 +201,8 @@ class Toc extends BaseFindings {
 			for (int i = 0; i < this.navPoints.size(); i++) {
 				NavPoint navPoint = this.navPoints.get(i);
 
-				System.out.println("navPoint (" + i + ") id: " + navPoint.getId() + ", playOrder: " + navPoint.getPlayOrder() + ", navLabel(Text): " + navPoint.getNavLabel() + ", content src: "
-						+ navPoint.getContentSrc());
+				System.out
+						.println("navPoint (" + i + ") id: " + navPoint.getId() + ", playOrder: " + navPoint.getPlayOrder() + ", navLabel(Text): " + navPoint.getNavLabel() + ", content src: " + navPoint.getContentSrc());
 			}
 		}
 	}
