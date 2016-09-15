@@ -247,7 +247,7 @@ class Content {
 
 		String htmlBodyToReplace = appendIncompleteTags(htmlBody, entryName, index, trimStartPosition, trimEndPosition);
 
-		// htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 		fileContentStr = fileContentStr.replace(htmlBody, htmlBodyToReplace);
 
 		if (Optionals.cssStatus == CssStatus.DISTRIBUTE) {
@@ -287,7 +287,7 @@ class Content {
 					}
 
 					bodyTrimEndPosition = anchorIndex;
-					
+
 				} else { // NextAnchor not found in the htmlContent. Invalidate it by removing it from navPoints and search for the next one.
 					bodyTrimEndPosition = getNextAvailableAnchorIndex(index, entryName, bodyTrimStartPosition, htmlBody);
 
@@ -319,7 +319,7 @@ class Content {
 
 		htmlBodyToReplace = appendIncompleteTags(htmlBody, entryName, index, bodyTrimStartPosition, bodyTrimEndPosition);
 
-		// htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
+		htmlBodyToReplace = replaceImgTag(htmlBodyToReplace);
 
 		if (Optionals.isIncludingTextContent) {
 			bookSection.setSectionTextContent(getOnlyTextContent(entryName, htmlBody, bodyTrimStartPosition, bodyTrimEndPosition));
