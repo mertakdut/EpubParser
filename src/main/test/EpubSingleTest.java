@@ -20,9 +20,10 @@ public class EpubSingleTest {
 	public void singleFileTest() throws ReadingException, OutOfPagesException {
 		Reader reader = new Reader();
 
-		// reader.setMaxContentPerSection(1250);
+		reader.setMaxContentPerSection(1250);
 		reader.setCssStatus(CssStatus.OMIT);
 		reader.setIsIncludingTextContent(true);
+		reader.setIsOmittingTitleTag(true);
 
 		reader.setFullContent("C:/eBooks/test/pg28885-images_new.epub"); // pg28885-images.epub pg28885-images_new.epub
 

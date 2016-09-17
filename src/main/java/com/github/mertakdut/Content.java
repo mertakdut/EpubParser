@@ -928,6 +928,10 @@ class Content {
 				fileContentStr = removeStyleTags(fileContentStr);
 			}
 
+			if (Optionals.isOmittingTitleTag) {
+				fileContentStr = removeTitleTags(fileContentStr);
+			}
+
 			return fileContentStr;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1194,7 +1198,7 @@ class Content {
 
 		// <link rel="stylesheet" type="text/css" href="docbook-epub.css"/>
 
-		Pattern linkTagPattern = Pattern.compile("<link.*?/>|<link.*?</link>");
+		Pattern linkTagPattern = Pattern.compile(ContextHelper.getTagsRegex("link", true));
 		Pattern hrefPattern = Pattern.compile("href=\"(.*?)\"");
 
 		Matcher linkMatcher = linkTagPattern.matcher(htmlContent);
@@ -1276,22 +1280,35 @@ class Content {
 	}
 
 	private String removeStyleTags(String fileContent) {
+		return findAndRemove(fileContent, ContextHelper.getTagsRegex("style", false));
+	}
 
-		Pattern styleTagPattern = Pattern.compile("(<style.*?</style>)");
+	private String removeTitleTags(String fileContent) {
+		return findAndRemove(fileContent, ContextHelper.getTagsRegex("title", false));
+	}
 
-		Matcher styleTagMatcher = styleTagPattern.matcher(fileContent);
+	private String findAndRemove(String text, String regex) {
 
-		while (styleTagMatcher.find()) {
-			String styleTag = styleTagMatcher.group(0);
-			fileContent = fileContent.replace(styleTag, "");
+		Pattern titleTagPattern = Pattern.compile(regex);
+		Matcher titleTagMatcher = titleTagPattern.matcher(text);
+
+		StringBuffer stringBuffer = new StringBuffer();
+
+		while (titleTagMatcher.find()) {
+			titleTagMatcher.appendReplacement(stringBuffer, "");
 		}
 
-		return fileContent;
+		if (stringBuffer.length() > 0) {
+			titleTagMatcher.appendTail(stringBuffer);
+			return stringBuffer.toString();
+		}
+
+		return text;
 	}
 
 	private String replaceImgTag(String htmlBody) throws ReadingException {
 
-		Pattern imgTagPattern = Pattern.compile("<img.*?/>|<img.*?</img>");
+		Pattern imgTagPattern = Pattern.compile(ContextHelper.getTagsRegex("img", true));
 		Pattern srcPattern = Pattern.compile("src=\"(.*?)\"");
 
 		Matcher imgTagMatcher = imgTagPattern.matcher(htmlBody);

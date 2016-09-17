@@ -52,4 +52,13 @@ class ContextHelper {
 
 	}
 
+	static String getTagsRegex(String tagName, boolean isIncludingEmptyTags) { // <style.*?</style> or <img.*?/>|<img.*?</img>
+
+		if (isIncludingEmptyTags)
+			return String.format("<%1$s.*?/>|<%1$s.*?</%1$s>", tagName);
+		else
+			return String.format("<%1$s.*?</%1$s>", tagName);
+
+	}
+
 }

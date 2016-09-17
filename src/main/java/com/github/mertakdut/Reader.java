@@ -60,6 +60,10 @@ public class Reader {
 	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
 		Optionals.isIncludingTextContent = isIncludingTextContent;
 	}
+	
+	public void setIsOmittingTitleTag (boolean isOmittingTitleTag) {
+		Optionals.isOmittingTitleTag = isOmittingTitleTag;
+	}
 
 	private Content fillContent(String zipFilePath, boolean isFullContent) throws ReadingException {
 
