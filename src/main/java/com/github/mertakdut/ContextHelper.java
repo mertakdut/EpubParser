@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import com.github.mertakdut.exception.ReadingException;
@@ -23,8 +24,8 @@ class ContextHelper {
 		String encodedString = null;
 
 		try {
-			encodedString = URLDecoder.decode(stringToEncode, StandardCharsets.UTF_8.name());
-			encodedString = URLEncoder.encode(encodedString, StandardCharsets.UTF_8.name()).replace("+", "%20");
+			encodedString = URLDecoder.decode(stringToEncode, Charset.forName("UTF-8").name()); // StandardCharsets.UTF_8.name()
+			encodedString = URLEncoder.encode(encodedString, Charset.forName("UTF-8").name()).replace("+", "%20"); // StandardCharsets.UTF_8.name()
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 			throw new ReadingException("UnsupportedEncoding while encoding, " + stringToEncode + ", : " + e.getMessage());
