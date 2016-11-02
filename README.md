@@ -14,7 +14,7 @@ Example usage:
 	reader.setFullContent(epubFilePath); // Setting content once is enough.
 	reader.setIsIncludingTextContent(true); // Optional, to return the tags-excluded version.
 
-	Book bookSection = reader.readSection(pageIndex);
+	BookSection bookSection = reader.readSection(pageIndex);
 	String sectionContent = bookSection.getSectionContent(); // Returns content as html.
 	String sectionTextContent = bookSection.getSectionTextContent(); // Excludes html tags.
 
