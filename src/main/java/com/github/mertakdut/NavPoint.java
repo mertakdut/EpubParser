@@ -2,7 +2,7 @@ package com.github.mertakdut;
 
 import java.util.List;
 
-class NavPoint {
+public class NavPoint {
 	private String id;
 	private int playOrder;
 	private String navLabel;
@@ -21,19 +21,19 @@ class NavPoint {
 	private List<Tag> openTags;
 	private boolean isCalculated;
 
-	public String getId() {
+	String getId() {
 		return id;
 	}
 
-	public void setId(String id) {
+	void setId(String id) {
 		this.id = id;
 	}
 
-	public int getPlayOrder() {
+	int getPlayOrder() {
 		return playOrder;
 	}
 
-	public void setPlayOrder(int playOrder) {
+	void setPlayOrder(int playOrder) {
 		this.playOrder = playOrder;
 	}
 
@@ -41,7 +41,7 @@ class NavPoint {
 		return navLabel;
 	}
 
-	public void setNavLabel(String navLabel) {
+	void setNavLabel(String navLabel) {
 		this.navLabel = navLabel;
 	}
 
@@ -49,79 +49,79 @@ class NavPoint {
 		return contentSrc;
 	}
 
-	public void setContentSrc(String contentSrc) {
+	void setContentSrc(String contentSrc) {
 		this.contentSrc = contentSrc;
 	}
 
-	public String getType() {
+	String getType() {
 		return type;
 	}
 
-	public void setType(String type) {
+	void setType(String type) {
 		this.type = type;
 	}
 
-	public String getValue() {
+	String getValue() {
 		return value;
 	}
 
-	public void setValue(String value) {
+	void setValue(String value) {
 		this.value = value;
 	}
 
-	public boolean isMarkedToDelete() {
+	boolean isMarkedToDelete() {
 		return markedToDelete;
 	}
 
-	public void setMarkedToDelete(boolean markedToDelete) {
+	void setMarkedToDelete(boolean markedToDelete) {
 		this.markedToDelete = markedToDelete;
 	}
 
-	public int getBodyTrimStartPosition() {
+	int getBodyTrimStartPosition() {
 		return bodyTrimStartPosition;
 	}
 
-	public void setBodyTrimStartPosition(int bodyTrimStartPosition) {
+	void setBodyTrimStartPosition(int bodyTrimStartPosition) {
 		this.bodyTrimStartPosition = bodyTrimStartPosition;
 	}
 
-	public int getBodyTrimEndPosition() {
+	int getBodyTrimEndPosition() {
 		return bodyTrimEndPosition;
 	}
 
-	public void setBodyTrimEndPosition(int bodyTrimEndPosition) {
+	void setBodyTrimEndPosition(int bodyTrimEndPosition) {
 		this.bodyTrimEndPosition = bodyTrimEndPosition;
 	}
 
-	public List<Tag> getOpenTags() {
+	List<Tag> getOpenTags() {
 		return openTags;
 	}
 
-	public void setOpenTags(List<Tag> openTags) {
+	void setOpenTags(List<Tag> openTags) {
 		this.openTags = openTags;
 	}
 
-	public int getTypeCode() {
+	int getTypeCode() {
 		return typeCode;
 	}
 
-	public void setTypeCode(int typeCode) {
+	void setTypeCode(int typeCode) {
 		this.typeCode = typeCode;
 	}
 
-	public String getEntryName() {
+	String getEntryName() {
 		return entryName;
 	}
 
-	public void setEntryName(String entryName) {
+	void setEntryName(String entryName) {
 		this.entryName = entryName;
 	}
 
-	public boolean isCalculated() {
+	boolean isCalculated() {
 		return isCalculated;
 	}
 
-	public void setCalculated(boolean isCalculated) {
+	void setCalculated(boolean isCalculated) {
 		this.isCalculated = isCalculated;
 	}
 }

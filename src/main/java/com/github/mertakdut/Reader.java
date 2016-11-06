@@ -60,8 +60,8 @@ public class Reader {
 	public void setIsIncludingTextContent(boolean isIncludingTextContent) {
 		Optionals.isIncludingTextContent = isIncludingTextContent;
 	}
-	
-	public void setIsOmittingTitleTag (boolean isOmittingTitleTag) {
+
+	public void setIsOmittingTitleTag(boolean isOmittingTitleTag) {
 		Optionals.isOmittingTitleTag = isOmittingTitleTag;
 	}
 
@@ -303,6 +303,10 @@ public class Reader {
 
 	public Package getInfoPackage() {
 		return content.getPackage();
+	}
+
+	public Toc getToc() {
+		return content.getToc();
 	}
 
 	public byte[] getCoverImage() throws ReadingException {

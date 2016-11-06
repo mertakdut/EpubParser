@@ -1,4 +1,4 @@
-src/main/test/
+src/test/java/
 target/
 .settings/
 .project

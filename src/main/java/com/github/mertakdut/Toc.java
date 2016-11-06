@@ -14,7 +14,7 @@ import org.w3c.dom.NodeList;
 import com.github.mertakdut.exception.ReadingException;
 
 //toc.ncx
-class Toc extends BaseFindings {
+public class Toc extends BaseFindings {
 
 	private Head head;
 	private NavMap navMap;
@@ -24,7 +24,7 @@ class Toc extends BaseFindings {
 		navMap = new NavMap();
 	}
 
-	private class Head {
+	public class Head {
 		private String uid;
 		private String depth;
 		private String totalPageCount;
@@ -84,7 +84,7 @@ class Toc extends BaseFindings {
 			return maxPageNumber;
 		}
 
-		public void print() {
+		void print() {
 			System.out.println("\n\nPrinting Head...\n");
 			System.out.println("uid: " + getUid());
 			System.out.println("depth: " + getDepth());
@@ -93,7 +93,7 @@ class Toc extends BaseFindings {
 		}
 	}
 
-	class NavMap {
+	public class NavMap {
 		private List<NavPoint> navPoints;
 
 		public NavMap() {
@@ -105,7 +105,7 @@ class Toc extends BaseFindings {
 		}
 
 		// TODO: navMap (epub2) and pageList (epub3) should be merged as well. Just as we merged spine and toc.ncx. Or just sorting them by their playOrder is enough?
-		public void fillNavPoints(NodeList possiblyNavPoints) throws ReadingException {
+		void fillNavPoints(NodeList possiblyNavPoints) throws ReadingException {
 
 			for (int i = 0; i < possiblyNavPoints.getLength(); i++) {
 
@@ -184,7 +184,7 @@ class Toc extends BaseFindings {
 			}
 		}
 
-		public void sortNavMaps() {
+		void sortNavMaps() {
 
 			// If playOrders are not given, then use the order in file.
 			Collections.sort(this.navPoints, new Comparator<NavPoint>() {
@@ -195,7 +195,7 @@ class Toc extends BaseFindings {
 
 		}
 
-		public void print() {
+		void print() {
 			System.out.println("\n\nPrinting NavPoints...\n");
 
 			for (int i = 0; i < this.navPoints.size(); i++) {
@@ -208,7 +208,7 @@ class Toc extends BaseFindings {
 	}
 
 	@Override
-	public void fillContent(Node node) throws ReadingException {
+	void fillContent(Node node) throws ReadingException {
 		if (node.getNodeName().equals("head")) {
 			getHead().fillAttributes(node.getChildNodes());
 		} else if (node.getNodeName().equals("navMap") || node.getNodeName().equals("pageList")) { // if pageList exists then it's epub3 if only navMap exists then it's epub2.
@@ -225,7 +225,7 @@ class Toc extends BaseFindings {
 		return navMap;
 	}
 
-	public void print() {
+	void print() {
 		getHead().print();
 		getNavMap().print();
 	}
