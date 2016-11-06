@@ -30,7 +30,7 @@ public class Toc extends BaseFindings {
 		private String totalPageCount;
 		private String maxPageNumber;
 
-		public void fillAttributes(NodeList nodeList) throws ReadingException {
+		void fillAttributes(NodeList nodeList) throws ReadingException {
 			Field[] fields = Toc.Head.class.getDeclaredFields();
 
 			for (int i = 0; i < nodeList.getLength(); i++) {
