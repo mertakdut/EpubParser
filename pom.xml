@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.mertakdut</groupId>
 	<artifactId>EpubParser</artifactId>
-	<version>1.0.86</version>
+	<version>1.0.87</version>
 	<packaging>jar</packaging>
 
 	<name>EpubParser</name>
