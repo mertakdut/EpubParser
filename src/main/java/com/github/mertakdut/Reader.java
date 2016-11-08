@@ -40,12 +40,7 @@ public class Reader {
 	}
 
 	public BookSection readSection(int index) throws ReadingException, OutOfPagesException {
-		return content.getBookSection(index);
-	}
-
-	public BookSection readSection(int index, int maxContentPerSection) throws ReadingException, OutOfPagesException {
-		Optionals.maxContentPerSection = maxContentPerSection;
-		return content.getBookSection(index);
+		return content.maintainBookSections(index);
 	}
 
 	// Optionals

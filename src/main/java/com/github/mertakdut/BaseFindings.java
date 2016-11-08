@@ -13,8 +13,6 @@ import com.github.mertakdut.exception.ReadingException;
 
 //Helper classes and methods used in Findings
 abstract class BaseFindings {
-	
-	Logger logger = new Logger();
 
 	abstract void fillContent(Node node) throws ReadingException;
 

@@ -30,8 +30,6 @@ import com.github.mertakdut.exception.ReadingException;
 
 class Content {
 
-	private Logger logger;
-
 	private String zipFilePath;
 
 	private Container container;
@@ -43,14 +41,12 @@ class Content {
 	private Map<String, List<Tag>> entryTagPositions;
 	private List<String> nonExistingHrefList;
 
-	private int playOrder;
+	private int peakPage;
 
 	// private int maxContentPerSection; // String length.
 	private BookSection lastBookSectionInfo;
 
 	public Content() {
-		logger = new Logger();
-
 		entryNames = new ArrayList<>();
 
 		container = new Container();
@@ -59,7 +55,7 @@ class Content {
 	}
 
 	// Debug
-	public void print() {
+	void print() {
 		System.out.println("Printing zipEntryNames...\n");
 
 		for (int i = 0; i < entryNames.size(); i++) {
@@ -71,35 +67,33 @@ class Content {
 		getToc().print();
 	}
 
-	// public BookSection getNextBookSection() throws ReadingException {
-	// NavPoint navPoint = getNavPoint(this.playOrder++);
-	// return prepareBookSection(navPoint, this.playOrder);
-	// }
-	//
-	// public BookSection getPrevBookSection() throws ReadingException {
-	// NavPoint navPoint = getNavPoint(this.playOrder--);
-	// return prepareBookSection(navPoint, this.playOrder);
-	// }
+	BookSection maintainBookSections(int index) throws ReadingException, OutOfPagesException {
 
-	BookSection getBookSection(int index) throws ReadingException, OutOfPagesException {
-		BookSection bookSection = null;
-
-		int orderDiff = index - this.playOrder;
-		while (orderDiff > 0) { // Out of order. Calculate the ones before first.
-			calculateBookSection(--orderDiff);
+		if (peakPage == index) { // Moving in order.
+			peakPage++;
+		} else {
+			while (peakPage < index) { // Trying to move forward. Calculate the ones before first.
+				getBookSection(peakPage++);
+			}
 		}
+
+		return getBookSection(index);
+
+	}
+
+	// TODO: A new method for only calculating book sections. That will also be useful for pre-loading the whole book.
+	private BookSection getBookSection(int index) throws ReadingException, OutOfPagesException {
+
+		BookSection bookSection = null;
 
 		NavPoint navPoint = getNavPoint(index);
 
 		if (Optionals.maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
-			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
 			bookSection = prepareBookSection(navPoint, index);
 		} else { // Pseudo navPoint - trimmed file entry.
-			// logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
 			bookSection = prepareTrimmedBookSection(navPoint, index);
 		}
 
-		this.playOrder++;
 		return bookSection;
 	}
 
@@ -109,7 +103,7 @@ class Content {
 				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
 
 				if (index >= navPoints.size()) {
-					throw new OutOfPagesException("Out of bounds at position: " + index);
+					throw new OutOfPagesException("Out of bounds at position: " + index, index);
 				}
 
 				return navPoints.get(index);
@@ -118,19 +112,6 @@ class Content {
 			}
 		} else {
 			throw new ReadingException("Index can't be less than 0");
-		}
-	}
-
-	// TODO: A new method for only calculating book sections. This will also be useful for pre-loading the whole book.
-	private void calculateBookSection(int index) throws ReadingException, OutOfPagesException {
-		NavPoint navPoint = getNavPoint(index);
-
-		if (Optionals.maxContentPerSection == 0 || navPoint.getTypeCode() == 0 || navPoint.getTypeCode() == 1) { // Real navPoint - actual file/anchor.
-			// logger.log(Severity.info, "\nindex: " + index + ", Real(at least for now...) navPoint");
-			prepareBookSection(navPoint, index);
-		} else { // Pseudo navPoint - trimmed file entry.
-			// logger.log(Severity.info, "\nindex: " + index + ", Pseudo navPoint");
-			prepareTrimmedBookSection(navPoint, index);
 		}
 	}
 
@@ -227,7 +208,7 @@ class Content {
 			}
 
 			if (!isSourceFileFound) {
-				logger.log(Logger.Severity.warning, "Source file not found!");
+				System.out.println("Source file not found!");
 				getToc().getNavMap().getNavPoints().remove(index);
 				return getBookSection(index);
 			}
@@ -265,9 +246,6 @@ class Content {
 		String entryName = entryNavPoint.getEntryName();
 		int bodyTrimStartPosition = entryNavPoint.getBodyTrimStartPosition();
 		int bodyTrimEndPosition = entryNavPoint.getBodyTrimEndPosition(); // Will be calculated on the first attempt.
-
-		// logger.log(Severity.info, "index: " + index + ", entryName: " + entryName + ", bodyTrimStartPosition: " + bodyTrimStartPosition + ", bodyTrimEndPosition: "
-		// + bodyTrimEndPosition + ", entryOpenedTags: " + entryOpenedTags + ", entryClosingTags: " + entryClosingTags);
 
 		String fileContent = readFileContent(entryName);
 		String htmlBody = getHtmlBody(fileContent);
@@ -576,7 +554,7 @@ class Content {
 
 				if (markedNavPoints != 0) {
 
-					if (markedNavPoints == getToc().getNavMap().getNavPoints().size() && markedNavPoints > 1) {
+					if (markedNavPoints == getToc().getNavMap().getNavPoints().size()) {
 						throw new ReadingException("There are no items left in TOC. Toc.ncx file is probably malformed.");
 					}
 
@@ -590,6 +568,8 @@ class Content {
 							}
 						}
 					}
+
+					this.peakPage -= markedNavPoints;
 				}
 
 			}
@@ -660,6 +640,8 @@ class Content {
 					}
 				}
 			}
+
+			this.peakPage -= markedNavPoints;
 		}
 
 		if (isNavigatingToNextFile) {
@@ -1215,7 +1197,6 @@ class Content {
 
 					if (nonExistingHrefList != null && nonExistingHrefList.contains(cssHref)) {
 
-						// logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Css) : " + cssHref);
 						htmlContent = htmlContent.replace(linkTag, "");
 
 					} else {
@@ -1258,7 +1239,7 @@ class Content {
 						}
 
 						if (!isCssFileFound) {
-							logger.log(Logger.Severity.warning, "Referenced css file not found!");
+							System.out.println("Referenced css file not found!");
 
 							if (nonExistingHrefList == null) {
 								nonExistingHrefList = new ArrayList<>();
@@ -1323,7 +1304,6 @@ class Content {
 				String encodedSrcHref = ContextHelper.encodeToUtf8(srcHref);
 
 				if (nonExistingHrefList != null && nonExistingHrefList.contains(srcHref)) {
-					// logger.log(Logger.Severity.warning, "Already not found on the first try. Skipping the search for(Img) : " + srcMatcher);
 					htmlBody = htmlBody.replace(imgPart, "");
 				} else {
 
@@ -1370,7 +1350,7 @@ class Content {
 					}
 
 					if (!isImageFileFound) {
-						logger.log(Logger.Severity.warning, "Referenced image file not found: " + srcHref);
+						System.out.println("Referenced image file not found: " + srcHref);
 
 						if (nonExistingHrefList == null) {
 							nonExistingHrefList = new ArrayList<>();
@@ -1836,6 +1816,7 @@ class Content {
 	}
 
 	List<String> getEntryNames() {
+
 		return entryNames;
 	}
 
