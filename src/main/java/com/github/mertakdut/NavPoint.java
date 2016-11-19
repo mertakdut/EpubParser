@@ -1,8 +1,12 @@
 package com.github.mertakdut;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class NavPoint {
+public class NavPoint implements Serializable {
+
+	private static final long serialVersionUID = -5558515239198872045L;
+
 	private String id;
 	private int playOrder;
 	private String navLabel;
@@ -123,5 +127,18 @@ public class NavPoint {
 
 	void setCalculated(boolean isCalculated) {
 		this.isCalculated = isCalculated;
+	}
+
+	@Override
+	public boolean equals(Object navPoint) {
+
+		if (this.contentSrc != null) {
+			return this.contentSrc.equals(((NavPoint) navPoint).getContentSrc());
+		} else if (this.entryName != null) {
+			return this.entryName.equals(((NavPoint) navPoint).getEntryName());
+		} else {
+			return false;
+		}
+
 	}
 }

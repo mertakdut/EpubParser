@@ -1,6 +1,11 @@
 package com.github.mertakdut;
 
-class Tag {
+import java.io.Serializable;
+
+class Tag implements Serializable {
+
+	private static final long serialVersionUID = -7115489705388170603L;
+
 	private String tagName;
 	private String fullTagName;
 	private int openingTagStartPosition;

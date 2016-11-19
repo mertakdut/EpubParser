@@ -3,6 +3,7 @@ package com.github.mertakdut;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -58,6 +59,16 @@ class ContextHelper {
 		else
 			return String.format("<%1$s.*?</%1$s>", tagName);
 
+	}
+
+	static void copy(InputStream input, OutputStream output) throws IOException {
+
+		byte[] BUFFER = new byte[4096 * 1024];
+
+		int bytesRead;
+		while ((bytesRead = input.read(BUFFER)) != -1) {
+			output.write(BUFFER, 0, bytesRead);
+		}
 	}
 
 }

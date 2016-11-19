@@ -25,7 +25,9 @@ class Constants {
 	static final String EXTENSION_CSS = ".css";
 
 	static final String HTML_TAG_PATTERN = "<(\"[^\"]*\"|'[^']*'|[^'\">])*>";
-	
+
 	static final String STRING_MARKER = "|";
+
+	static final String SAVE_FILE_NAME = "epubparser_progress.ser";
 
 }

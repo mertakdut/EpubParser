@@ -43,7 +43,6 @@ class Content {
 
 	private int peakPage;
 
-	// private int maxContentPerSection; // String length.
 	private BookSection lastBookSectionInfo;
 
 	public Content() {
@@ -94,6 +93,7 @@ class Content {
 			bookSection = prepareTrimmedBookSection(navPoint, index);
 		}
 
+		getToc().setLastPageIndex(index);
 		return bookSection;
 	}
 
@@ -143,18 +143,6 @@ class Content {
 
 					fileContentStr = readFileContent(entryName);
 					htmlBody = getHtmlBody(fileContentStr); // This must not be changed.
-
-					// entryTagPositions only used in either in trimming or including text content.
-					if ((Optionals.maxContentPerSection != 0 && Optionals.maxContentPerSection < htmlBody.length()) || Optionals.isIncludingTextContent) {
-						// Calculate the tag positions of the current entry, if it hasn't done before.
-						if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
-							if (entryTagPositions == null) {
-								entryTagPositions = new HashMap<>();
-							}
-
-							calculateEntryTagPositions(entryName, htmlBody);
-						}
-					}
 
 					if (!href.equals(fileName)) { // Anchored, e.g. #pgepubid00058
 						Pair<Integer, Integer> bodyIntervals = getNextAvailableAnchorIndex2(index, entryName, htmlBody, href, fileName);
@@ -329,6 +317,9 @@ class Content {
 	 */
 	private void calculateEntryTagPositions(String entryName, String htmlBody) {
 
+		List<Tag> tagList = new ArrayList<>();
+		this.entryTagPositions.put(entryName, tagList);
+
 		List<Tag> openedTags = null;
 		ListIterator<Tag> listIterator = null;
 
@@ -413,22 +404,15 @@ class Content {
 		tag.setFullTagName(fullTagName);
 		tag.setTagName(getTagName(fullTagName));
 
-		if (this.entryTagPositions.containsKey(entryName)) {
+		List<Tag> tagList = this.entryTagPositions.get(entryName);
 
-			List<Tag> tagList = this.entryTagPositions.get(entryName);
-
-			int index = tagList.size();
-			while (index > 0 && tagList.get(index - 1).getOpeningTagStartPosition() > openingPosition) {
-				index--;
-			}
-
-			this.entryTagPositions.get(entryName).add(index, tag);
-
-		} else {
-			List<Tag> tagList = new ArrayList<>();
-			tagList.add(tag);
-			this.entryTagPositions.put(entryName, tagList);
+		int index = tagList.size();
+		while (index > 0 && tagList.get(index - 1).getOpeningTagStartPosition() > openingPosition) {
+			index--;
 		}
+
+		tagList.add(index, tag);
+
 	}
 
 	private String getFullTagName(String tag, boolean isOpeningTag) {
@@ -686,7 +670,7 @@ class Content {
 			return -1;
 		}
 
-		List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
+		List<Tag> tagStartEndPositions = getTagStartEndPositions(entryName, htmlBody);
 
 		int loopCount = 0;
 		int lastTagsLength = 0;
@@ -1385,15 +1369,7 @@ class Content {
 
 		if (tableTagMatcher.find()) {
 
-			if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
-				if (entryTagPositions == null) {
-					entryTagPositions = new HashMap<>();
-				}
-
-				calculateEntryTagPositions(entryName, htmlBody);
-			}
-
-			List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
+			List<Tag> tagStartEndPositions = getTagStartEndPositions(entryName, htmlBody);
 
 			List<Tag> tableTagList = new ArrayList<>();
 
@@ -1452,7 +1428,7 @@ class Content {
 
 	private void markTableTags(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition, List<Tag> tableTagPositions) {
 
-		List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
+		List<Tag> tagStartEndPositions = getTagStartEndPositions(entryName, htmlBody);
 
 		for (int i = 0; i < tableTagPositions.size(); i++) {
 
@@ -1494,7 +1470,7 @@ class Content {
 	// Removes all the tags from htmlBody and returns it.
 	private String getOnlyTextContent(String entryName, String htmlBody, int trimStartPosition, int trimEndPosition) {
 
-		List<Tag> tagStartEndPositions = this.entryTagPositions.get(entryName);
+		List<Tag> tagStartEndPositions = getTagStartEndPositions(entryName, htmlBody);
 
 		List<String> stringsToRemove = new ArrayList<>();
 
@@ -1554,8 +1530,6 @@ class Content {
 		return htmlBody;
 	}
 
-	// TODO: Save these in navPoints as well avoid calculating again.
-	// TODO: Change the method name.
 	private String appendIncompleteTags(String htmlBody, String entryName, int index, int trimStartPosition, int trimEndPosition) throws ReadingException {
 
 		if (!getToc().getNavMap().getNavPoints().get(index).isCalculated()) {
@@ -1575,14 +1549,12 @@ class Content {
 		List<Tag> openedNotClosedYetTags = new ArrayList<>(); // Opened in this scope and not yet closed tags. Appending only closing tags.
 		List<Tag> prevOpenedClosedTags = new ArrayList<>(); // Previously opened and closed in this scope. Appending only opening tags.
 
-		List<Tag> currentEntryTags = this.entryTagPositions.get(entryName);
+		List<Tag> currentEntryTags = getTagStartEndPositions(entryName, htmlBody);
 
 		trimEndPosition = trimEndPosition == 0 ? htmlBody.length() : trimEndPosition;
 
 		for (int i = 0; i < currentEntryTags.size(); i++) {
 			Tag tag = currentEntryTags.get(i);
-
-			// TODO: break this when it's out of possibility.
 
 			if (tag.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
@@ -1619,7 +1591,7 @@ class Content {
 			}
 		}
 
-		// TODO: We shouldn't substring htmlBody before this method.
+		// Warning: We shouldn't substring htmlBody before this method.
 		if (trimEndPosition == htmlBody.length()) {
 			htmlBodyToReplace = htmlBody.substring(trimStartPosition);
 		} else {
@@ -1836,12 +1808,28 @@ class Content {
 		return toc;
 	}
 
+	void setToc(Toc toc) {
+		this.toc = toc;
+	}
+
 	void setZipFilePath(String zipFilePath) {
 		this.zipFilePath = zipFilePath;
 	}
 
 	String getZipFilePath() {
 		return this.zipFilePath;
+	}
+
+	List<Tag> getTagStartEndPositions(String entryName, String htmlBody) {
+		if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
+			if (entryTagPositions == null) {
+				entryTagPositions = new HashMap<>();
+			}
+
+			calculateEntryTagPositions(entryName, htmlBody);
+		}
+
+		return entryTagPositions.get(entryName);
 	}
 
 }

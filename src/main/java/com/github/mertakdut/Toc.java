@@ -1,5 +1,6 @@
 package com.github.mertakdut;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,17 +15,24 @@ import org.w3c.dom.NodeList;
 import com.github.mertakdut.exception.ReadingException;
 
 //toc.ncx
-public class Toc extends BaseFindings {
+public class Toc extends BaseFindings implements Serializable {
+
+	private static final long serialVersionUID = 8154412879349792795L;
 
 	private Head head;
 	private NavMap navMap;
+
+	private int lastPageIndex;
 
 	public Toc() {
 		head = new Head();
 		navMap = new NavMap();
 	}
 
-	public class Head {
+	public class Head implements Serializable {
+		
+		private static final long serialVersionUID = -5861717309893477622L;
+		
 		private String uid;
 		private String depth;
 		private String totalPageCount;
@@ -93,7 +101,10 @@ public class Toc extends BaseFindings {
 		}
 	}
 
-	public class NavMap {
+	public class NavMap implements Serializable {
+
+		private static final long serialVersionUID = -3629764613712749465L;
+
 		private List<NavPoint> navPoints;
 
 		public NavMap() {
@@ -164,16 +175,16 @@ public class Toc extends BaseFindings {
 						}
 					}
 
-					boolean duplicateContentSrc = false;
+					boolean duplicateOrNullContentSrc = false;
 
 					for (NavPoint navPointItem : this.navPoints) {
-						if (navPoint.getContentSrc().equals(navPointItem.getContentSrc())) { // NullPointer?
-							duplicateContentSrc = true;
+						if (navPoint.getContentSrc() == null || navPoint.getContentSrc().equals(navPointItem.getContentSrc())) {
+							duplicateOrNullContentSrc = true;
 							break;
 						}
 					}
 
-					if (!duplicateContentSrc) {
+					if (!duplicateOrNullContentSrc) {
 						this.navPoints.add(navPoint);
 					}
 
@@ -228,6 +239,14 @@ public class Toc extends BaseFindings {
 	void print() {
 		getHead().print();
 		getNavMap().print();
+	}
+
+	int getLastPageIndex() {
+		return lastPageIndex;
+	}
+
+	void setLastPageIndex(int lastPageIndex) {
+		this.lastPageIndex = lastPageIndex;
 	}
 
 }

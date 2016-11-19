@@ -1,13 +1,18 @@
 package com.github.mertakdut;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -25,20 +30,62 @@ public class Reader {
 
 	private Content content;
 
+	private boolean isProgressFileFound;
+
+	/**
+	 * Parses only needed files for book info.
+	 * 
+	 * @param filePath
+	 * @throws ReadingException
+	 */
 	public void setInfoContent(String filePath) throws ReadingException {
 		this.content = new Content();
 		this.content.setZipFilePath(filePath);
 
-		fillContent(filePath, false);
+		fillContent(filePath, false, false);
 	}
 
+	/**
+	 * Parses all the files needed for reading book. This method must be called before calling readSection method.
+	 * 
+	 * @param filePath
+	 * @throws ReadingException
+	 */
 	public void setFullContent(String filePath) throws ReadingException {
 		this.content = new Content();
 		this.content.setZipFilePath(filePath);
 
-		fillContent(filePath, true);
+		fillContent(filePath, true, false);
 	}
 
+	/**
+	 * Does the same job with setFullContent but also tries to load saved progress if found any. If no progress file is found then it'll work the same as setFullContent does.
+	 * 
+	 * @param filePath
+	 * @return saved page index. 0 if no progress is found.
+	 * @throws ReadingException
+	 */
+	public int setFullContentWithProgress(String filePath) throws ReadingException {
+		this.content = new Content();
+		this.content.setZipFilePath(filePath);
+
+		fillContent(filePath, true, true);
+
+		if (isProgressFileFound) {
+			return loadProgress();
+		} else {
+			return 0;
+		}
+	}
+
+	/**
+	 * 
+	 * @param index
+	 * @return
+	 * @throws ReadingException
+	 * @throws OutOfPagesException
+	 *             if index is greater than the page count.
+	 */
 	public BookSection readSection(int index) throws ReadingException, OutOfPagesException {
 		return content.maintainBookSections(index);
 	}
@@ -60,13 +107,192 @@ public class Reader {
 		Optionals.isOmittingTitleTag = isOmittingTitleTag;
 	}
 
-	private Content fillContent(String zipFilePath, boolean isFullContent) throws ReadingException {
+	// Additional operations
+	public Package getInfoPackage() {
+		return content.getPackage();
+	}
+
+	public Toc getToc() {
+		return content.getToc();
+	}
+
+	public byte[] getCoverImage() throws ReadingException {
+
+		if (content != null) {
+			return content.getCoverImage();
+		}
+
+		throw new ReadingException("Content info is not set.");
+	}
+
+	public void saveProgress(int lastPageIndex) throws ReadingException {
+		content.getToc().setLastPageIndex(lastPageIndex);
+		saveProgress();
+	}
+
+	public void saveProgress() throws ReadingException {
+
+		ZipFile epubFile = null;
+		ZipOutputStream zipOutputStream = null;
+		ObjectOutputStream objectOutputStream = null;
+
+		String newFilePath = null;
+
+		try {
+			epubFile = new ZipFile(content.getZipFilePath());
+
+			String fileName = ContextHelper.getTextAfterCharacter(content.getZipFilePath(), Constants.SLASH);
+			newFilePath = content.getZipFilePath().replace(fileName, "tmp_" + fileName);
+
+			zipOutputStream = new ZipOutputStream(new FileOutputStream(newFilePath));
+
+			Enumeration<? extends ZipEntry> entries = epubFile.entries();
+			while (entries.hasMoreElements()) {
+				ZipEntry entry = entries.nextElement();
+
+				if (entry.getName().equals(Constants.SAVE_FILE_NAME)) // Don't copy the progress file. We'll put the new one already.
+					continue;
+
+				ZipEntry destEntry = new ZipEntry(entry.getName());
+				zipOutputStream.putNextEntry(destEntry);
+				if (!entry.isDirectory()) {
+					ContextHelper.copy(epubFile.getInputStream(entry), zipOutputStream);
+				}
+				zipOutputStream.closeEntry();
+			}
+
+			ZipEntry progressFileEntry = new ZipEntry(Constants.SAVE_FILE_NAME);
+			zipOutputStream.putNextEntry(progressFileEntry);
+			objectOutputStream = new ObjectOutputStream(zipOutputStream);
+			objectOutputStream.writeObject(content.getToc());
+			zipOutputStream.closeEntry();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+
+			File newFile = new File(newFilePath);
+
+			if (newFile.exists()) {
+				newFile.delete();
+			}
+
+			throw new ReadingException("Error writing progressed ZipFile: " + e.getMessage());
+		} finally {
+
+			if (epubFile != null) {
+				try {
+					epubFile.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("Error closing ZipFile: " + e.getMessage());
+				}
+			}
+
+			// if (zipOutputStream != null) {
+			// try {
+			// zipOutputStream.close();
+			// } catch (IOException e) {
+			// e.printStackTrace();
+			// throw new ReadingException("Error closing zip output stream: " + e.getMessage());
+			// }
+			// }
+
+			if (objectOutputStream != null) {
+				try {
+					objectOutputStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("Error closing object output stream: " + e.getMessage());
+				}
+			}
+
+		}
+
+		File oldFile = new File(content.getZipFilePath());
+
+		if (oldFile.exists()) {
+			oldFile.delete();
+		}
+
+		File newFile = new File(newFilePath);
+
+		if (newFile.exists() && !oldFile.exists()) {
+			newFile.renameTo(new File(content.getZipFilePath()));
+		}
+
+	}
+
+	public boolean isSavedProgressFound() {
+		return isProgressFileFound;
+	}
+
+	public int loadProgress() throws ReadingException {
+
+		if (!isProgressFileFound)
+			throw new ReadingException("No save files are found. Loading progress is unavailable.");
+
+		ZipFile epubFile = null;
+		InputStream saveFileInputStream = null;
+		ObjectInputStream oiStream = null;
+
+		try {
+
+			try {
+				epubFile = new ZipFile(content.getZipFilePath());
+				ZipEntry zipEntry = epubFile.getEntry(Constants.SAVE_FILE_NAME);
+				saveFileInputStream = epubFile.getInputStream(zipEntry);
+
+				oiStream = new ObjectInputStream(saveFileInputStream);
+				Toc toc = (Toc) oiStream.readObject();
+
+				content.setToc(toc);
+				return content.getToc().getLastPageIndex();
+
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+			}
+
+		} finally {
+
+			if (epubFile != null) {
+				try {
+					epubFile.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("Error closing ZipFile: " + e.getMessage());
+				}
+			}
+
+			// if (saveFileInputStream != null) {
+			// try {
+			// saveFileInputStream.close();
+			// } catch (IOException e) {
+			// e.printStackTrace();
+			// throw new ReadingException("Error closing save file input stream: " + e.getMessage());
+			// }
+			// }
+
+			if (oiStream != null) {
+				try {
+					oiStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("Error closing object input stream: " + e.getMessage());
+				}
+			}
+
+		}
+
+	}
+
+	private Content fillContent(String zipFilePath, boolean isFullContent, boolean isLoadingProgress) throws ReadingException {
 
 		ZipFile epubFile = null;
 		try {
 			try {
 				epubFile = new ZipFile(zipFilePath);
-			} catch (Exception e) {
+			} catch (IOException e) {
 				e.printStackTrace();
 				throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
 			}
@@ -80,6 +306,10 @@ public class Reader {
 
 					if (entryName != null) {
 						content.addEntryName(entryName);
+
+						if (entryName.equals(Constants.SAVE_FILE_NAME)) {
+							isProgressFileFound = true;
+						}
 					}
 				}
 			}
@@ -132,7 +362,7 @@ public class Reader {
 
 					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
 					parseContainerXml(docBuilder, document, content, epubFile);
-				} else if (isFullContent && currentEntryName.contains(".ncx")) {
+				} else if ((!isLoadingProgress || !isProgressFileFound) && isFullContent && currentEntryName.contains(".ncx")) {
 					isTocXmlFound = true;
 
 					ZipEntry toc = epubFile.getEntry(currentEntryName);
@@ -154,11 +384,13 @@ public class Reader {
 				throw new ReadingException("container.xml not found.");
 			}
 
-			if (!isTocXmlFound && isFullContent) {
+			if (!isTocXmlFound && isFullContent && (!isLoadingProgress || !isProgressFileFound)) {
 				throw new ReadingException("toc.ncx not found.");
 			}
 
-			mergeTocElements();
+			if (!isLoadingProgress || !isProgressFileFound) {
+				mergeTocElements();
+			}
 
 			// Debug
 			// content.print();
@@ -166,13 +398,14 @@ public class Reader {
 			return content;
 
 		} finally {
-			try {
-				if (epubFile != null) {
+			if (epubFile != null) {
+				try {
+
 					epubFile.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("Error closing ZipFile: " + e.getMessage());
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
-				throw new ReadingException("Error closing ZipFile: " + e.getMessage());
 			}
 		}
 	}
@@ -294,23 +527,6 @@ public class Reader {
 			}
 		}
 
-	}
-
-	public Package getInfoPackage() {
-		return content.getPackage();
-	}
-
-	public Toc getToc() {
-		return content.getToc();
-	}
-
-	public byte[] getCoverImage() throws ReadingException {
-
-		if (content != null) {
-			return content.getCoverImage();
-		}
-
-		throw new ReadingException("Content info is not set.");
 	}
 
 }
