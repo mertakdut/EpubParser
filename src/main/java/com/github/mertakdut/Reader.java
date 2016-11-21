@@ -28,6 +28,8 @@ import com.github.mertakdut.exception.ReadingException;
 
 public class Reader {
 
+	private boolean isFoundNeeded;
+
 	private Content content;
 
 	private boolean isProgressFileFound;
@@ -125,8 +127,14 @@ public class Reader {
 		throw new ReadingException("Content info is not set.");
 	}
 
-	public void saveProgress(int lastPageIndex) throws ReadingException {
-		content.getToc().setLastPageIndex(lastPageIndex);
+	public void saveProgress(int lastPageIndex) throws ReadingException, OutOfPagesException {
+
+		if (lastPageIndex < content.getToc().getNavMap().getNavPoints().size()) {
+			content.getToc().setLastPageIndex(lastPageIndex);
+		} else {
+			throw new OutOfPagesException(lastPageIndex, content.getToc().getNavMap().getNavPoints().size());
+		}
+
 		saveProgress();
 	}
 
@@ -141,7 +149,7 @@ public class Reader {
 		try {
 			epubFile = new ZipFile(content.getZipFilePath());
 
-			String fileName = ContextHelper.getTextAfterCharacter(content.getZipFilePath(), Constants.SLASH);
+			String fileName = new File(content.getZipFilePath()).getName();
 			newFilePath = content.getZipFilePath().replace(fileName, "tmp_" + fileName);
 
 			zipOutputStream = new ZipOutputStream(new FileOutputStream(newFilePath));
@@ -187,15 +195,6 @@ public class Reader {
 					throw new ReadingException("Error closing ZipFile: " + e.getMessage());
 				}
 			}
-
-			// if (zipOutputStream != null) {
-			// try {
-			// zipOutputStream.close();
-			// } catch (IOException e) {
-			// e.printStackTrace();
-			// throw new ReadingException("Error closing zip output stream: " + e.getMessage());
-			// }
-			// }
 
 			if (objectOutputStream != null) {
 				try {
@@ -264,15 +263,6 @@ public class Reader {
 				}
 			}
 
-			// if (saveFileInputStream != null) {
-			// try {
-			// saveFileInputStream.close();
-			// } catch (IOException e) {
-			// e.printStackTrace();
-			// throw new ReadingException("Error closing save file input stream: " + e.getMessage());
-			// }
-			// }
-
 			if (oiStream != null) {
 				try {
 					oiStream.close();
@@ -287,6 +277,10 @@ public class Reader {
 	}
 
 	private Content fillContent(String zipFilePath, boolean isFullContent, boolean isLoadingProgress) throws ReadingException {
+
+		if (zipFilePath == null) {
+			throw new ReadingException("Epub file path is null.");
+		}
 
 		ZipFile epubFile = null;
 		try {
@@ -388,7 +382,7 @@ public class Reader {
 				throw new ReadingException("toc.ncx not found.");
 			}
 
-			if (!isLoadingProgress || !isProgressFileFound) {
+			if (isFullContent && (!isLoadingProgress || !isProgressFileFound)) {
 				mergeTocElements();
 			}
 
@@ -412,6 +406,7 @@ public class Reader {
 
 	private void parseContainerXml(DocumentBuilder docBuilder, Document document, Content content, ZipFile epubFile) throws ReadingException {
 		if (document.hasChildNodes()) {
+			isFoundNeeded = false;
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getContainer());
 		}
 
@@ -432,12 +427,14 @@ public class Reader {
 
 	private void parseOpfFile(Document document, Package pckage) throws ReadingException {
 		if (document.hasChildNodes()) {
+			isFoundNeeded = false;
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), pckage);
 		}
 	}
 
 	private void parseTocFile(Document document, Toc toc) throws ReadingException {
 		if (document.hasChildNodes()) {
+			isFoundNeeded = false;
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), toc);
 		}
 	}
@@ -456,15 +453,19 @@ public class Reader {
 
 	private void traverseDocumentNodesAndFillContent(NodeList nodeList, BaseFindings findings) throws ReadingException {
 
+		if (isFoundNeeded) // Warning: Throwing a specific exception instead of holding a variable may be a better solution.
+			return;
+
 		for (int i = 0; i < nodeList.getLength(); i++) {
 			Node tempNode = nodeList.item(i);
 
-			// make sure it's element node.
 			if (tempNode.getNodeType() == Node.ELEMENT_NODE) {
-				findings.fillContent(tempNode);
+				isFoundNeeded = findings.fillContent(tempNode);
+
+				if (isFoundNeeded)
+					break;
 
 				if (tempNode.hasChildNodes()) {
-					// loop again if has child nodes
 					traverseDocumentNodesAndFillContent(tempNode.getChildNodes(), findings);
 				}
 			}

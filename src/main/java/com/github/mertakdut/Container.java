@@ -16,8 +16,8 @@ class Container extends BaseFindings {
 	}
 
 	public String getFullPathValue() throws ReadingException {
-		if (getRootFile() != null && getRootFile().getAttributes() != null && getRootFile().getAttributes().containsKey("full-path")
-				&& getRootFile().getAttributes().get("full-path") != null && !getRootFile().getAttributes().get("full-path").equals("")) {
+		if (getRootFile() != null && getRootFile().getAttributes() != null && getRootFile().getAttributes().containsKey("full-path") && getRootFile().getAttributes().get("full-path") != null
+				&& !getRootFile().getAttributes().get("full-path").equals("")) {
 			return getRootFile().getAttributes().get("full-path");
 		} else {
 			throw new ReadingException(Constants.EXTENSION_OPF + " file not found.");
@@ -25,10 +25,13 @@ class Container extends BaseFindings {
 	}
 
 	@Override
-	public void fillContent(Node node) {
+	public boolean fillContent(Node node) {
 		if (node.getNodeName() != null && node.getNodeName().equals("rootfile")) {
 			this.rootFile = nodeToXmlItem(node);
+			return true;
 		}
+
+		return false;
 	}
 
 	public void print() {

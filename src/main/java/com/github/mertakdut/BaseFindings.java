@@ -14,7 +14,7 @@ import com.github.mertakdut.exception.ReadingException;
 //Helper classes and methods used in Findings
 abstract class BaseFindings {
 
-	abstract void fillContent(Node node) throws ReadingException;
+	abstract boolean fillContent(Node node) throws ReadingException;
 
 	protected class XmlItem {
 		private String value;

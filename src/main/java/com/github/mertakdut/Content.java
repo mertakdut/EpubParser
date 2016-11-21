@@ -102,14 +102,17 @@ class Content {
 			if (getToc() != null) {
 				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
 
-				if (index >= navPoints.size()) {
-					throw new OutOfPagesException("Out of bounds at position: " + index, index);
+				if (navPoints != null) {
+					if (index >= navPoints.size()) {
+						throw new OutOfPagesException(index, navPoints.size());
+					}
+
+					return navPoints.get(index);
 				}
 
-				return navPoints.get(index);
-			} else {
-				throw new ReadingException("Term of Contents is null.");
 			}
+
+			throw new ReadingException("Term of Contents is null.");
 		} else {
 			throw new ReadingException("Index can't be less than 0");
 		}
@@ -126,7 +129,7 @@ class Content {
 		String fileContentStr = null;
 		String htmlBody = null;
 
-		if (!navPoint.isCalculated()) { // Not calculated before.
+		if (!navPoint.isCalculated()) {
 
 			String href = navPoint.getContentSrc();
 			String label = navPoint.getNavLabel();
@@ -1432,8 +1435,8 @@ class Content {
 
 		for (int i = 0; i < tableTagPositions.size(); i++) {
 
-			int tableStartPosition = tableTagPositions.get(i).getOpeningTagStartPosition();
-			int tableEndPosition = tableTagPositions.get(i).getClosingTagStartPosition();
+			int tableStartPosition = tableTagPositions.get(i).getOpeningTagStartPosition() - 1;
+			int tableEndPosition = tableTagPositions.get(i).getClosingTagStartPosition() - 1;
 
 			for (Tag tag : tagStartEndPositions) {
 
@@ -1443,10 +1446,11 @@ class Content {
 
 				if (tag.getOpeningTagStartPosition() == tag.getClosingTagStartPosition()) { // Empty Tag
 
-					// Images inside table tags look corrupt.
-					// if (tag.getTagName().equals("img")) {
-					// continue;
-					// }
+					if (tag.getTagName().equals("img")) {
+						continue;
+					}
+
+					// TODO: We may have to break the row tabs with new lines (<br/>).
 
 					if (tag.getOpeningTagStartPosition() > tableStartPosition && tag.getOpeningTagStartPosition() < tableEndPosition) {
 
@@ -1480,7 +1484,6 @@ class Content {
 
 		for (Tag tag : tagStartEndPositions) {
 
-			// This may not work correctly.
 			if (tag.getOpeningTagStartPosition() > trimEndPosition) {
 				break;
 			}

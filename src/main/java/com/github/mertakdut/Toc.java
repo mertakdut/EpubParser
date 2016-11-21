@@ -24,27 +24,35 @@ public class Toc extends BaseFindings implements Serializable {
 
 	private int lastPageIndex;
 
+	private transient boolean isHeadFound, isNavMapFound;
+
 	public Toc() {
 		head = new Head();
 		navMap = new NavMap();
 	}
 
 	public class Head implements Serializable {
-		
+
 		private static final long serialVersionUID = -5861717309893477622L;
-		
+
 		private String uid;
 		private String depth;
 		private String totalPageCount;
 		private String maxPageNumber;
 
 		void fillAttributes(NodeList nodeList) throws ReadingException {
+
 			Field[] fields = Toc.Head.class.getDeclaredFields();
 
 			for (int i = 0; i < nodeList.getLength(); i++) {
-				Node possiblyMetaNode = nodeList.item(i);
 
-				if (possiblyMetaNode.getNodeName().equals("meta")) {
+				String metaNodeName = nodeList.item(i).getNodeName();
+
+				if (metaNodeName.contains(Character.toString(Constants.COLON))) {
+					metaNodeName = ContextHelper.getTextAfterCharacter(metaNodeName, Constants.COLON);
+				}
+
+				if (metaNodeName.equals("meta")) {
 					NamedNodeMap attributes = nodeList.item(i).getAttributes();
 
 					for (int k = 0; k < attributes.getLength(); k++) {
@@ -52,8 +60,15 @@ public class Toc extends BaseFindings implements Serializable {
 
 						if (attribute.getNodeName().equals("name")) {
 
+							String attributeNodeValue = attribute.getNodeValue();
+
+							if (attributeNodeValue.contains(Character.toString(Constants.COLON))) {
+								attributeNodeValue = ContextHelper.getTextAfterCharacter(attributeNodeValue, Constants.COLON);
+							}
+
 							for (int j = 0; j < fields.length; j++) {
-								if (attribute.getNodeValue().contains(fields[j].getName())) {
+
+								if (attributeNodeValue.equals(fields[j].getName())) {
 
 									// Find content in attributes
 									for (int l = 0; l < attributes.getLength(); l++) {
@@ -107,10 +122,6 @@ public class Toc extends BaseFindings implements Serializable {
 
 		private List<NavPoint> navPoints;
 
-		public NavMap() {
-			this.navPoints = new ArrayList<NavPoint>();
-		}
-
 		public List<NavPoint> getNavPoints() {
 			return navPoints;
 		}
@@ -118,9 +129,17 @@ public class Toc extends BaseFindings implements Serializable {
 		// TODO: navMap (epub2) and pageList (epub3) should be merged as well. Just as we merged spine and toc.ncx. Or just sorting them by their playOrder is enough?
 		void fillNavPoints(NodeList possiblyNavPoints) throws ReadingException {
 
+			this.navPoints = new ArrayList<>();
+
 			for (int i = 0; i < possiblyNavPoints.getLength(); i++) {
 
-				if (possiblyNavPoints.item(i).getNodeName().equals("navPoint") || possiblyNavPoints.item(i).getNodeName().equals("pageTarget")) {
+				String navPointNodeName = possiblyNavPoints.item(i).getNodeName();
+
+				if (navPointNodeName.contains(Character.toString(Constants.COLON))) {
+					navPointNodeName = ContextHelper.getTextAfterCharacter(navPointNodeName, Constants.COLON);
+				}
+
+				if (navPointNodeName.equals("navPoint") || navPointNodeName.equals("pageTarget")) {
 					NavPoint navPoint = new NavPoint();
 
 					NamedNodeMap nodeMap = possiblyNavPoints.item(i).getAttributes();
@@ -146,16 +165,29 @@ public class Toc extends BaseFindings implements Serializable {
 
 						Node navPointChild = navPointChildNodes.item(k);
 
-						if (navPointChild.getNodeName().equals("navLabel")) {
+						String navPointChildNodeName = navPointChild.getNodeName();
+
+						if (navPointChildNodeName.contains(Character.toString(Constants.COLON))) {
+							navPointChildNodeName = ContextHelper.getTextAfterCharacter(navPointChildNodeName, Constants.COLON);
+						}
+
+						if (navPointChildNodeName.equals("navLabel")) {
 							NodeList navLabelChildNodes = navPointChild.getChildNodes();
 
 							for (int l = 0; l < navLabelChildNodes.getLength(); l++) {
-								if (navLabelChildNodes.item(l).getNodeName().equals("text")) {
+
+								String navLabelChildNodeName = navLabelChildNodes.item(l).getNodeName();
+
+								if (navLabelChildNodeName.contains(Character.toString(Constants.COLON))) {
+									navLabelChildNodeName = ContextHelper.getTextAfterCharacter(navLabelChildNodeName, Constants.COLON);
+								}
+
+								if (navLabelChildNodeName.equals("text")) {
 									navPoint.setNavLabel(navLabelChildNodes.item(l).getTextContent());
 								}
 							}
 
-						} else if (navPointChild.getNodeName().equals("content")) {
+						} else if (navPointChildNodeName.equals("content")) {
 							NamedNodeMap contentAttributes = navPointChild.getAttributes();
 
 							for (int m = 0; m < contentAttributes.getLength(); m++) {
@@ -170,7 +202,7 @@ public class Toc extends BaseFindings implements Serializable {
 									}
 								}
 							}
-						} else if (!hasNestedNavPoints && navPointChild.getNodeName().equals("navPoint")) {
+						} else if (!hasNestedNavPoints && navPointChildNodeName.equals("navPoint")) {
 							hasNestedNavPoints = true;
 						}
 					}
@@ -219,13 +251,24 @@ public class Toc extends BaseFindings implements Serializable {
 	}
 
 	@Override
-	void fillContent(Node node) throws ReadingException {
-		if (node.getNodeName().equals("head")) {
+	boolean fillContent(Node node) throws ReadingException {
+
+		String nodeName = node.getNodeName();
+
+		if (nodeName.contains(Character.toString(Constants.COLON))) {
+			nodeName = ContextHelper.getTextAfterCharacter(nodeName, Constants.COLON);
+		}
+
+		if (nodeName.equals("head")) {
 			getHead().fillAttributes(node.getChildNodes());
-		} else if (node.getNodeName().equals("navMap") || node.getNodeName().equals("pageList")) { // if pageList exists then it's epub3 if only navMap exists then it's epub2.
+			isHeadFound = true;
+		} else if (nodeName.equals("navMap") || nodeName.equals("pageList")) { // if pageList exists then it's epub3 if only navMap exists then it's epub2.
 			getNavMap().fillNavPoints(node.getChildNodes());
 			getNavMap().sortNavMaps();
+			isNavMapFound = true;
 		}
+
+		return isHeadFound && isNavMapFound;
 	}
 
 	public Head getHead() {

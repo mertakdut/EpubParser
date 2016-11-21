@@ -18,6 +18,8 @@ public class Package extends BaseFindings {
 	private Spine spine;
 	private Guide guide;
 
+	private boolean isMetadataFound, isManifestFound, isSpineFound, isGuideFound;
+
 	public Package() {
 		metadata = new Metadata();
 		manifest = new Manifest();
@@ -286,16 +288,22 @@ public class Package extends BaseFindings {
 	}
 
 	@Override
-	void fillContent(Node node) throws ReadingException {
+	boolean fillContent(Node node) throws ReadingException {
 		if (node.getNodeName().equals("metadata")) {
 			getMetadata().fillAttributes(node.getChildNodes());
+			isMetadataFound = true;
 		} else if (node.getNodeName().equals("manifest")) {
 			getManifest().fillXmlItemList(node.getChildNodes());
+			isManifestFound = true;
 		} else if (node.getNodeName().equals("spine")) {
 			getSpine().fillXmlItemList(node.getChildNodes());
+			isSpineFound = true;
 		} else if (node.getNodeName().equals("guide")) {
 			getGuide().fillXmlItemList(node.getChildNodes());
+			isGuideFound = true;
 		}
+
+		return isMetadataFound && isManifestFound && isSpineFound && isGuideFound;
 	}
 
 	public Metadata getMetadata() {
