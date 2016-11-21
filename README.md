@@ -11,8 +11,8 @@ Example usage:
 
 	Reader reader = new Reader();
 	reader.setMaxContentPerSection(1000); // Max string length for the current page.
-	reader.setFullContent(epubFilePath); // Setting content once is enough.
 	reader.setIsIncludingTextContent(true); // Optional, to return the tags-excluded version.
+	reader.setFullContent(epubFilePath); // Must call before readSection.
 
 	BookSection bookSection = reader.readSection(pageIndex);
 	String sectionContent = bookSection.getSectionContent(); // Returns content as html.
@@ -22,9 +22,11 @@ To save the page and parsing progress:
 
 	reader.saveProgress();
 	
-And to load it afterwards:
+And to check and load it afterwards:
 	
-	int lastPage = reader.loadProgress();
+	if (reader.isSavedProgressFound()) { // Available after calling setFullContent method.
+		int lastSavedPage = reader.loadProgress();
+	}
 
 Check out <a href="https://github.com/mertakdut/EpubParser-Sample-Android-Application">EpubParser-Sample-Android-Application</a> for more info.
 <a href="https://play.google.com/store/apps/details?id=com.github.epubparsersampleandroidapplication"> Google Play Link</a>
