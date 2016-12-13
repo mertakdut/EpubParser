@@ -41,9 +41,6 @@ public class Reader {
 	 * @throws ReadingException
 	 */
 	public void setInfoContent(String filePath) throws ReadingException {
-		this.content = new Content();
-		this.content.setZipFilePath(filePath);
-
 		fillContent(filePath, false, false);
 	}
 
@@ -54,9 +51,6 @@ public class Reader {
 	 * @throws ReadingException
 	 */
 	public void setFullContent(String filePath) throws ReadingException {
-		this.content = new Content();
-		this.content.setZipFilePath(filePath);
-
 		fillContent(filePath, true, false);
 	}
 
@@ -68,9 +62,6 @@ public class Reader {
 	 * @throws ReadingException
 	 */
 	public int setFullContentWithProgress(String filePath) throws ReadingException {
-		this.content = new Content();
-		this.content.setZipFilePath(filePath);
-
 		fillContent(filePath, true, true);
 
 		if (isProgressFileFound) {
@@ -81,6 +72,7 @@ public class Reader {
 	}
 
 	/**
+	 * Main method that splits and gets the parts of the book.
 	 * 
 	 * @param index
 	 * @return
@@ -276,11 +268,15 @@ public class Reader {
 
 	}
 
+	// Private methods
 	private Content fillContent(String zipFilePath, boolean isFullContent, boolean isLoadingProgress) throws ReadingException {
 
 		if (zipFilePath == null) {
 			throw new ReadingException("Epub file path is null.");
 		}
+
+		this.content = new Content();
+		this.content.setZipFilePath(zipFilePath);
 
 		ZipFile epubFile = null;
 		try {

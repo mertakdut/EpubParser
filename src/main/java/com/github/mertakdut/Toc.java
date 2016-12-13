@@ -129,7 +129,9 @@ public class Toc extends BaseFindings implements Serializable {
 		// TODO: navMap (epub2) and pageList (epub3) should be merged as well. Just as we merged spine and toc.ncx. Or just sorting them by their playOrder is enough?
 		void fillNavPoints(NodeList possiblyNavPoints) throws ReadingException {
 
-			this.navPoints = new ArrayList<>();
+			if (this.navPoints == null) {
+				this.navPoints = new ArrayList<>();
+			}
 
 			for (int i = 0; i < possiblyNavPoints.getLength(); i++) {
 
