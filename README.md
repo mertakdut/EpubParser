@@ -35,14 +35,14 @@ Check out <a href="https://github.com/mertakdut/EpubParser-Sample-Android-Applic
 
 Add dependency in your project build.gradle
 
-	compile 'com.github.mertakdut:EpubParser:1.0.9'
+	compile 'com.github.mertakdut:EpubParser:1.0.91'
 
 Or grab it via maven
 
 	<dependency>
     		<groupId>com.github.mertakdut</groupId>
     		<artifactId>EpubParser</artifactId>
-    		<version>1.0.9</version>
+    		<version>1.0.91</version>
 	</dependency>
 
 # License
