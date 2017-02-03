@@ -1,6 +1,7 @@
 package com.github.mertakdut;
 
 public class BookSection {
+	
 	private String label;
 	private String extension;
 	private String sectionContent;
