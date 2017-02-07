@@ -337,7 +337,7 @@ public class Reader {
 
 				String currentEntryName = content.getEntryNames().get(i);
 
-				if (currentEntryName.contains("container.xml")) {
+				if (currentEntryName.contains(Constants.FILE_NAME_CONTAINER_XML)) {
 					isContainerXmlFound = true;
 
 					ZipEntry container = epubFile.getEntry(currentEntryName);
@@ -350,9 +350,17 @@ public class Reader {
 						throw new ReadingException("IOException while reading " + Constants.FILE_NAME_CONTAINER_XML + " file: " + e.getMessage());
 					}
 
+					String higherPath = null;
+
+					int slashCount = currentEntryName.length() - currentEntryName.replace(Constants.SLASHSTR, "").length();
+
+					if (slashCount > 1) { // There is a higher path than META-INF!
+						higherPath = currentEntryName.substring(0, currentEntryName.indexOf(Constants.SLASHSTR));
+					}
+
 					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
-					parseContainerXml(docBuilder, document, content, epubFile);
-				} else if ((!isLoadingProgress || !isProgressFileFound) && isFullContent && currentEntryName.contains(".ncx")) {
+					parseContainerXml(docBuilder, document, higherPath, epubFile);
+				} else if ((!isLoadingProgress || !isProgressFileFound) && isFullContent && currentEntryName.contains(Constants.EXTENSION_NCX)) {
 					isTocXmlFound = true;
 
 					ZipEntry toc = epubFile.getEntry(currentEntryName);
@@ -400,13 +408,20 @@ public class Reader {
 		}
 	}
 
-	private void parseContainerXml(DocumentBuilder docBuilder, Document document, Content content, ZipFile epubFile) throws ReadingException {
+	private void parseContainerXml(DocumentBuilder docBuilder, Document document, String higherPath, ZipFile epubFile) throws ReadingException {
 		if (document.hasChildNodes()) {
 			isFoundNeeded = false;
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getContainer());
 		}
 
-		String opfFilePath = content.getContainer().getFullPathValue();
+		String opfFilePath;
+
+		if (higherPath == null) { // Check if there is a higher path than META-INF if there is one insert that path to the fullPathValue -> higherPath + fullPathValue
+			opfFilePath = content.getContainer().getFullPathValue();
+		} else {
+			opfFilePath = higherPath + Constants.SLASHSTR + content.getContainer().getFullPathValue();
+		}
+
 		ZipEntry opfFileEntry = epubFile.getEntry(opfFilePath);
 
 		InputStream opfFileInputStream;
@@ -449,7 +464,7 @@ public class Reader {
 
 	private void traverseDocumentNodesAndFillContent(NodeList nodeList, BaseFindings findings) throws ReadingException {
 
-		if (isFoundNeeded) // Warning: Throwing a specific exception instead of holding a variable may be a better solution.
+		if (isFoundNeeded)
 			return;
 
 		for (int i = 0; i < nodeList.getLength(); i++) {
