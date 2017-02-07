@@ -350,16 +350,8 @@ public class Reader {
 						throw new ReadingException("IOException while reading " + Constants.FILE_NAME_CONTAINER_XML + " file: " + e.getMessage());
 					}
 
-					String higherPath = null;
-
-					int slashCount = currentEntryName.length() - currentEntryName.replace(Constants.SLASHSTR, "").length();
-
-					if (slashCount > 1) { // There is a higher path than META-INF!
-						higherPath = currentEntryName.substring(0, currentEntryName.indexOf(Constants.SLASHSTR));
-					}
-
 					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
-					parseContainerXml(docBuilder, document, higherPath, epubFile);
+					parseContainerXml(docBuilder, document, epubFile);
 				} else if ((!isLoadingProgress || !isProgressFileFound) && isFullContent && currentEntryName.contains(Constants.EXTENSION_NCX)) {
 					isTocXmlFound = true;
 
@@ -408,21 +400,23 @@ public class Reader {
 		}
 	}
 
-	private void parseContainerXml(DocumentBuilder docBuilder, Document document, String higherPath, ZipFile epubFile) throws ReadingException {
+	private void parseContainerXml(DocumentBuilder docBuilder, Document document, ZipFile epubFile) throws ReadingException {
 		if (document.hasChildNodes()) {
 			isFoundNeeded = false;
 			traverseDocumentNodesAndFillContent(document.getChildNodes(), content.getContainer());
 		}
 
-		String opfFilePath;
-
-		if (higherPath == null) { // Check if there is a higher path than META-INF if there is one insert that path to the fullPathValue -> higherPath + fullPathValue
-			opfFilePath = content.getContainer().getFullPathValue();
-		} else {
-			opfFilePath = higherPath + Constants.SLASHSTR + content.getContainer().getFullPathValue();
-		}
-
+		String opfFilePath = content.getContainer().getFullPathValue();
 		ZipEntry opfFileEntry = epubFile.getEntry(opfFilePath);
+
+		if (opfFileEntry == null) {
+			for (String entryName : content.getEntryNames()) {
+				if (entryName.contains(Constants.EXTENSION_OPF)) {
+					opfFileEntry = epubFile.getEntry(entryName);
+					break;
+				}
+			}
+		}
 
 		InputStream opfFileInputStream;
 		try {
