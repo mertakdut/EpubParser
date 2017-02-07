@@ -31,18 +31,20 @@ And to check and load it afterwards:
 Check out <a href="https://github.com/mertakdut/EpubParser-Sample-Android-Application">EpubParser-Sample-Android-Application</a> for more info.
 <a href="https://play.google.com/store/apps/details?id=com.github.epubparsersampleandroidapplication"> Google Play Link</a>
 
+Check out my latest app written by using this library. <a href="https://play.google.com/store/apps/details?id=com.codefan.effectbookreader">Effective Reader</a>
+
 # Setup
 
 Add dependency in your project build.gradle
 
-	compile 'com.github.mertakdut:EpubParser:1.0.91'
+	compile 'com.github.mertakdut:EpubParser:1.0.92'
 
 Or grab it via maven
 
 	<dependency>
     		<groupId>com.github.mertakdut</groupId>
     		<artifactId>EpubParser</artifactId>
-    		<version>1.0.91</version>
+    		<version>1.0.92</version>
 	</dependency>
 
 # License
