@@ -418,6 +418,10 @@ public class Reader {
 			}
 		}
 
+		if (opfFileEntry == null) {
+			throw new ReadingException(".opf file not found");
+		}
+
 		InputStream opfFileInputStream;
 		try {
 			opfFileInputStream = epubFile.getInputStream(opfFileEntry);
