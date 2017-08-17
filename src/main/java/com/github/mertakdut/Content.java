@@ -98,6 +98,7 @@ class Content {
 	}
 
 	private NavPoint getNavPoint(int index) throws ReadingException, OutOfPagesException {
+
 		if (index >= 0) {
 			if (getToc() != null) {
 				List<NavPoint> navPoints = getToc().getNavMap().getNavPoints();
@@ -1639,7 +1640,8 @@ class Content {
 			htmlBodyToReplace = openingTags + htmlBodyToReplace + closingTags;
 		}
 
-		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) { // If this is not the last page, next navPoint should start with not closed yet tags because they are not closed in this navPoint as well.
+		// If this is not the last page, next navPoint should start with not closed yet tags because they are not closed in this navPoint as well.
+		if (getToc().getNavMap().getNavPoints().size() > (index + 1)) {
 			openedNotClosedYetTags.addAll(prevOpenedNotClosedYetTags);
 			getToc().getNavMap().getNavPoints().get(index + 1).setOpenTags(openedNotClosedYetTags.isEmpty() ? null : openedNotClosedYetTags);
 		} else {

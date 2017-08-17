@@ -37,14 +37,14 @@ Check out my latest app written by using this library. <a href="https://play.goo
 
 Add dependency in your project build.gradle
 
-	compile 'com.github.mertakdut:EpubParser:1.0.93'
+	compile 'com.github.mertakdut:EpubParser:1.0.94'
 
 Or grab it via maven
 
 	<dependency>
     		<groupId>com.github.mertakdut</groupId>
     		<artifactId>EpubParser</artifactId>
-    		<version>1.0.93</version>
+    		<version>1.0.94</version>
 	</dependency>
 
 # License
