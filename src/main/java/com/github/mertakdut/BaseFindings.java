@@ -11,7 +11,7 @@ import org.w3c.dom.NodeList;
 
 import com.github.mertakdut.exception.ReadingException;
 
-//Helper classes and methods used in Findings
+// Helper classes and methods used in Findings
 abstract class BaseFindings {
 
 	abstract boolean fillContent(Node node) throws ReadingException;

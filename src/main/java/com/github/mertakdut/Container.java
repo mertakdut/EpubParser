@@ -5,7 +5,7 @@ import org.w3c.dom.Node;
 import com.github.mertakdut.exception.ReadingException;
 
 class Container extends BaseFindings {
-	
+
 	private XmlItem rootFile;
 
 	public XmlItem getRootFile() {

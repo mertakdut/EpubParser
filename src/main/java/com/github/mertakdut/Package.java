@@ -117,6 +117,7 @@ public class Package extends BaseFindings {
 		}
 
 		void fillAttributes(NodeList nodeList) throws ReadingException {
+			
 			Field[] fields = Package.Metadata.class.getDeclaredFields();
 
 			List<String> subjectList = null;
@@ -128,7 +129,13 @@ public class Package extends BaseFindings {
 					continue;
 				}
 
-				if (node.getNodeName().equals("meta")) {
+				String nodeName = node.getNodeName();
+
+				if (nodeName.contains(Character.toString(Constants.COLON))) {
+					nodeName = ContextHelper.getTextAfterCharacter(nodeName, Constants.COLON);
+				}
+
+				if (nodeName.equals("meta")) {
 					if (node.hasAttributes()) {
 						NamedNodeMap nodeMap = node.getAttributes();
 
@@ -149,7 +156,8 @@ public class Package extends BaseFindings {
 				}
 
 				for (int j = 0; j < fields.length; j++) {
-					if (nodeList.item(i).getNodeName().contains(fields[j].getName())) {
+					
+					if (nodeName.equals(fields[j].getName())) {
 
 						if (fields[j].getName().equals("subject")) {
 							if (subjectList == null) {
@@ -289,16 +297,23 @@ public class Package extends BaseFindings {
 
 	@Override
 	boolean fillContent(Node node) throws ReadingException {
-		if (node.getNodeName().equals("metadata")) {
+
+		String nodeName = node.getNodeName();
+
+		if (nodeName.contains(Character.toString(Constants.COLON))) {
+			nodeName = ContextHelper.getTextAfterCharacter(nodeName, Constants.COLON);
+		}
+
+		if (nodeName.equals("metadata")) {
 			getMetadata().fillAttributes(node.getChildNodes());
 			isMetadataFound = true;
-		} else if (node.getNodeName().equals("manifest")) {
+		} else if (nodeName.equals("manifest")) {
 			getManifest().fillXmlItemList(node.getChildNodes());
 			isManifestFound = true;
-		} else if (node.getNodeName().equals("spine")) {
+		} else if (nodeName.equals("spine")) {
 			getSpine().fillXmlItemList(node.getChildNodes());
 			isSpineFound = true;
-		} else if (node.getNodeName().equals("guide")) {
+		} else if (nodeName.equals("guide")) {
 			getGuide().fillXmlItemList(node.getChildNodes());
 			isGuideFound = true;
 		}

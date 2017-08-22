@@ -110,6 +110,15 @@ public class Reader {
 		return content.getToc();
 	}
 
+	public String getCoverImageFileName() throws ReadingException {
+
+		if (content != null) {
+			return content.getCoverImageFileName();
+		}
+
+		throw new ReadingException("Content info is not set.");
+	}
+
 	public byte[] getCoverImage() throws ReadingException {
 
 		if (content != null) {
@@ -352,7 +361,7 @@ public class Reader {
 
 					Document document = getDocument(docBuilder, inputStream, Constants.FILE_NAME_CONTAINER_XML);
 					parseContainerXml(docBuilder, document, epubFile);
-				} else if ((!isLoadingProgress || !isProgressFileFound) && isFullContent && currentEntryName.contains(Constants.EXTENSION_NCX)) {
+				} else if ((!isLoadingProgress || !isProgressFileFound) && isFullContent && currentEntryName.endsWith(Constants.EXTENSION_NCX)) {
 					isTocXmlFound = true;
 
 					ZipEntry toc = epubFile.getEntry(currentEntryName);

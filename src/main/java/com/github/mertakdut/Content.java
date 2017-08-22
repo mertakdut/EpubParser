@@ -24,7 +24,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.xml.sax.SAXException;
 
 import com.github.mertakdut.BaseFindings.XmlItem;
-import com.github.mertakdut.Package.Metadata;
 import com.github.mertakdut.exception.OutOfPagesException;
 import com.github.mertakdut.exception.ReadingException;
 
@@ -77,10 +76,9 @@ class Content {
 		}
 
 		return getBookSection(index);
-
 	}
 
-	// TODO: A new method for only calculating book sections. That will also be useful for pre-loading the whole book.
+	// TODO: A new method for only getting (approx.) count of book sections. That will also be useful for pre-loading the whole book.
 	private BookSection getBookSection(int index) throws ReadingException, OutOfPagesException {
 
 		BookSection bookSection = null;
@@ -110,7 +108,6 @@ class Content {
 
 					return navPoints.get(index);
 				}
-
 			}
 
 			throw new ReadingException("Term of Contents is null.");
@@ -178,7 +175,7 @@ class Content {
 
 							getToc().getNavMap().getNavPoints().add(index + 1, nextEntryNavPoint);
 
-							// Inserting calculated info to avoid calculating this navPoint again. In the future these data could be written to Term of Contents file.
+							// Inserting calculated info to avoid calculating this navPoint again.
 							getToc().getNavMap().getNavPoints().get(index).setTypeCode(2); // To indicate that, this is a trimmed part. TODO: Change these with constants.
 
 							if (lastBookSectionInfo == null) {
@@ -1726,65 +1723,77 @@ class Content {
 
 		return isHtmlBodyModified ? new Pair<>(htmlBody, stringsToRemove) : null;
 	}
+	
+	String getCoverImageFileName() {
 
-	byte[] getCoverImage() throws ReadingException {
-		Metadata metadata = this.opfPackage.getMetadata();
+		if (this.opfPackage != null && this.opfPackage.getMetadata() != null) {
 
-		if (this.opfPackage != null && metadata != null) {
-			String coverImageId = metadata.getCoverImageId();
+			String coverImageId = this.opfPackage.getMetadata().getCoverImageId();
 
 			if (coverImageId != null && !coverImageId.equals("")) {
+
 				List<XmlItem> manifestXmlItems = this.opfPackage.getManifest().getXmlItemList();
 
 				for (XmlItem xmlItem : manifestXmlItems) {
+
 					if (xmlItem.getAttributes().get("id").equals(coverImageId)) {
-						String coverImageEntryName = xmlItem.getAttributes().get("href");
 
-						if (coverImageEntryName != null && !coverImageEntryName.equals("")) {
-							ZipFile epubFile = null;
-							try {
-								try {
-									epubFile = new ZipFile(this.getZipFilePath());
-								} catch (IOException e) {
-									e.printStackTrace();
-									throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
-								}
+						return xmlItem.getAttributes().get("href");
+					}
+				}
+			}
+		}
 
-								for (String entryName : this.getEntryNames()) {
+		return null;
+	}
 
-									// TODO: I might have to change this contains with equals.
-									if (entryName.contains(coverImageEntryName)) {
-										ZipEntry coverImageEntry = epubFile.getEntry(entryName);
+	byte[] getCoverImage() throws ReadingException {
 
-										InputStream inputStream;
-										try {
-											inputStream = epubFile.getInputStream(coverImageEntry);
-										} catch (IOException e) {
-											e.printStackTrace();
-											throw new ReadingException("IOException while reading " + entryName + " file: " + e.getMessage());
-										}
+		String coverImageEntryName = getCoverImageFileName();
 
-										try {
-											return ContextHelper.convertIsToByteArray(inputStream);
-										} catch (IOException e) {
-											e.printStackTrace();
-											throw new ReadingException("IOException while converting inputStream to byte array: " + e.getMessage());
-										}
-									}
-								}
+		if (coverImageEntryName != null && !coverImageEntryName.equals("")) {
 
-							} finally {
-								try {
-									if (epubFile != null) {
-										epubFile.close();
-									}
-								} catch (IOException e) {
-									e.printStackTrace();
-									throw new ReadingException("Error closing ZipFile: " + e.getMessage());
-								}
-							}
+			ZipFile epubFile = null;
+
+			try {
+				try {
+					epubFile = new ZipFile(this.getZipFilePath());
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("Error initializing ZipFile: " + e.getMessage());
+				}
+
+				for (String entryName : this.getEntryNames()) {
+
+					// TODO: I might have to change this contains with equals.
+					if (entryName.contains(coverImageEntryName)) {
+						ZipEntry coverImageEntry = epubFile.getEntry(entryName);
+
+						InputStream inputStream;
+						try {
+							inputStream = epubFile.getInputStream(coverImageEntry);
+						} catch (IOException e) {
+							e.printStackTrace();
+							throw new ReadingException("IOException while reading " + entryName + " file: " + e.getMessage());
+						}
+
+						try {
+							return ContextHelper.convertIsToByteArray(inputStream);
+						} catch (IOException e) {
+							e.printStackTrace();
+							throw new ReadingException("IOException while converting inputStream to byte array: " + e.getMessage());
 						}
 					}
+				}
+
+			} finally {
+				try {
+					if (epubFile != null) {
+						epubFile.close();
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new ReadingException("Error closing ZipFile: " + e.getMessage());
 				}
 			}
 		}
@@ -1826,6 +1835,7 @@ class Content {
 	}
 
 	List<Tag> getTagStartEndPositions(String entryName, String htmlBody) {
+
 		if (entryTagPositions == null || !entryTagPositions.containsKey(entryName)) {
 			if (entryTagPositions == null) {
 				entryTagPositions = new HashMap<>();
